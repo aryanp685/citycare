@@ -4,6 +4,7 @@ import { EncounterForm } from "./encounter-form";
 import { Card, SectionTitle, Badge, EmptyNote, KV } from "@/components/ui";
 import { EmergencyAccess } from "./emergency-access";
 import { openDocument } from "./document-manager";
+import { TrendsPanel } from "./trends";
 
 type RecordPayload = {
   scopeNote: string;
@@ -17,6 +18,8 @@ type RecordPayload = {
     medications: { name: string; dosage: string | null; frequency: string | null; notes: string | null }[];
     encounters: { encounterDate: string; type: string; chiefComplaint: string | null; diagnosisText: string | null; advice: string | null }[];
     labs: { testName: string; value: string; unit: string | null; refRangeLow: string | null; refRangeHigh: string | null; takenOn: string | null }[];
+    // F5: self-reported readings, already consent-scoped by the server (applyScope).
+    observations: { id: string; name: string; category: string; valueNum: number; unit: string | null; refLow: number | null; refHigh: number | null; takenOn: string; encounterId: string | null }[];
     prescriptions: { issuedOn: string; items: { name: string; dosage?: string; frequency?: string; durationDays?: number }[]; doctor: string | null }[];
     documents: { id: string; title: string; type: string; issuedOn: string | null }[];
   };
@@ -117,6 +120,7 @@ export function PatientWorkspace({ patientId, patientName }: { patientId: string
                 <KV k="Consent expires" v={new Date(data.expiresAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} />
                 <KV k="Encounters visible" v={data.record.encounters.length} />
                 <KV k="Lab values visible" v={data.record.labs.length} />
+                <KV k="Self-reported readings visible" v={data.record.observations.length} />
                 <div className="mt-3">
                   <button className="btn btn-primary" onClick={() => setShowForm((x) => !x)}>{showForm ? "Close consultation form" : "Write consultation note + prescription"}</button>
                 </div>
@@ -160,6 +164,10 @@ export function PatientWorkspace({ patientId, patientName }: { patientId: string
                 ))}
                 {data.record.encounters.length === 0 && <EmptyNote>Nothing within the shared scope.</EmptyNote>}
               </ul>
+            </Card>
+            <Card>
+              <SectionTitle right={<Badge tone="off">self-reported</Badge>}>Trends — patient-logged readings {data.record.observations.length === 0 && "(none in scope)"}</SectionTitle>
+              <TrendsPanel rows={data.record.observations} />
             </Card>
             <Card>
               <SectionTitle>Files {data.record.documents.length === 0 && "(full-record consent only)"}</SectionTitle>

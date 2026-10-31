@@ -30,19 +30,6 @@ import type { RuleRecord } from "./rules";
 
 /** All SQL that both pages (RSC) and API routes need, in one honest place. */
 
-const IST = "Asia/Kolkata";
-
-export function fmtIstDate(d: Date | string): string {
-  const dt = typeof d === "string" ? new Date(d) : d;
-  return new Intl.DateTimeFormat("en-IN", { timeZone: IST, day: "2-digit", month: "short", year: "numeric" }).format(dt);
-}
-export function fmtIstDateTime(d: Date | string): string {
-  const dt = typeof d === "string" ? new Date(d) : d;
-  return (
-    new Intl.DateTimeFormat("en-IN", { timeZone: IST, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(dt) + " IST"
-  );
-}
-
 export function ageFrom(dob: Date | string | null): number | null {
   if (!dob) return null;
   const d = typeof dob === "string" ? new Date(dob) : dob;
@@ -53,6 +40,9 @@ export function ageFrom(dob: Date | string | null): number | null {
   if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) a -= 1;
   return a >= 0 && a < 130 ? a : null; // sanity clamp: absurd DOB typo -> treat as unknown
 }
+
+// Date formatters live in lib/dates (pure — importable by client components without the pg pool).
+export { fmtIstDate, fmtIstDateTime } from "./dates";
 
 // ---------------- doctors ----------------
 
@@ -161,12 +151,16 @@ export type RecordSections = {
   medications: { id: string; name: string; dosage: string | null; frequency: string | null; notes: string | null }[];
   encounters: { id: string; encounterDate: Date; type: string; chiefComplaint: string | null; diagnosisText: string | null; diagnosisCode: string | null; advice: string | null; followUpOn: Date | null; doctor: string | null }[];
   labs: { id: string; testName: string; value: string; unit: string | null; refRangeLow: string | null; refRangeHigh: string | null; takenOn: Date | null; documentId: string; encounterId: string | null }[];
+  // F5: self-reported, numeric readings (glucose / BP / peak flow / weight). The Observation
+  // table used to be dead — no writer, no reader. Only rows with a numeric value and a date
+  // are trend material; those are what the query returns.
+  observations: { id: string; name: string; category: string; valueNum: number; unit: string | null; refLow: number | null; refHigh: number | null; takenOn: Date; encounterId: string | null }[];
   prescriptions: { id: string; encounterId: string | null; issuedOn: Date; items: unknown; notes: string | null; doctor: string | null }[];
   documents: { id: string; title: string; type: string; source: string; issuedOn: Date | null; ocrStatus: string }[];
 };
 
 export async function recordSections(patientId: string): Promise<RecordSections> {
-  const [allergies, conditions, medications, encounters, labs, prescriptions, documents] = await Promise.all([
+  const [allergies, conditions, medications, encounters, labs, observations, prescriptions, documents] = await Promise.all([
     all(`SELECT id, allergen, severity, reaction FROM "Allergy" WHERE "patientId"=$1 AND "isActive" ORDER BY allergen`, [patientId]),
     all(`SELECT id, name, status, icd10 FROM "Condition" WHERE "patientId"=$1 AND status='ACTIVE' ORDER BY name`, [patientId]),
     all(`SELECT id, name, dosage, frequency, notes FROM "Medication" WHERE "patientId"=$1 AND "isActive" ORDER BY name`, [patientId]),
@@ -185,6 +179,13 @@ export async function recordSections(patientId: string): Promise<RecordSections>
       [patientId],
     ),
     all(
+      `SELECT id, name, category, "valueNum", unit, "refLow", "refHigh", "takenOn", "encounterId"
+         FROM "Observation"
+        WHERE "patientId"=$1 AND "valueNum" IS NOT NULL AND "takenOn" IS NOT NULL
+        ORDER BY name, "takenOn" ASC LIMIT 1000`,
+      [patientId],
+    ),
+    all(
       `SELECT p.id, p."issuedOn", p.items, p.notes, p."encounterId", d."fullName" AS doctor
          FROM "Prescription" p
          JOIN "Encounter" e ON e.id = p."encounterId"
@@ -198,7 +199,7 @@ export async function recordSections(patientId: string): Promise<RecordSections>
       [patientId],
     ),
   ]);
-  return { allergies, conditions, medications, encounters, labs, prescriptions, documents } as RecordSections;
+  return { allergies, conditions, medications, encounters, labs, observations, prescriptions, documents } as RecordSections;
 }
 
 /** Sections filtered by consent scope — the view a DOCTOR receives. */
@@ -221,7 +222,7 @@ export function applyScope(rec: RecordSections, verdict: ConsentVerdict): { sect
     case "SUMMARY_ONLY": {
       return {
         sections: { ...emptySections(), allergies: rec.allergies, conditions: rec.conditions, medications: rec.medications },
-        scopeNote: `Summary only (${c.scope}) — encounters, labs, prescriptions and documents hidden`,
+        scopeNote: `Summary only (${c.scope}) — encounters, labs, prescriptions, documents and self-reported readings hidden`,
       };
     }
     case "LAST_N_ENCOUNTERS": {
@@ -235,6 +236,9 @@ export function applyScope(rec: RecordSections, verdict: ConsentVerdict): { sect
           // prescriptions/lab documents belong to encounters OUTSIDE the window — hide those rows.
           prescriptions: rec.prescriptions.filter((p) => p.encounterId === null || encIds.has(p.encounterId)),
           labs: rec.labs.filter((l) => l.encounterId === null || encIds.has(l.encounterId)),
+          // F5: same rule as labs — self-logged readings (no encounter) stay visible,
+          // encounter-linked ones only inside the window.
+          observations: rec.observations.filter((o) => o.encounterId === null || encIds.has(o.encounterId)),
           documents: [], // no file storage in this build; see DRAWBACKS
         },
         scopeNote: `Last ${n} encounter(s) only`,
@@ -255,6 +259,8 @@ export function applyScope(rec: RecordSections, verdict: ConsentVerdict): { sect
           // A56-follow-up: labs/prescriptions from unrelated encounters were leaking through this scope.
           prescriptions: rec.prescriptions.filter((p) => p.encounterId !== null && encIds.has(p.encounterId)),
           labs: rec.labs.filter((l) => l.encounterId !== null && encIds.has(l.encounterId)),
+          // F5: same rule as labs — only readings taken during the matching encounters.
+          observations: rec.observations.filter((o) => o.encounterId !== null && encIds.has(o.encounterId)),
           documents: [],
         },
         scopeNote: `Only encounters mentioning “${c.conditionName}”`,
@@ -266,7 +272,7 @@ export function applyScope(rec: RecordSections, verdict: ConsentVerdict): { sect
 }
 
 function emptySections(): RecordSections {
-  return { allergies: [], conditions: [], medications: [], encounters: [], labs: [], prescriptions: [], documents: [] };
+  return { allergies: [], conditions: [], medications: [], encounters: [], labs: [], observations: [], prescriptions: [], documents: [] };
 }
 
 /** The exact shape rules.ts consumes — built from LIVE rows, not flags. */
