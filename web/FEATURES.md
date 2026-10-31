@@ -70,7 +70,7 @@ Legal-driven items are marked ⚖.
 | F16 | **Dark mode** (tokens already CSS variables) | polish | 2 h |
 | F17 | **QR consent at the clinic**: patient shows a QR, doctor scans → scoped consent request | walk-in flow without typing | ½ day |
 | F18 | **Print / PDF visit summary** (print stylesheet + `window.print`) | what patients actually ask for | 2 h |
-| ~~F19~~ | **CI** (GitHub Actions: vitest + build + e2e against a Postgres service) + 5 Playwright smoke flows | stops regressions | ½ day | **Workflow file written (`.github/workflows/ci.yml`); runs on first push. Playwright flows still open.**
+| ~~F19~~ | **CI** (GitHub Actions: vitest + build + e2e against a Postgres service) + 5 Playwright smoke flows | stops regressions | ½ day | **Workflow file written (`.github/workflows/ci.yml`); repo remote created 2026-10-31, but the 2026-10-31 push produced a 0-second failure with no log → GitHub Actions is disabled for this repo (see D59). The identical local sequence was re-run green in the sandbox the same day. Owner: enable Actions in repo settings, then re-push. Playwright flows still open.**
 | F20 | **Ledger root-hash anchoring** (daily hash to an external place) + least-privilege DB role | tamper-*proof*, not just tamper-evident | ½ day |
 | F21 ⚖ | **Supabase Mumbai cutover** (`scripts/supabase-cutover.sh`) | data residency (L-G6); needs the session-pooler URI from the account owner | 10 min |
 

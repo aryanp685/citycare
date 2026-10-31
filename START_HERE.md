@@ -13,7 +13,7 @@ Live site: https://citycare-xi.vercel.app  (demo: ramesh@demo.in / city1234 — 
 | `trust/` | Trust/consent design notes. |
 | `CITYCARE_PROJECT_PLAN.md`, `PLAN_REVIEW_AND_DRAWBACKS.md`, `DATA_AND_TRUST.md`, `AI_ACCURACY_AND_HALLUCINATION.md` | Plan, critique, data/trust and anti-hallucination design docs. |
 | `uploads/Seminar 1.pdf` | The Project Progress Seminar-I slides (as submitted). |
-| `.github/workflows/ci.yml` | CI gate (lint, tsc, vitest, licences, bootstrap, build, 217-check e2e) — runs on first push to GitHub. |
+| `.github/workflows/ci.yml` | CI gate (lint, tsc, vitest, licences, bootstrap, build, 217-check e2e). The remote now exists (created 2026-10-31) but GitHub Actions is disabled for this repo, so the 2026-10-31 push produced a 0-second failure with no log (see D59). The identical local sequence was re-run green in the sandbox on 2026-10-31. |
 
 ## Run locally (from `web/`)
 ```

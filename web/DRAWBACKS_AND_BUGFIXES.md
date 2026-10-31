@@ -435,7 +435,7 @@ SSR HTML.
 | D56 | E-mail delivery is scaffolded, not live: no `RESEND_API_KEY`/verified domain → codes stay in `Outbox` and the UI says so; SMS/phone verification not started (DLT registration is a legal prerequisite) | Recovery codes give self-service without any provider | Resend/SES + DLT-registered SMS sender |
 | D57 | Doctor verification is a *recorded attestation*, not a registry lookup; a careless admin can still tick the box | The attestation names the register + admin + date and is in the ledger — reviewable, not invisible | HPR-based verification when ABDM credentials exist |
 | D58 | Hindi/Marathi cover the privacy key points and the record summary, not the app shell (D17 still open) | Copy is centralised; `legal-i18n.ts` shows the pattern | next-intl dictionaries for the shell |
-| D59 | CI workflow (`.github/workflows/ci.yml`) is written but has never run — there is no git remote yet | It mirrors the exact local sequence that passed (lint, tsc, vitest, licences, bootstrap, build, 217-check e2e) | push to GitHub and watch the first run |
+| D59 | CI workflow (`.github/workflows/ci.yml`) is written but has never *completed a run*: the remote now exists (`github.com/aryanp685/citycare`, first push 2026-10-31) but that push produced a 0-second run failure with no logs, and the Actions permissions API answers 403 → GitHub Actions is disabled/unavailable for this repo | The exact sequence the workflow mirrors was re-run in full in the 2026-10-31 sandbox: lint clean, tsc clean, vitest 131/131, licence audit clean, schema bootstrap + seed, build clean, e2e 217/217 — all green | owner enables GitHub Actions (repo Settings → Actions → General) and pushes again; the first green run closes this |
 
 ## What a critic should NOT be able to say
 
