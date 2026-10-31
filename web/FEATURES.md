@@ -48,7 +48,7 @@ Status legend: ✅ live & tested · 🔧 in progress · ⏭ next · 💡 later. 
 | — | **Ledger anchoring** (D13) | nightly Ed25519 signature of the chain head + OpenTimestamps submission; `/legal/transparency`, `GET /api/ledger/anchors`, `/api/ledger/anchors/[seq]/ots` | e2e `D13:` (independent signature recompute), `anchors.test.ts`; live anchor #9 accepted by `a.pool.opentimestamps.org` |
 | — | **Slot capacity + live grid** (D6/D7) | `maxPerSlot` 1–6 is real capacity with per-seat unique index; picker re-fetches every 45 s / on focus / after `slot_full` | e2e `D6:`, `slots.test.ts` |
 | — | **Verification attestation** (D12/L-G7) | approve = register checked (NMC IMR / state council / HPR) + "name and number matched" checkbox, stored + ledgered | e2e `D12:` |
-| — | **Sliding sessions** (D52), **multipart CSRF** (D22), **cold-start warm-up** (D31), `/api/health` config facts, CI workflow file (F19, unrun) | — | e2e `D31:` | live cron output |
+| — | **Sliding sessions** (D52), **multipart CSRF** (D22), **cold-start warm-up** (D31), `/api/health` config facts, CI workflow file (F19, unrun), **psql-free DB bootstrap** (`scripts/db-bootstrap-node.mjs` — same steps/asserts as the shell script, for machines without psql) | — | e2e `D31:`; node script run on a fresh DB (35 tables + seed + 0 breaks, idempotent re-run, exit 0) | live cron output |
 
 ## Next (in order — each is one focused session)
 
