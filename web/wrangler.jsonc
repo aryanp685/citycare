@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "citycare",
+  "main": ".open-next/worker.js",
+  // workerd bundled with wrangler 4.141 is 2026-09-25; any date >= 2024-09-23 works for OpenNext
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": [
+    "nodejs_compat",             // node:crypto (scrypt), Buffer, net/tls for `pg`, process.env from vars/secrets
+    "global_fetch_strictly_public"
+  ],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "citycare" }],
+
+  // Postgres via Hyperdrive (free plan OK). `id` is written by scripts/cf-deploy.sh after
+  // `wrangler hyperdrive create`; locally (`wrangler dev`) the binding transparently points
+  // at localConnectionString instead, so the SAME code path is exercised on workerd.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgresql://citycare:citycare@127.0.0.1:5432/citycare"
+    }
+  ],
+
+  "vars": {
+    // Workers FREE plan = 10 ms CPU per request. scrypt 2^14 costs ~40-80 ms → login would
+    // trip the limit. 4096 ≈ ¼ of that. On the PAID plan set 16384 (or 65536) and add
+    // "limits": { "cpu_ms": 30000 }. The cost is stored in each hash, so changing it is safe.
+    "SCRYPT_N": "4096",
+    "NEXTJS_ENV": "production"
+  },
+  // SESSION_SECRET is a *secret*, never a var: `wrangler secret put SESSION_SECRET`
+
+  // Run the Worker close to the database instead of close to the visitor: every page does
+  // several sequential queries, so DB round-trip time dominates.
+  "placement": { "mode": "smart" },
+  "observability": { "enabled": true }
+}
