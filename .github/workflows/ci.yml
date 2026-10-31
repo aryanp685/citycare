@@ -1,0 +1,46 @@
+# F19 — CI gate: the same four checks the deploy script relies on, on every push / PR.
+# Runs against a throw-away Postgres 17 so the e2e suite (217 HTTP checks) is real, not mocked.
+name: ci
+on:
+  push:
+  pull_request:
+concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: citycare, POSTGRES_PASSWORD: citycare, POSTGRES_DB: citycare }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U citycare" --health-interval 5s --health-timeout 5s --health-retries 12
+    defaults: { run: { working-directory: web } }
+    env:
+      DATABASE_URL: postgres://citycare:citycare@127.0.0.1:5432/citycare
+      SESSION_SECRET: ci-only-secret-ci-only-secret-ci-only-secret-0123456789
+      CRON_SECRET: ci-cron-secret
+      ANCHOR_OTS: "0"           # never call public calendars from CI
+      TZ_POLICY: Asia/Kolkata
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - name: generate CI-only keys (document encryption + anchor signing)
+        run: |
+          echo "DOCUMENT_KEY=$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')" >> "$GITHUB_ENV"
+          echo "ANCHOR_SIGNING_KEY=$(node -e 'const {privateKey}=require("crypto").generateKeyPairSync("ed25519");console.log(privateKey.export({format:"der",type:"pkcs8"}).toString("base64"))')" >> "$GITHUB_ENV"
+      - run: npx eslint .
+      - run: npx tsc --noEmit -p .
+      - run: npx vitest run
+      - run: node scripts/licenses.mjs
+      - name: schema + demo data
+        run: sudo apt-get install -y -qq postgresql-client && FORCE_SEED=1 bash scripts/db-bootstrap.sh
+      - run: npx next build
+      - name: e2e (HTTP, against the built app)
+        run: |
+          (npx next start -H 127.0.0.1 -p 3000 > /tmp/next.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/health > /dev/null && break; sleep 1; done
+          node scripts/e2e.mjs || { tail -50 /tmp/next.log; exit 1; }

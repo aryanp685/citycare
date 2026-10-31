@@ -1,0 +1,701 @@
+// ============================================================
+//  CityCare — Unified Healthcare & Patient Health Record
+//  BCA Final Year Group Project | Reference Schema (PostgreSQL)
+//  Design principles:
+//    1. Patient OWNS the record. Doctors BORROW access.
+//    2. Every read of clinical data is written to AuditLog.
+//    3. Nothing is ever hard-deleted — use `status` + `revokedAt`.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------- ENUMS ----------------
+
+enum Role {
+  PATIENT
+  DOCTOR
+  HOSPITAL_ADMIN
+  LAB_TECHNICIAN
+  SUPER_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNDISCLOSED
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+enum AccountStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SUSPENDED
+  DELETED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED_BY_PATIENT
+  CANCELLED_BY_DOCTOR
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum EncounterType {
+  OUTPATIENT
+  INPATIENT
+  EMERGENCY
+  TELECONSULT
+  LAB_TEST
+  SURGERY
+  SELF_REPORTED // patient manually entered old history
+}
+
+enum DocumentType {
+  PRESCRIPTION
+  LAB_REPORT
+  DISCHARGE_SUMMARY
+  XRAY
+  MRI
+  CT_SCAN
+  ULTRASOUND
+  ECG
+  VACCINATION_CARD
+  BILL
+  OTHER
+}
+
+enum DocumentSource {
+  PATIENT_UPLOAD
+  DOCTOR_UPLOAD
+  LAB_UPLOAD
+  SCANNED_PAPER // OCR'd
+  IMPORTED_FHIR
+}
+
+enum ConsentStatus {
+  REQUESTED
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum ConsentScope {
+  FULL_RECORD
+  SUMMARY_ONLY
+  LAST_N_ENCOUNTERS
+  SPECIFIC_CONDITION
+  SPECIFIC_DOCUMENTS
+}
+
+enum AccessPurpose {
+  TREATMENT
+  SECOND_OPINION
+  EMERGENCY
+  RESEARCH_ANONYMISED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum AlertType {
+  DRUG_DRUG_INTERACTION
+  DRUG_ALLERGY_CONFLICT
+  ABNORMAL_LAB_VALUE
+  CHRONIC_FOLLOWUP_DUE
+  MEDICATION_REFILL_DUE
+  VACCINATION_DUE
+  MISSING_HISTORY_GAP
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+// ---------------- IDENTITY & AUTH ----------------
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  phone          String        @unique
+  passwordHash   String        // argon2id, never bcrypt cost<12
+  role           Role
+  status         AccountStatus @default(PENDING_VERIFICATION)
+  totpSecret     String?       // optional 2FA
+  lastLoginAt    DateTime?
+  failedAttempts Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  patient        Patient?
+  doctor         Doctor?
+  hospitalAdmin  HospitalAdmin?
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
+  @@index([role, status])
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  phone     String
+  codeHash  String
+  purpose   String   // LOGIN | SIGNUP | SHARE_CONFIRM
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+}
+
+model Patient {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id])
+
+  // ---- demographics ----
+  fullName        String
+  dateOfBirth     DateTime?
+  ageAtEntry      Int?        // only when exact DOB unknown (common in India)
+  gender          Gender      @default(UNDISCLOSED)
+  bloodGroup      BloodGroup  @default(UNKNOWN)
+  addressLine     String?
+  city            String      @default("Pune")
+  state           String      @default("Maharashtra")
+  pincode         String?
+
+  // ---- India-specific IDs (all OPTIONAL, never mandatory) ----
+  abhaId          String?     @unique // Ayushman Bharat Health Account
+  abhaAddress     String?     @unique // e.g. ramesh@abdm
+
+  // ---- emergency ----
+  emergencyName   String?
+  emergencyPhone  String?
+
+  // ---- privacy toggles (patient-controlled) ----
+  shareDefaultExpiryDays Int @default(7)
+  autoRevokeAfterVisit   Boolean @default(true)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  encounters      Encounter[]
+  documents       Document[]
+  medications     Medication[]
+  allergies       Allergy[]
+  conditions      Condition[]
+  observations    Observation[]
+  consentsGiven   Consent[]
+  appointments    Appointment[]
+  alerts          Alert[]
+  aiSummaries     AiSummary[]
+
+  @@index([city, fullName])
+}
+
+model Hospital {
+  id          String   @id @default(uuid())
+  name        String
+  hfrId       String?  @unique // Health Facility Registry ID (ABDM)
+  address     String
+  city        String
+  pincode     String?
+  phone       String?
+  latitude    Decimal? @db.Decimal(9, 6)
+  longitude   Decimal? @db.Decimal(9, 6)
+  isEmpanelled Boolean @default(false) // on CityCare network
+  rating      Float?
+  createdAt   DateTime @default(now())
+
+  doctors       Doctor[]
+  encounters    Encounter[]
+  hospitalAdmin HospitalAdmin[]
+
+  @@index([city, name])
+}
+
+model HospitalAdmin {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+}
+
+model Specialty {
+  id    String   @id @default(uuid())
+  name  String   @unique // Cardiology, Dermatology, ...
+  code  String?  @unique // SNOMED / internal code
+
+  doctors DoctorSpecialty[]
+}
+
+model Doctor {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+
+  fullName       String
+  registrationNo String?  @unique // State Medical Council reg no.
+  hospitalId     String?
+  hospital       Hospital? @relation(fields: [hospitalId], references: [id])
+
+  qualification  String
+  experienceYrs  Int      @default(0)
+  consultationFee Decimal @db.Decimal(8, 2)
+  bio            String?
+  languages      String[] @default([])
+  photoUrl       String?
+
+  isVerified     Boolean  @default(false)
+  rating         Float?
+  totalReviews   Int      @default(0)
+
+  // ABDM practitioner identity
+  hprId          String?  @unique // Health Practitioner Registry ID
+
+  createdAt      DateTime @default(now())
+
+  specialties    DoctorSpecialty[]
+  slots          AvailabilitySlot[]
+  appointments   Appointment[]
+  encounters     Encounter[]
+  documents      Document[]
+  prescriptions  Prescription[]
+  consents       Consent[]
+  alerts         Alert[]
+
+  @@index([fullName])
+  @@index([hospitalId])
+}
+
+model DoctorSpecialty {
+  doctorId    String
+  specialtyId String
+  doctor      Doctor    @relation(fields: [doctorId], references: [id])
+  specialty   Specialty @relation(fields: [specialtyId], references: [id])
+
+  @@id([doctorId, specialtyId])
+}
+
+// ---------------- APPOINTMENTS ----------------
+
+model AvailabilitySlot {
+  id         String   @id @default(uuid())
+  doctorId   String
+  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  dayOfWeek  Int      // 0=Sun .. 6=Sat
+  startTime  String   // "09:30"
+  endTime    String   // "13:00"
+  slotMinutes Int     @default(15)
+  maxPerSlot Int      @default(1)
+  isActive   Boolean  @default(true)
+
+  appointments Appointment[]
+
+  @@index([doctorId, dayOfWeek])
+}
+
+model Appointment {
+  id             String            @id @default(uuid())
+  patientId      String
+  patient        Patient           @relation(fields: [patientId], references: [id])
+  doctorId       String
+  doctor         Doctor            @relation(fields: [doctorId], references: [id])
+  slotId         String?
+  slot           AvailabilitySlot? @relation(fields: [slotId], references: [id])
+
+  scheduledAt    DateTime
+  durationMin    Int               @default(15)
+  status         AppointmentStatus @default(PENDING)
+  reason         String?
+  notesForDoctor String?
+  tokenNo        Int?              // per-doctor per-day queue token
+
+  // consent auto-created for this visit
+  consentId      String?
+  consent        Consent?          @relation(fields: [consentId], references: [id])
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  encounter      Encounter?
+
+  @@index([doctorId, scheduledAt])
+  @@index([patientId, scheduledAt])
+  @@index([status])
+
+  // ---- GUARDRAILS ----
+  // Prisma's @@unique cannot express a PARTIAL index, so the two
+  // double-booking guards live in sql/constraints.sql (applied right
+  // after the generated migration). They are:
+  //   1. one live appointment per doctor per instant
+  //   2. one queue token per doctor per day
+  // Without them the DB happily accepts two patients at 09:45 — proven
+  // by smoke_test + gap_test in this folder.
+}
+
+// ---------------- CLINICAL RECORD (the longitudinal core) ----------------
+
+model Encounter {
+  id            String        @id @default(uuid())
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  doctorId      String?
+  doctor        Doctor?       @relation(fields: [doctorId], references: [id])
+  hospitalId    String?
+  hospital      Hospital?     @relation(fields: [hospitalId], references: [id])
+  appointmentId String?       @unique
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
+
+  encounterDate DateTime
+  type          EncounterType @default(OUTPATIENT)
+  chiefComplaint String?
+  diagnosisText  String?
+  diagnosisCode  String?      // ICD-10
+  advice         String?
+  followUpOn     DateTime?
+
+  createdAt     DateTime      @default(now())
+
+  documents     Document[]
+  medications   Medication[]
+  observations  Observation[]
+  conditions    Condition[]
+  prescriptions Prescription[]
+
+  @@index([patientId, encounterDate])
+}
+
+model Document {
+  id            String         @id @default(uuid())
+  patientId     String
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  encounterId   String?
+  encounter     Encounter?     @relation(fields: [encounterId], references: [id])
+  uploadedByDoc String?
+  uploadedBy    Doctor?        @relation(fields: [uploadedByDoc], references: [id])
+
+  type          DocumentType
+  source        DocumentSource @default(PATIENT_UPLOAD)
+  title         String
+  issuedBy      String?
+  issuedOn      DateTime?
+
+  // ---- storage: file itself NEVER in DB ----
+  storageKey    String         // S3/MinIO object key
+  encryptionIv  String         // AES-256-GCM nonce, stored per-file
+  mimeType      String
+  sizeBytes     Int
+  checksumSha256 String
+
+  // ---- OCR pipeline ----
+  ocrStatus     String         @default("PENDING") // PENDING|DONE|FAILED|SKIPPED
+  ocrText       String?        @db.Text
+
+  isDeleted     Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+
+  labResults    LabResult[]
+  aiExtractions AiExtraction[]
+
+  @@index([patientId, type])
+  @@index([ocrStatus])
+}
+
+model LabResult {
+  id          String   @id @default(uuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id])
+
+  testName    String   // "HbA1c"
+  loincCode   String?  // 4548-4
+  value       String
+  unit        String?
+  refRangeLow String?
+  refRangeHigh String?
+  isAbnormal  Boolean  @default(false)
+  takenOn     DateTime?
+
+  @@index([documentId])
+  @@index([testName, takenOn])
+}
+
+model Observation {
+  id          String    @id @default(uuid())
+  patientId   String
+  patient     Patient   @relation(fields: [patientId], references: [id])
+  encounterId String?
+  encounter   Encounter? @relation(fields: [encounterId], references: [id])
+
+  category    String    // VITALS | ANTHROPOMETRY | LIFESTYLE
+  name        String    // systolic_bp, weight_kg, hba1c ...
+  valueNum    Float?
+  valueText   String?
+  unit        String?
+  takenOn     DateTime  @default(now())
+
+  @@index([patientId, name, takenOn])
+}
+
+model Condition {
+  id          String     @id @default(uuid())
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  encounterId String?
+  encounter   Encounter? @relation(fields: [encounterId], references: [id])
+
+  name        String     // "Type 2 Diabetes"
+  icd10       String?    // E11
+  status      String     @default("ACTIVE") // ACTIVE | RESOLVED | IN_REMISSION
+  sinceDate   DateTime?
+  notes       String?
+
+  @@index([patientId, status])
+}
+
+model Allergy {
+  id          String     @id @default(uuid())
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+
+  allergen    String     // "Penicillin"
+  category    String     @default("DRUG") // DRUG | FOOD | ENVIRONMENT
+  reaction    String?
+  severity    AlertSeverity @default(WARNING)
+  isActive    Boolean    @default(true)
+  reportedBy  String?    // DOCTOR | PATIENT
+  createdAt   DateTime   @default(now())
+
+  @@index([patientId, isActive])
+}
+
+model Medication {
+  id          String     @id @default(uuid())
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  encounterId String?
+  encounter   Encounter? @relation(fields: [encounterId], references: [id])
+
+  name        String
+  genericName String?
+  rxnormId    String?    // for RxNav interaction lookups
+  dosage      String?    // "500 mg"
+  frequency   String?    // "1-0-1"
+  route       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean    @default(true)
+  isChronic   Boolean    @default(false)
+  notes       String?
+
+  @@index([patientId, isActive])
+}
+
+model Prescription {
+  id          String   @id @default(uuid())
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+  encounterId String?
+  encounter   Encounter? @relation(fields: [encounterId], references: [id])
+
+  items       Json     // [{name, dosage, frequency, duration, instructions}]
+  notes       String?
+  pdfKey      String?
+  issuedOn    DateTime @default(now())
+}
+
+// ---------------- CONSENT (the heart of the project) ----------------
+
+model Consent {
+  id            String        @id @default(uuid())
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  doctorId      String
+  doctor        Doctor        @relation(fields: [doctorId], references: [id])
+
+  status        ConsentStatus @default(REQUESTED)
+  scope         ConsentScope  @default(SUMMARY_ONLY)
+  purpose       AccessPurpose @default(TREATMENT)
+
+  // fine-grained scope
+  lastNEncounters Int?        // used when scope = LAST_N_ENCOUNTERS
+  conditionName   String?     // used when scope = SPECIFIC_CONDITION
+  documentIds     String[]    // used when scope = SPECIFIC_DOCUMENTS
+
+  requestedAt   DateTime      @default(now())
+  approvedAt    DateTime?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  revocationReason String?
+
+  // emergency break-glass
+  isEmergencyOverride Boolean @default(false)
+
+  appointments  Appointment[]
+  accessLogs    AuditLog[]
+
+  @@index([patientId, status])
+  @@index([doctorId, status, expiresAt])
+}
+
+// ---------------- AI LAYER ----------------
+
+model AiSummary {
+  id            String   @id @default(uuid())
+  patientId     String
+  patient       Patient   @relation(fields: [patientId], references: [id])
+
+  model         String   // "gemini-2.5-flash" | "llama3.1:8b-local"
+  promptVersion String   // NEVER ship AI without versioning the prompt
+  inputDigest   String   // sha256 of the record snapshot used
+
+  headline      String   // 3-line doctor-facing summary
+  bodyMarkdown  String   @db.Text
+  activeIssues  String[]
+  redFlags      String[]
+  suggestedQueries String[]
+
+  tokenCount    Int?
+  latencyMs     Int?
+  createdAt     DateTime @default(now())
+
+  @@index([patientId, createdAt])
+}
+
+model AiExtraction {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+
+  fieldPath  String   // "labResults[2].value"
+  rawText    String
+  value      String
+  confidence Float    // < 0.7 => flagged for human review
+  reviewedBy String?  // doctor who confirmed/corrected it
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
+model Alert {
+  id          String        @id @default(uuid())
+  patientId   String
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  doctorId    String?
+  doctor      Doctor?       @relation(fields: [doctorId], references: [id])
+
+  type        AlertType
+  severity    AlertSeverity
+  status      AlertStatus   @default(OPEN)
+  title       String
+  message     String
+  payload     Json?         // {drugA, drugB, interactionSource, severityLabel}
+  source      String        @default("RULE_ENGINE") // RULE_ENGINE | AI
+  ackAt       DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([patientId, status, severity])
+}
+
+// ---------------- AUDIT + NOTIFICATIONS ----------------
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  consentId  String?
+  consent    Consent? @relation(fields: [consentId], references: [id])
+
+  action     String   // VIEW_RECORD | DOWNLOAD_DOC | CREATE_ENCOUNTER | REVOKE_CONSENT
+  entityType String
+  entityId   String
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  // ---- tamper-evident chain (schema/sql/ledger.sql) ----
+  // entry_hash = sha256(prev_hash | createdAtIso | actor | action | entity...)
+  // createdAtIso is the canonical UTC string that gets HASHED AND STORED
+  // verbatim — naive timestamp columns must never be re-derived under a
+  // session TimeZone (that silently "breaks" every row if TimeZone changes).
+  // Written only via the ledger_append() SQL function; verified with
+  // ledger_verify(). seq is gapless while nothing is deleted; a deleted or
+  // edited row surfaces as a named break, thanks to this chain + the
+  // audit_no_update trigger in constraints.sql.
+  seq          BigInt?
+  prevHash     String?
+  entryHash    String?
+  createdAtIso String?
+
+  // append-only: no updatedAt, no delete relation anywhere
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  channel   NotificationChannel
+  title     String
+  body      String
+  isRead    Boolean             @default(false)
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ---------------- OUTBOX for async jobs (OCR, AI, email) ----------------
+
+model JobQueue {
+  id         String   @id @default(uuid())
+  type       String   // OCR | AI_SUMMARY | SEND_SMS | SEND_EMAIL | FHIR_EXPORT
+  payload    Json
+  status     String   @default("PENDING") // PENDING|RUNNING|DONE|FAILED
+  attempts   Int      @default(0)
+  lastError  String?
+  runAt      DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([status, runAt])
+}

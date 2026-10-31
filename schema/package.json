@@ -1,0 +1,13 @@
+{
+  "name": "citycare-schema",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CityCare reference database schema (BCA final year project)",
+  "scripts": {
+    "validate": "prisma validate",
+    "test": "bash run_tests.sh"
+  },
+  "devDependencies": {
+    "prisma": "6.19.3"
+  }
+}
