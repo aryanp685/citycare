@@ -205,3 +205,38 @@ table.data tbody tr:hover { background: #f8fbfb; }
 .legal-prose th { font-weight: 700; background: var(--wash); }
 .legal-prose .meta { font-size: .8125rem; color: var(--muted); margin-bottom: 1.5rem; }
 .legal-prose .callout { border: 1px solid var(--line); border-left: 4px solid var(--brand); background: #fff; border-radius: 10px; padding: .75rem 1rem; margin: 1rem 0; }
+
+/* F18 — print / PDF visit summary.
+   #print-summary is display:none on screen. When it exists in the DOM, @media print turns
+   it into the ENTIRE page: every other element on the page goes visibility:hidden (layout
+   is untouched, so nothing reflows while the block is hidden), and the summary is lifted
+   to the top-left as a plain black-on-white document. Styled with plain CSS on purpose —
+   the printout must not depend on the app's theme. Pages without the block print normally. */
+#print-summary { display: none; }
+@media print {
+  @page { margin: 1.4cm; }
+  body:has(#print-summary) * { visibility: hidden; }
+  body:has(#print-summary) #print-summary,
+  body:has(#print-summary) #print-summary * { visibility: visible; }
+  body:has(#print-summary) #print-summary {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  body:has(#print-summary) #print-summary h1 { font-size: 17px; font-weight: 800; margin: 0 0 2px; }
+  body:has(#print-summary) #print-summary .ps-meta { font-size: 11px; color: #333; border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+  body:has(#print-summary) #print-summary .ps-section { margin-bottom: 9px; break-inside: avoid; }
+  body:has(#print-summary) #print-summary .ps-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #111; margin-bottom: 2px; }
+  body:has(#print-summary) #print-summary .ps-list { margin: 0; padding-left: 1.1rem; }
+  body:has(#print-summary) #print-summary .ps-list li { margin: 1px 0; }
+  body:has(#print-summary) #print-summary .ps-note { font-size: 10.5px; color: #444; margin-top: 2px; }
+  body:has(#print-summary) #print-summary .ps-footer { border-top: 1px solid #000; margin-top: 12px; padding-top: 6px; font-size: 10.5px; color: #333; }
+  body:has(#print-summary) #print-summary .ps-footer p { margin: 2px 0; }
+}

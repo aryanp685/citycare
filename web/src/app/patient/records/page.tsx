@@ -1,23 +1,70 @@
 import { viewerForPage } from "@/lib/session";
-import { recordSections, toRuleRecord, fmtIstDate } from "@/lib/repo";
+import { recordSections, toRuleRecord, fmtIstDate, patientById } from "@/lib/repo";
 import { runAllRules } from "@/lib/rules";
+import { buildSeries } from "@/lib/trends";
+import { buildPrintSummary } from "@/lib/print-summary";
 import { Card, Badge, SectionTitle, EmptyNote } from "@/components/ui";
 import { PhotoPaste } from "@/components/photo-paste";
 import { DocumentManager } from "@/components/document-manager";
 import { ConfirmDraftButton } from "@/components/confirm-draft";
 import { ClinicalDisclaimer } from "@/components/clinical-disclaimer";
 import { TrendsCard } from "@/components/trends";
+import { PrintSummary } from "@/components/print-summary";
+import { PrintButton } from "@/components/print-button";
 
 export default async function RecordsPage() {
   const v = await viewerForPage("PATIENT");
   const pid = v.profileId;
   const rec = await recordSections(pid);
+  const patient = await patientById(pid);
   const today = new Date().toISOString().slice(0, 10);
   const alerts = runAllRules(toRuleRecord(rec), today);
   const drafts = rec.medications.filter((m) => (m.notes ?? "").startsWith("DRAFT:"));
 
+  // F18: the printable visit summary — same record data, the exact lines built by the
+  // pure lib/print-summary (unit-tested). Hidden on screen; @media print makes it the page.
+  const series = buildSeries(
+    rec.observations.map((o) => ({ name: o.name, valueNum: o.valueNum, unit: o.unit, refLow: o.refLow, refHigh: o.refHigh, takenOn: o.takenOn })),
+  );
+  const printData = patient
+    ? buildPrintSummary({
+        patient: {
+          fullName: patient.fullName,
+          dateOfBirth: patient.dateOfBirth?.toISOString() ?? null,
+          gender: patient.gender,
+          bloodGroup: patient.bloodGroup,
+          city: patient.city,
+          abhaId: patient.abhaId,
+        },
+        generatedAt: new Date().toISOString(),
+        audience: "patient",
+        allergies: rec.allergies.map((a) => ({ allergen: a.allergen, severity: a.severity })),
+        conditions: rec.conditions,
+        medications: rec.medications,
+        observations: series.map((s) => ({ name: s.name, unit: s.unit, latest: s.latest, direction: s.direction, band: s.latestBand, points: s.pointsUsed })),
+        labs: rec.labs.slice(0, 5).map((l) => ({
+          testName: l.testName,
+          value: l.value,
+          unit: l.unit,
+          refRangeLow: l.refRangeLow,
+          refRangeHigh: l.refRangeHigh,
+          takenOn: l.takenOn?.toISOString() ?? null,
+        })),
+        lastEncounter: rec.encounters[0]
+          ? {
+              encounterDate: rec.encounters[0].encounterDate.toISOString(),
+              diagnosisText: rec.encounters[0].diagnosisText,
+              doctor: rec.encounters[0].doctor,
+              advice: rec.encounters[0].advice,
+              followUpOn: rec.encounters[0].followUpOn?.toISOString() ?? null,
+            }
+          : null,
+      })
+    : null;
+
   return (
     <div className="grid md:grid-cols-2 gap-4">
+      {printData && <PrintSummary s={printData} />}
       <div className="grid gap-4 content-start md:col-span-2">
         <ClinicalDisclaimer audience="patient" />
         <Card className="flex flex-wrap items-center justify-between gap-3">
@@ -25,10 +72,14 @@ export default async function RecordsPage() {
             <div className="font-bold">Your record is yours to take</div>
             <p className="text-sm text-muted mt-0.5">Download everything as a <strong>FHIR R4</strong> bundle — the format ABDM and every modern hospital system speaks. Drafts are excluded; the export itself is logged.</p>
           </div>
-          <a className="btn btn-ghost" href="/api/patient/fhir" download>
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
-            Export FHIR R4 (JSON)
-          </a>
+          <div className="flex items-center gap-2">
+            <a className="btn btn-ghost" href="/api/patient/fhir" download>
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
+              Export FHIR R4 (JSON)
+            </a>
+            {/* F18: the visit summary another hospital can actually use — printed / saved as PDF */}
+            <PrintButton logExport />
+          </div>
         </Card>
         <Card className="border-teal-200">
           <SectionTitle right={<span className="text-xs text-muted">nothing here is a doctor&apos;s report — it is a draft until you tap confirm</span>}>

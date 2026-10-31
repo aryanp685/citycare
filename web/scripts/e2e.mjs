@@ -906,6 +906,58 @@ console.log("\n— 12. F5: self-reported readings + trends (the Observation tabl
   const gone = await sql(`SELECT count(*)::int n FROM "Observation" WHERE id=$1`, [posted.data?.observation?.id]);
   check("F5: the deleted row is gone from the DB", gone?.rows[0]?.n === 0, JSON.stringify(gone?.rows[0]));
 }
+
+console.log("\n— 13. F18: print / PDF visit summary —");
+{
+  // Extract just the hidden print block from a page (it ends with the footer line).
+  // The footer text can appear elsewhere on the page (banners) — so search from the
+  // block's own start, not from 0.
+  const printBlock = (html) => {
+    const start = html.indexOf('id="print-summary"');
+    if (start === -1) return null;
+    const end = html.indexOf("citycare (demo build)", start);
+    return end > start ? html.slice(start, end + 120) : html.slice(start, start + 6000);
+  };
+
+  const ramesh18 = new Session("ramesh-f18");
+  await ramesh18.post("/api/auth/login", { email: "ramesh@demo.in", password: "city1234" });
+  const page = await ramesh18.raw("/patient/records");
+  const html = new TextDecoder().decode(page.bytes);
+  const block = printBlock(html);
+  check("F18: /patient/records carries the hidden print summary", page.status === 200 && !!block, `status ${page.status}`);
+  check("F18: the block has identity + confirmed medicines + trend line + disclaimer", !!block && block.includes("visit summary") && block.includes("Metformin") && block.includes("HbA1c") && /not a diagnosis/i.test(block), block ? block.slice(0, 200) : "no block");
+
+  // sunita: the DRAFT medication (Tab. Brufen) must be EXCLUDED from the printout
+  const sunita18 = new Session("sunita-f18");
+  await sunita18.post("/api/auth/login", { email: "sunita@demo.in", password: "city1234" });
+  const sPage = await sunita18.raw("/patient/records");
+  const sBlock = printBlock(new TextDecoder().decode(sPage.bytes));
+  check("F18: unconfirmed DRAFT med is never printed as a medicine", !!sBlock && !sBlock.includes("Tab. Brufen") && sBlock.includes("unconfirmed draft(s) from old paperwork excluded"), sBlock ? sBlock.slice(0, 200) : "no block");
+
+  const unauth18 = new Session("anon-f18");
+  check("F18: unauthenticated export-log → 401", (await unauth18.post("/api/patient/print-summary", {})).status === 401);
+  const logged = await ramesh18.post("/api/patient/print-summary", {});
+  check("F18: patient's print export is logged (200 + {logged:true})", logged.status === 200 && logged.data?.logged === true, `${logged.status} ${JSON.stringify(logged.data)}`);
+  const ledgerRow = await sql(
+    `SELECT count(*)::int n FROM "AuditLog" a JOIN "Patient" p ON p.id=a."entityId" JOIN "User" u ON u.id=p."userId"
+      WHERE a.action='EXPORT_PRINT_SUMMARY' AND u.email='ramesh@demo.in'`,
+  );
+  check("F18: EXPORT_PRINT_SUMMARY is on ramesh's ledger", ledgerRow?.rows[0]?.n >= 1, JSON.stringify(ledgerRow?.rows[0]));
+
+  // doctor side: anita → dr.sheikh live FULL_RECORD (seeded); dr.kulkarni has no consent for ramesh
+  const anitaId = await sql(`SELECT p.id FROM "Patient" p JOIN "User" u ON u.id = p."userId" WHERE u.email='anita@demo.in'`);
+  const sheikh18 = new Session("dr.sheikh-f18");
+  await sheikh18.post("/api/auth/login", { email: "dr.sheikh@demo.in", password: "city1234" });
+  const dPage = await sheikh18.raw(`/doctor/patients/${anitaId?.rows[0]?.id}`);
+  const dBlock = printBlock(new TextDecoder().decode(dPage.bytes));
+  check("F18: consent-holding doctor's page carries the scoped print summary", dPage.status === 200 && !!dBlock && dBlock.includes("Asthma") && dBlock.includes("shared under consent"), `status ${dPage.status}`);
+
+  const rameshId = await sql(`SELECT p.id FROM "Patient" p JOIN "User" u ON u.id = p."userId" WHERE u.email='ramesh@demo.in'`);
+  const kulkarni18 = new Session("dr.kulkarni-f18");
+  await kulkarni18.post("/api/auth/login", { email: "dr.kulkarni@demo.in", password: "city1234" });
+  const noPage = await kulkarni18.raw(`/doctor/patients/${rameshId?.rows[0]?.id}`);
+  check("F18: a doctor WITHOUT live consent gets NO print block at all", noPage.status === 200 && !new TextDecoder().decode(noPage.bytes).includes("print-summary"), `status ${noPage.status}`);
+}
 if (pgClient) await pgClient.end();
 
 console.log(`\n========================\n e2e: ${pass} passed, ${failc} failed${skipped ? `, ${skipped} skipped (runtime-specific)` : ""}\n========================`);
