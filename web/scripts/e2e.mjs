@@ -63,7 +63,7 @@ class Session {
   post(path, body, form = false) { return this.req("POST", path, body, form); }
   patch(path, body) { return this.req("PATCH", path, body); }
   put(path, body) { return this.req("PUT", path, body); }
-  del(path) { return this.req("DELETE", path); }
+  del(path, body) { return this.req("DELETE", path, body); }
 }
 
 const stamp = Date.now().toString(36);
@@ -88,6 +88,12 @@ const utcMinFor = (h, m) => (h * 60 + m) - 330; // IST wall -> minutes offset fr
 function istSlot(h, m = 0) {
   return new Date(Date.parse(DAY + "T00:00:00Z") + utcMinFor(h, m) * 60000).toISOString();
 }
+// Calendar-year DOB, not `now − N×365.25d`: the fractional day drifts the synthetic DOB by
+// up to a full day around the exact Nth anniversary, and on that day the expected age flips
+// (hit for real on 2026-11-01: 7×365.25d lands 06 h into the NEXT day, so "age 7" was 6).
+// UTC midnight of the anniversary: ageFrom is UTC-based, so age === N for the whole day.
+function dobYearsAgo(n) { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - n); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); }
+
 let bookedAt = null;
 let e2eDoctorId = null; // set in §4, reused in §11
 const uniqPhone = (lead) => lead + String(Date.now() % 1_000_000_000).padStart(9, "0");
@@ -626,13 +632,13 @@ console.log("\n— 10. server sessions (D2/D14), re-consent 428 (L2), grievance 
   // --- dependents (F13 / L-G4) ---
   const dep0 = await pat.get("/api/patient/dependents");
   check("F13: dependents start empty", dep0.status === 200 && dep0.data?.dependents?.length === 0, JSON.stringify(dep0.data));
-  const adultDob = new Date(Date.now() - 20 * 365.25 * 86400e3).toISOString();
-  const depAdult = await pat.post("/api/patient/dependents", { name: "Grown Up", dateOfBirth: adultDob, relation: "PARENT", guardianDateOfBirth: new Date(Date.now() - 45 * 365.25 * 86400e3).toISOString() });
+  const adultDob = dobYearsAgo(20);
+  const depAdult = await pat.post("/api/patient/dependents", { name: "Grown Up", dateOfBirth: adultDob, relation: "PARENT", guardianDateOfBirth: dobYearsAgo(45) });
   check("F13: an adult cannot be added as a dependent → 400 not_a_minor", depAdult.status === 400 && depAdult.data?.code === "not_a_minor", `${depAdult.status} ${JSON.stringify(depAdult.data)}`);
-  const childDob = new Date(Date.now() - 7 * 365.25 * 86400e3).toISOString();
-  const depMinorGuardian = await pat.post("/api/patient/dependents", { name: "Kid One", dateOfBirth: childDob, relation: "PARENT", guardianDateOfBirth: new Date(Date.now() - 16 * 365.25 * 86400e3).toISOString() });
+  const childDob = dobYearsAgo(7);
+  const depMinorGuardian = await pat.post("/api/patient/dependents", { name: "Kid One", dateOfBirth: childDob, relation: "PARENT", guardianDateOfBirth: dobYearsAgo(16) });
   check("F13: a minor guardian is refused → 403 guardian_not_adult", depMinorGuardian.status === 403 && depMinorGuardian.data?.code === "guardian_not_adult", `${depMinorGuardian.status} ${JSON.stringify(depMinorGuardian.data)}`);
-  const dep1 = await pat.post("/api/patient/dependents", { name: `Kid ${stamp}`, dateOfBirth: childDob, gender: "FEMALE", relation: "PARENT", guardianDateOfBirth: new Date(Date.now() - 34 * 365.25 * 86400e3).toISOString() });
+  const dep1 = await pat.post("/api/patient/dependents", { name: `Kid ${stamp}`, dateOfBirth: childDob, gender: "FEMALE", relation: "PARENT", guardianDateOfBirth: dobYearsAgo(34) });
   check("F13: dependent added → 201 (guardian DOB stored, r.10 age check)", dep1.status === 201 && !!dep1.data?.id && dep1.data?.age === 7, `${dep1.status} ${JSON.stringify(dep1.data)}`);
   const sw = await pat.post(`/api/patient/dependents/${dep1.data?.id}/switch`, {});
   check("F13: switch into the dependent → new session", sw.status === 200 && sw.data?.actingFor === dep1.data?.id, `${sw.status} ${JSON.stringify(sw.data)}`);
@@ -791,7 +797,7 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
     const kl = await kidS.post("/api/auth/login", { email: `kid.${stamp}@e2e.test`, password: "kidpassword123" });
     const kme = await kidS.get("/api/auth/me");
     check("D49: the adult signs in to their own account with the same profile", kl.status === 200 && kme.data?.viewer?.role === "PATIENT" && kme.data?.viewer?.profileId === kid.id && kme.data?.viewer?.actingFor === null, `${kl.status} ${JSON.stringify(kme.data)}`);
-    const firstMut = await kidS.post("/api/patient/dependents", { name: "X", dateOfBirth: new Date(Date.now() - 5 * 365.25 * 86400e3).toISOString(), relation: "PARENT" });
+    const firstMut = await kidS.post("/api/patient/dependents", { name: "X", dateOfBirth: dobYearsAgo(5), relation: "PARENT" });
     const recoveryStillWorks = await kidS.get("/api/auth/recovery-codes");
     check("D49: recovery endpoints stay reachable under a stale notice (never lock someone out of recovery)", recoveryStillWorks.status === 200, `got ${recoveryStillWorks.status}`);
     check("D49: the guardian's on-behalf acceptance is withdrawn — first mutation → 428 consent_outdated", firstMut.status === 428, `got ${firstMut.status}`);
@@ -853,6 +859,52 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
   const h = await fetch(BASE + "/api/health");
   const hj = await h.json().catch(() => ({}));
   check("D31: /api/health reports documentKey source + anchor signing + e-mail delivery flags", ["env", "derived"].includes(hj.config?.documentKey) && typeof hj.config?.anchorSigning === "boolean" && typeof hj.config?.emailDelivery === "boolean", JSON.stringify(hj.config));
+}
+
+console.log("\n— 12. F5: self-reported readings + trends (the Observation table, wired) —");
+{
+  const ramesh = new Session("ramesh");
+  const login = await ramesh.post("/api/auth/login", { email: "ramesh@demo.in", password: "city1234" });
+  check("F5: ramesh demo login", login.status === 200, `got ${login.status}`);
+
+  const anon = new Session("anon-f5");
+  const unauth = await anon.post("/api/patient/observations", { name: "Fasting glucose", valueNum: 100, unit: "mg/dL", takenOn: new Date().toISOString() });
+  check("F5: unauthenticated log-reading → 401", unauth.status === 401, `got ${unauth.status}`);
+
+  const posted = await ramesh.post("/api/patient/observations", { name: "Fasting glucose", valueNum: 132, unit: "mg/dL", refLow: 70, refHigh: 110, takenOn: new Date().toISOString() });
+  check("F5: log a self-reported reading → 201 + id", posted.status === 201 && typeof posted.data?.observation?.id === "string", `${posted.status} ${JSON.stringify(posted.data)}`);
+  const dbRow = await sql(`SELECT count(*)::int n FROM "Observation" WHERE id=$1 AND "valueNum"=132`, [posted.data?.observation?.id]);
+  check("F5: the row is in the DB under ramesh with its numeric value", dbRow?.rows[0]?.n === 1, JSON.stringify(dbRow?.rows[0]));
+
+  const badVal = await ramesh.post("/api/patient/observations", { name: "Fasting glucose", valueNum: "abc", unit: "mg/dL", takenOn: new Date().toISOString() });
+  check("F5: non-numeric value → 400 validation", badVal.status === 400 && badVal.data?.code === "validation", `${badVal.status} ${JSON.stringify(badVal.data)}`);
+  const future = await ramesh.post("/api/patient/observations", { name: "Fasting glucose", valueNum: 100, takenOn: new Date(Date.now() + 30 * 86400e3).toISOString() });
+  check("F5: a date 30 days in the future → 400 (tz drift yes, prophecy no)", future.status === 400, `got ${future.status}`);
+  const badBand = await ramesh.post("/api/patient/observations", { name: "Fasting glucose", valueNum: 100, refLow: 110, refHigh: 70, takenOn: new Date().toISOString() });
+  check("F5: refLow above refHigh → 400", badBand.status === 400, `got ${badBand.status}`);
+  const huge = await ramesh.post("/api/patient/observations", { name: "Fasting glucose", valueNum: 1e9, takenOn: new Date().toISOString() });
+  check("F5: implausible magnitude (1e9) → 400", huge.status === 400, `got ${huge.status}`);
+
+  const page = await ramesh.raw("/patient/records");
+  const html = new TextDecoder().decode(page.bytes);
+  check("F5: /patient/records renders the Trends card with ramesh's seeded series", page.status === 200 && html.includes("Trends") && html.includes("HbA1c") && html.includes("Fasting glucose"), `status ${page.status}`);
+  check("F5: the just-logged 132 appears on the page", html.includes("132"), "value not found in HTML");
+
+  const anitaId = await sql(`SELECT p.id FROM "Patient" p JOIN "User" u ON u.id = p."userId" WHERE u.email='anita@demo.in'`);
+  const sheikh = new Session("dr.sheikh");
+  await sheikh.post("/api/auth/login", { email: "dr.sheikh@demo.in", password: "city1234" });
+  const rec = await sheikh.get(`/api/doctor/patients/${anitaId?.rows[0]?.id}/record`);
+  const obs = rec.data?.record?.observations ?? [];
+  check("F5: doctor record exposes anita's self-reported readings under the live FULL_RECORD consent", rec.status === 200 && obs.length >= 4 && obs.some((o) => o.name === "Peak flow"), `${rec.status} obs=${obs.length}`);
+  check("F5: doctor-facing rows are ISO-serialized with numeric values", obs.length > 0 && obs.every((o) => typeof o.takenOn === "string" && typeof o.valueNum === "number"), JSON.stringify(obs[0]));
+
+  const strangerObs = await sql(`SELECT id FROM "Observation" WHERE "patientId"=$1 LIMIT 1`, [anitaId?.rows[0]?.id]);
+  const foreignDel = await ramesh.del("/api/patient/observations", { id: strangerObs?.rows[0]?.id });
+  check("F5: deleting ANOTHER patient's reading by UUID → 404", foreignDel.status === 404, `got ${foreignDel.status}`);
+  const selfDel = await ramesh.del("/api/patient/observations", { id: posted.data?.observation?.id });
+  check("F5: patient deletes their own reading → deleted", selfDel.status === 200 && selfDel.data?.deleted === true, `${selfDel.status} ${JSON.stringify(selfDel.data)}`);
+  const gone = await sql(`SELECT count(*)::int n FROM "Observation" WHERE id=$1`, [posted.data?.observation?.id]);
+  check("F5: the deleted row is gone from the DB", gone?.rows[0]?.n === 0, JSON.stringify(gone?.rows[0]));
 }
 if (pgClient) await pgClient.end();
 

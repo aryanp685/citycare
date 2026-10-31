@@ -68,6 +68,7 @@ export const GET = handler(async (_req, { params }) => {
       prescriptions: sections.prescriptions.map((p) => ({ ...p, issuedOn: p.issuedOn.toISOString() })),
       documents: sections.documents.map((d) => ({ ...d, issuedOn: d.issuedOn?.toISOString() ?? null })),
       labs: sections.labs.map((l) => ({ ...l, takenOn: l.takenOn?.toISOString() ?? null })),
+      observations: sections.observations.map((o) => ({ ...o, takenOn: o.takenOn.toISOString() })),
     },
     alerts,
     digest,

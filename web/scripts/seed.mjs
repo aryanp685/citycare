@@ -192,6 +192,32 @@ for (const [n, docEmail, dx, icd, items] of [
   }
 }
 
+// F5: self-reported readings (the Observation table's first data). Realistic 6-month chronic
+// care arcs, all logged at home (encounterId NULL). Ramesh: diabetes + hypertension.
+// Anita: asthma (peak flow). Each series ends with 5-6 points so the trends view is alive.
+{
+  const insertObs = (patientId, category, name, unit, refLow, refHigh, daysBack, value) =>
+    q(
+      `INSERT INTO "Observation" (id,"patientId","encounterId",category,name,"valueNum",unit,"refLow","refHigh","takenOn")
+       VALUES (gen_random_uuid()::text,$1,NULL,$2,$3,$4,$5,$6,$7,$8)`,
+      [patientId, category, name, value, unit, refLow, refHigh, daysAgo(daysBack)],
+    );
+  // ramesh — diabetes arc (HbA1c target ≤ 7%) + fasting glucose (70–110) + BP (target < 130)
+  for (const [daysBack, value] of [[180, 9.4], [150, 9.2], [120, 8.8], [90, 8.4], [60, 8.1], [30, 7.9]]) {
+    await insertObs(R.id, "lab", "HbA1c", "%", null, 7, daysBack, value);
+  }
+  for (const [daysBack, value] of [[180, 212], [150, 198], [120, 183], [90, 171], [60, 158], [30, 149]]) {
+    await insertObs(R.id, "glucose", "Fasting glucose", "mg/dL", 70, 110, daysBack, value);
+  }
+  for (const [daysBack, value] of [[150, 162], [120, 156], [90, 149], [60, 145], [30, 141]]) {
+    await insertObs(R.id, "blood_pressure", "BP systolic", "mmHg", null, 130, daysBack, value);
+  }
+  // anita — asthma (peak flow, personal best band 350–420)
+  for (const [daysBack, value] of [[75, 300], [45, 318], [15, 334], [3, 358]]) {
+    await insertObs(patIds["anita@demo.in"].id, "respiratory", "Peak flow", "L/min", 350, 420, daysBack, value);
+  }
+}
+
 // appointments: ramesh tomorrow 11:00 IST with Dr. Nair (fresh, consent REQUESTED pending)
 const t11 = tomorrowIst(11, 0);
 const appt1 = await one(

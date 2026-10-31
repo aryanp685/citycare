@@ -99,6 +99,34 @@ export const PhotoSchema = z.object({
   ocrText: z.string().min(1).max(20_000),
 });
 
+/** F5: a self-reported reading (glucose / BP / peak flow / weight …). */
+const ObservationDate = z
+  .string()
+  .refine((s) => {
+    const t = Date.parse(s);
+    if (Number.isNaN(t)) return false;
+    if (t < Date.parse("2000-01-01")) return false; // a 1994 blood sugar is a data-entry error
+    if (t > Date.now() + 2 * 86_400_000) return false; // at most 2 days ahead (tz drift, not prophecy)
+    return true;
+  }, "takenOn must be a real date, no earlier than 2000 and no more than 2 days ahead");
+
+export const ObservationSchema = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    valueNum: z.number().finite().refine((n) => Math.abs(n) < 1_000_000, "value out of plausible range"),
+    unit: z.string().trim().max(16).optional().nullable(),
+    category: z.string().trim().min(1).max(40).default("self_reported"),
+    takenOn: ObservationDate,
+    refLow: z.number().finite().optional().nullable(),
+    refHigh: z.number().finite().optional().nullable(),
+  })
+  .refine((o) => o.refLow == null || o.refHigh == null || o.refLow < o.refHigh, {
+    message: "refLow must be below refHigh",
+    path: ["refLow"],
+  });
+
+export const ObservationDeleteSchema = z.object({ id: z.string().uuid() });
+
 export const BookingSchema = z.object({
   doctorId: z.string().uuid(),
   scheduledAt: z.string().datetime(), // full ISO with Z from the slots API

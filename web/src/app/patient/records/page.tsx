@@ -6,6 +6,7 @@ import { PhotoPaste } from "@/components/photo-paste";
 import { DocumentManager } from "@/components/document-manager";
 import { ConfirmDraftButton } from "@/components/confirm-draft";
 import { ClinicalDisclaimer } from "@/components/clinical-disclaimer";
+import { TrendsCard } from "@/components/trends";
 
 export default async function RecordsPage() {
   const v = await viewerForPage("PATIENT");
@@ -41,6 +42,21 @@ export default async function RecordsPage() {
         <SectionTitle right={<span className="kbd">AES-256-GCM</span>}>Files — reports, prescriptions, scans</SectionTitle>
         <DocumentManager />
       </Card>
+
+      {/* F5: the longitudinal record — self-reported readings between visits, with trends. */}
+      <TrendsCard
+        rows={rec.observations.map((o) => ({
+          id: o.id,
+          name: o.name,
+          category: o.category,
+          valueNum: o.valueNum,
+          unit: o.unit,
+          refLow: o.refLow,
+          refHigh: o.refHigh,
+          takenOn: o.takenOn.toISOString(),
+          encounterId: o.encounterId,
+        }))}
+      />
 
       <Card className="md:col-span-1">
         <SectionTitle>Timeline</SectionTitle>

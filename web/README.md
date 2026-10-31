@@ -70,6 +70,14 @@ Optional: `RESEND_API_KEY` + `EMAIL_FROM` turn the e-mail `Outbox` into real del
 | Erasure that erases (and keeps the receipt) | `src/app/api/patient/purge/route.ts` |
 | Patient transparency screen | `src/app/patient/access/page.tsx` |
 
+## Verified on 2026-11-01 — F5 shipped (this sandbox, commands actually run)
+
+- `npx tsc --noEmit` → clean · `npx eslint .` → clean · `npx vitest run` → **151/151** (17 files)
+- `node scripts/e2e.mjs` (local, Node prod server, migrations through `0005`) → **232 passed / 0 failed** (217 baseline + 15 `F5:`); the production `BASE=https://<new>.vercel.app` run happens right after the next deploy (this sandbox cannot reach `*.vercel.app`)
+- `NODE_OPTIONS=--max-old-space-size=1150 npx next build` → clean, `BUILD_ID` present
+- New this round: **F5 longitudinal trends** — the dead `Observation` table is wired (D60 closed): 21 seed rows over 4 realistic series, reference bands + hand-rolled SVG sparkline (zero libraries), consent-scoped read-only on the doctor side, Zod-validated + ledgered log/delete API, direction decided in the pure deterministic `src/lib/trends.ts`. Plus **A75**: the e2e suite's `now − N×365.25d` synthetic DOBs drifted a day on exact anniversaries (surfaced on 2026-11-01, the synthetic child's 7th birthday) — replaced with calendar-year math, all five sites swept.
+- Demo data was re-seeded after the e2e run (e2e creates users/appointments)
+
 ## Verified on 2026-09-29, round 3 (this machine + live, commands actually run)
 
 - `npx tsc --noEmit -p .` → clean · `npx eslint .` → clean · `npx vitest run` → **131/131** (16 files)
