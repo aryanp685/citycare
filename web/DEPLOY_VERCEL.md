@@ -18,6 +18,7 @@ pinned next to the database, free tier that fits a non-commercial project.
 |---|---|
 | `next build` of this exact tree (locally and on Vercel's builder) | OK (26 routes) |
 | `scripts/db-bootstrap.sh` on a **fresh** database → schema + UTC pin + seed, all asserted | OK locally (2nd run idempotent; tampered ledger → **exit 1**) **and on Neon** (25 tables · UTC · 9 users · ledger 0 breaks; re-run skipped both steps) |
+| `scripts/db-bootstrap-node.mjs` (pure-node equivalent for machines **without psql**, e.g. stock macOS) — same steps, same asserts | OK 2026-10-31 in a psql-less sandbox: fresh DB → 35 tables + UTC pin + migrations + seed (11 users, ledger 0 breaks) → `✔ database ready`; re-run skips schema+seed and exits 0 in 0.1 s |
 | Pool hardening for serverless Postgres (`error` listener, idle/connect timeouts, one retry on server-went-away) | OK — unit 72/72; local prod e2e 55/55 ×2; 9 idle backends killed server-side while serving → next request still 200 |
 | **Real deploy** (`vercel deploy --prod`) | **DONE** — https://citycare-xi.vercel.app, Ready, target production, `x-vercel-id … sin1` |
 | **e2e against the live URL** | **52 passed · 0 failed · 5 skipped** ×2 (skips = X-Forwarded-* proxy simulation, meaningless behind Vercel's real proxy) |

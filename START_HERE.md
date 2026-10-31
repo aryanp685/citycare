@@ -21,6 +21,7 @@ cp .env.example .env.local        # fill SESSION_SECRET, CRON_SECRET, DOCUMENT_K
 npm install
 export DATABASE_URL=postgres://citycare:citycare@127.0.0.1:5432/citycare   # Postgres 17 with role/db "citycare"
 FORCE_SEED=1 bash scripts/db-bootstrap.sh                                    # schema + migrations + demo data
+# (no psql on the machine? identical, pure-node: node scripts/db-bootstrap-node.mjs)
 npm run build && npm start                                                   # http://localhost:3000
 npx vitest run && node scripts/e2e.mjs                                       # 131 unit tests, 217 HTTP checks
 ```
