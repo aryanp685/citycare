@@ -70,6 +70,15 @@ Optional: `RESEND_API_KEY` + `EMAIL_FROM` turn the e-mail `Outbox` into real del
 | Erasure that erases (and keeps the receipt) | `src/app/api/patient/purge/route.ts` |
 | Patient transparency screen | `src/app/patient/access/page.tsx` |
 
+## Verified on 2026-11-01 — A76: production 500 fixed (schema ⇄ code now move together)
+
+- **Incident**: the live site 500'd on `/patient` (and every record page) — F5's migration `0005` had never been applied to the production Neon, because Vercel deploys run `next build` and **nothing applies migrations**. Reproduced locally: scratch DB with base SQL + migrations 0001–0004 only, then the exact `recordSections` Observation query → `ERROR 42703: column "refLow" does not exist`
+- **Fix**: a `prebuild` hook (`web/scripts/prebuild-schema-sync.mjs`) — every `npm run build` first runs the idempotent `db-bootstrap-node.mjs` when `DATABASE_URL` is set: migrations always, base SQL + seed only on a fresh database. A schema the code can't run against now **fails the build loudly** (negative-tested: unreachable URL → prebuild exits 1 before `next build` starts) instead of shipping a 500; local builds without `DATABASE_URL` are untouched
+- On the repro DB: prebuild applied `0005` + seeded the empty DB → the failing query returns rows; idempotent re-run exits 0; no-`DATABASE_URL` no-op exits 0
+- `npx vitest run` → **162/162** (18 files) · `npx tsc --noEmit` clean · `npx eslint .` clean · `next build` clean (`BUILD_ID` present)
+- `node scripts/e2e.mjs` on a fresh seed → **241 passed / 0 failed** (240 + 1 new `A76:` check — the logged-in `/patient` home that shipped broken now has a regression guard over real HTTP)
+- **The merge IS the fix**: Vercel's build of the merge runs `prebuild` → applies `0005` to the production Neon → the site self-heals. The sandbox cannot reach `*.vercel.app`; owner confirmation on the live URL is the last step
+
 ## Verified on 2026-11-01 — F5 + F18 shipped (this sandbox, commands actually run)
 
 - `npx tsc --noEmit` → clean · `npx eslint .` → clean · `npx vitest run` → **162/162** (18 files)
