@@ -127,6 +127,14 @@ let doctorId = null;
   });
   check("onboarding save", prof.status === 200);
 
+  // A76 guard: /patient is the first page a user sees after login and it calls
+  // recordSections — the 2026-11-01 production incident (migration 0005 never applied on
+  // Neon → "column refLow does not exist" → 500) shipped silently because no check ever
+  // rendered this page over HTTP.
+  const home = await pat.raw("/patient");
+  const homeHtml = new TextDecoder().decode(home.bytes);
+  check("A76: logged-in patient's /patient home renders 200 with content (schema ⇄ code in sync)", home.status === 200 && homeHtml.includes("Upcoming appointments"), `status ${home.status}`);
+
   const dup = await pat.post("/api/auth/signup", {
     role: "PATIENT", acceptPolicy: true, adult: true, name: "Dup", email: `e2e.p.${stamp}@e2e.test`, phone: "9999999998", password: "e2epassword1",
   });

@@ -19,6 +19,7 @@ pinned next to the database, free tier that fits a non-commercial project.
 | `next build` of this exact tree (locally and on Vercel's builder) | OK (26 routes) |
 | `scripts/db-bootstrap.sh` on a **fresh** database → schema + UTC pin + seed, all asserted | OK locally (2nd run idempotent; tampered ledger → **exit 1**) **and on Neon** (25 tables · UTC · 9 users · ledger 0 breaks; re-run skipped both steps) |
 | `scripts/db-bootstrap-node.mjs` (pure-node equivalent for machines **without psql**, e.g. stock macOS) — same steps, same asserts | OK 2026-10-31 in a psql-less sandbox: fresh DB → 35 tables + UTC pin + migrations + seed (11 users, ledger 0 breaks) → `✔ database ready`; re-run skips schema+seed and exits 0 in 0.1 s |
+| `prebuild` schema sync (A76, 2026-11-01): every `npm run build` first applies migrations when `DATABASE_URL` is set — the 500 on the live `/patient` (migration 0005 never applied on Neon) can no longer happen | OK 2026-11-01: repro DB (base + 0001–0004) → `prebuild` applies 0005 + seeds → the failing query returns rows; idempotent re-run exit 0; unreachable URL → build fails before `next build`; no `DATABASE_URL` → no-op |
 | Pool hardening for serverless Postgres (`error` listener, idle/connect timeouts, one retry on server-went-away) | OK — unit 72/72; local prod e2e 55/55 ×2; 9 idle backends killed server-side while serving → next request still 200 |
 | **Real deploy** (`vercel deploy --prod`) | **DONE** — https://citycare-xi.vercel.app, Ready, target production, `x-vercel-id … sin1` |
 | **e2e against the live URL** | **52 passed · 0 failed · 5 skipped** ×2 (skips = X-Forwarded-* proxy simulation, meaningless behind Vercel's real proxy) |
@@ -84,12 +85,16 @@ BASE=https://citycare-xi.vercel.app node scripts/e2e.mjs     # expect 52 passed,
 ## Deploy — option B: no CLI, no token (GitHub import)
 
 1. Push `citycare/` to a GitHub repo.
-2. Run **only** the database step yourself: `DATABASE_URL=… npm run db:bootstrap`.
+2. Database: since A76 (2026-11-01) the **build itself** runs `prebuild` → `db-bootstrap-node.mjs` when
+   `DATABASE_URL` is set, so a fresh database gets its schema + migrations + demo seed from the first
+   deploy. Running `DATABASE_URL=… npm run db:bootstrap` yourself beforehand is still fine (it's
+   idempotent — the build then just skips).
 3. vercel.com → *Add New → Project* → import the repo → **Root Directory: `web`** → Environment
    Variables: `DATABASE_URL`, `SESSION_SECRET` (≥ 32 random chars), `CRON_SECRET`, `DOCUMENT_KEY` (32-byte base64), `ANCHOR_SIGNING_KEY` (Ed25519 PKCS8 base64, optional) → Deploy.
 4. Project → *Settings → Functions → Function Region* should read **Singapore (sin1)** (picked up
    from `vercel.json`; set it by hand if not).
-Every later `git push` redeploys — handy between viva iterations.
+Every later `git push` redeploys — handy between viva iterations — and every new `schema/migrations/*.sql`
+is applied automatically on that deploy (A76: code and schema always move together).
 
 ## Things to know
 
