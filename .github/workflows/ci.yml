@@ -1,5 +1,6 @@
 # F19 — CI gate: the same four checks the deploy script relies on, on every push / PR.
-# Runs against a throw-away Postgres 17 so the e2e suite (286 HTTP checks) is real, not mocked.
+# Runs against a throw-away Postgres 17 so the e2e suite (305 HTTP checks as of Day 2)
+# is real, not mocked.
 #
 # 2026-11-02 (NG-S11, Day 2): CI e2e was failing because the backup/DR section (B + S16)
 # needs a backup store, which the CI env did not provide. CI now generates a throwaway

@@ -81,6 +81,23 @@ NG-L17).
 HSTS value is NOT VERIFIED until NG-G04's owner run; NG-F03/NG-F05 have VERIFIED absence
 plus REPORTED market context.)*
 
+**Day 2 status overrides (2026-11-02 — these three findings moved; the counts above are the
+consolidation-time snapshot and are superseded for these IDs only):**
+- **NG-S10** (was PARTIALLY VERIFIED) → **PARTIALLY IMPLEMENTED**: health/cron routes
+  hardened + liveness/readiness contract + 6 unit tests + live before/after probes +
+  monitoring ops doc with owner-side monitor setup; external monitor still BLOCKED (owner
+  account). Not RESOLVED.
+- **NG-S11** (was BLOCKED — "Actions disabled") → **PARTIALLY IMPLEMENTED**: the premise was
+  stale — runs had been executing; A90/A91 fixed in Day 2, CI **green on the branch**
+  (41441262459 + 41441271173 on `6475348`, both SUCCESS). Green-on-`main` PENDING OWNER
+  MERGE; branch protection BLOCKED (403 from the work environment — owner procedure
+  committed). Not RESOLVED.
+- **NG-S14** (was Open) → **PARTIALLY IMPLEMENTED**: demo-seed gate (refuse/skip/seed,
+  fail-safe, no writes before the gate) in `seed.mjs` + both bootstraps; UI disclosures
+  `DEMO_MODE`-gated (pilot build ships zero demo strings — build-verified); 14 unit tests +
+  19 e2e isolation checks (305/305, exit 0). Pilot-URL acceptance + any pre-existing pilot
+  DB audit are owner-side. Not RESOLVED.
+
 **P0 launch blockers (6)** — must close before any real patient data:
 1. **NG-S09** no database backup / DR / tested restore
 2. **NG-S15** *(new)* the live demo **7-day retention sweep is active on the production instance** — a pilot reusing that env would auto-erase real pilot users
@@ -95,9 +112,10 @@ demo-credential isolation (NG-S14) · external pen test (NG-S17) · production e
 officer (NG-F02) · Marathi/Hindi (NG-F03) · ABHA identifier (NG-F05) · verifiable guardian
 age (NG-L11).
 
-**Blocked items (5):** NG-S11 (owner must enable GitHub Actions) · NG-G04 (owner must run
-prod e2e) · NG-S17 (external budget/approval) · NG-L11 (DigiLocker partner credentials) ·
-NG-L19 (ABDM/HPR credentials).
+**Blocked items (5):** NG-S11 *(superseded 2026-11-02: Actions is executing — CI green on
+the branch; remaining owner actions = merge to main + branch-protection permission)* ·
+NG-G04 (owner must run prod e2e) · NG-S17 (external budget/approval) · NG-L11 (DigiLocker
+partner credentials) · NG-L19 (ABDM/HPR credentials).
 **External dependencies (non-blocked):** owner's Resend key + verified domain (NG-F01),
 grievance-officer appointment (NG-F02), translation legal review (NG-F03), prod DB access
 for backup drills (NG-S09), 2+ practising physicians (NG-C06), qualified Indian counsel
@@ -260,6 +278,15 @@ interviews, Hobby ToS caps non-commercial).
 - **Dependencies**: free-tier monitor account (owner).
 - **Recommended solution**: Step-2 W3 — UptimeRobot/BetterStack on `/api/health`; Neon alerts when the paid plan decision (W11) lands.
 - **Required tests**: induced 5-minute outage in staging → alert received.
+
+**Day 2 update (2026-11-02, WS-A):**
+- **Root cause (as found)**: no external probe existed; `/api/health` existed (Day 1) but its DB-down error path returned raw driver text on a public wire (host:port exposure — executed proof on the pre-fix build: `503 {"error":"connect ECONNREFUSED 127.0.0.1:59999"}`), and the liveness/readiness contract was undocumented.
+- **Changes**: (a) `/api/health` + `/api/cron/backup` + `/api/cron/daily` now return **static safe** error text on the wire; only non-sensitive error classes are logged server-side (post-fix probe: `503 {"error":"database unreachable"}` in 0.10 s); (b) liveness (HTTP failure) vs readiness (503 `db_unreachable`/`degraded`) contract documented in the route + ops doc and pinned by tests; (c) backup-failure visibility: stable `[citycare-backup] FATAL` marker + complete failure-mode→signal table + ready-to-configure alert rules R1–R3 (log rule, `backups.stale` JSON assertion, recovery); (d) external monitor: full owner-side setup instructions for UptimeRobot + Better Stack (field-by-field config, JSON assertion, recovery notifications, required first-probe + test-alert verification) — **no monitor was configured and none is claimed active** (no account access from the work environment; nothing simulated).
+- **Changed files**: `web/src/app/api/health/route.ts`, `web/src/app/api/cron/backup/route.ts`, `web/src/app/api/cron/daily/route.ts`, `web/src/lib/__tests__/health-route.test.ts` (new, 6 tests), `web/docs/operations/MONITORING_AND_ALERTING.md` (new), `CITYCARE_DAY_2_MONITORING_REPORT.md` (new).
+- **Test evidence**: 6/6 new unit tests; live before/after DB-down probes (17:33 / 17:35 IST); e2e 305/305 (incl. §16c FATAL-marker checks) on the rebuilt app (2026-11-02).
+- **Owner-side actions**: monitor account + config per ops doc §3/§5 checklist; 5-minute controlled outage drill per ops doc §6 (production outage deliberately not performed from the sandbox).
+- **Remaining blockers**: external monitor account/verification (owner); staging outage drill (owner).
+- **Status: PARTIALLY IMPLEMENTED** (code + local evidence complete; external monitoring BLOCKED on owner-side account — **not RESOLVED**).
 - **Acceptance criteria**: monitor live on the production URL; an induced outage is caught + notified in < 10 min; evidence (screenshot/log) committed.
 - **External deps / approvals**: owner account.
 - **Complexity**: Small · **Status**: Open
@@ -300,7 +327,21 @@ interviews, Hobby ToS caps non-commercial).
 - **Required tests**: fresh pilot-mode DB has 0 users; login with old demo creds → 401; e2e green in both modes.
 - **Acceptance criteria**: pilot URL with 0 seeded users verified by the owner; old creds fail (evidence committed).
 - **External deps / approvals**: owner (deploy of the flag).
-- **Complexity**: Small · **Status**: Open
+
+**Day 2 update (2026-11-02, WS-C):**
+- **Root cause (as found)**: the seed gate was entirely absent — `scripts/seed.mjs` (and both bootstrap scripts) unconditionally created the 11 `@demo.in` demo identities in **every** environment, and the login/landing UI disclosed the published demo credentials unconditionally. Nothing separated the synthetic demo env from a real-data (internal/pilot) env.
+- **Changes**:
+  - **`src/lib/demo-seed-core.mjs`** — the single demo-seed gate. Given `RETENTION_POLICY` + `SEED_DEMO` it returns exactly one of `seed` / `skip` / `refuse` with a machine-readable reason + exit code. Fail-safe: real-data policy (`internal`/`pilot`) with `SEED_DEMO` unset or `1` **refuses** (exit 2) *before any database connection or write*; `SEED_DEMO=0` skips cleanly (exit 0, nothing written, nothing truncated); `demo` keeps its default (seed) for the synthetic demo. Only exactly `0`/`1` are recognised; anything else = unset (never a silent enable). No hostname inference — explicit env vars only.
+  - **`scripts/seed.mjs`** + **`scripts/db-bootstrap.sh`** + **`scripts/db-bootstrap-node.mjs`** honour the gate (skip → "schema only, no demo data" is a valid success; refuse → exit 2, target DB byte-for-byte untouched).
+  - **UI**: login pre-fill + demo-credential hint and the landing "Try it with the demo accounts" CTA are now `DEMO_MODE`-gated (the two spots that were NOT gated before Day 2; the banner/legal notices were already). A pilot build therefore ships **zero** demo strings — verified on a real production build with `NEXT_PUBLIC_DEMO_MODE=0` (0 occurrences of `city1234` / `ramesh@demo.in` / the CTA in the SSR HTML), while the demo build still discloses (1 each).
+  - **`.env.example`** documents the full config matrix.
+- **Changed files**: `web/src/lib/demo-seed-core.mjs` + `.d.mts` (new), `web/src/lib/__tests__/demo-seed-core.test.ts` (new, 14 tests), `web/scripts/seed.mjs`, `web/scripts/db-bootstrap.sh`, `web/scripts/db-bootstrap-node.mjs`, `web/src/app/login/page.tsx`, `web/src/app/page.tsx`, `web/.env.example`, `web/scripts/e2e.mjs` (§17, 19 checks), `web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md` (new).
+- **Test evidence** (all executed 2026-11-02): 14/14 unit tests on the gate matrix; **e2e 305/305, exit 0** — the new §17 section (19 checks) runs on isolated scratch DBs + a real pilot app instance on a fresh pilot DB: demo seed (11 identities, `SEED_DEMO=1` + default); pilot `SEED_DEMO` unset → REFUSE (exit 2, zero rows) and `SEED_DEMO=0` → skip (zero rows, nothing truncated); internal `SEED_DEMO=0` → skip; contradictory (`SEED_DEMO=1` on real data) → REFUSE **with a pre-seeded marker row surviving** (proves no write before the gate); unverified env (no policy, no flag) → REFUSE by default; pilot app boots (health 200, `policy=pilot`, sweep disabled); **published demo creds `ramesh@demo.in` + `dr.kulkarni@demo.in` → 401** on the fresh pilot DB; normal patient + doctor registration/auth works (201 / 200); **zero `@demo.in` users + zero seeded hospitals** in the pilot DB while the real registration is present; pilot cron sweep disabled (0 swept); existing public demo still functional on the synthetic env (login 200 + home 200); cleanup drops all scratch DBs with no leftovers.
+  - A related defect found *during* WS-C is logged as **A92** (`DRAWBACKS_AND_BUGFIXES.md`): the e2e pilot-app section originally orphaned the `next-server` child when it killed only the `npx` pid, which kept the port + scratch DB alive and contaminated the next run — fixed with a `detached` spawn + whole-process-group kill + port pre-check; the re-run that surfaced it is the 305/305 run above.
+- **Owner-side actions (NOT done from the sandbox — no production access)**: set production/pilot env vars (`RETENTION_POLICY=internal|pilot`, `SEED_DEMO=0`, `NEXT_PUBLIC_DEMO_MODE=0` — the last is build-time, so a **redeploy** is required), and audit any **existing** pilot DB that was bootstrapped before this patch (`SELECT count(*) FROM "User" WHERE email ILIKE '%@demo.in'`) — this patch prevents future seeding and removes the UI presentation, but deliberately does **not** touch existing rows (no silent deletion, no patient/audit modification). Full steps: `DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md` §5.
+- **Remaining blockers**: owner deployment of the flag + redeploy; owner audit/cleanup of any pre-existing pilot DB; owner verification that the live pilot URL shows 0 seeded users.
+- **Status: PARTIALLY IMPLEMENTED** (code + tests + docs complete and green locally/CI; pilot-URL acceptance is owner-verified — **not RESOLVED** on local code alone).
+- **Complexity**: Small
 
 #### NG-S17 — No external penetration test has ever been performed *(NEW at consolidation)*
 - **Category**: Security → Assurance
@@ -338,7 +379,14 @@ interviews, Hobby ToS caps non-commercial).
 - **Required tests**: the existing suite via Actions.
 - **Acceptance criteria**: a green Actions run on `main` (link committed to README); D59 closed in the bug log.
 - **External deps / approvals**: owner.
-- **Complexity**: Small · **Status**: Blocked
+
+**Day 2 update (2026-11-02, WS-B + precheck):**
+- **What actually happened**: Actions runs had been executing all along (they were never "disabled" — the 0-second failures were the A90 YAML parse error, fixed in `2caee66` on Day 2's first push). Once the workflow parsed, the FIRST runs that actually executed exposed **A91**: the CI env lacked `BACKUP_KEY` + a writable `BACKUP_DIR`, so the (correctly-failing) backup/DR e2e section turned the whole job red on `f56ea86` (runs [41438463442](https://github.com/aryanp685/citycare/actions/runs/41438463442) push + [41438467092](https://github.com/aryanp685/citycare/actions/runs/41438467092) pull_request, both FAILURE). Root cause fixed in `6475348` (per-run generated `BACKUP_KEY`, explicit `BACKUP_DIR=/tmp/ci-backups` + `mkdir -p`) **without weakening any check**; the affected checks were re-run on GitHub (not locally only): runs [41441262459](https://github.com/aryanp685/citycare/actions/runs/41441262459) (push) + [41441271173](https://github.com/aryanp685/citycare/actions/runs/41441271173) (pull_request) on `6475348` — **both SUCCESS** (12:00–12:03 UTC, all steps green). Full run table: `web/docs/operations/GITHUB_CI_AND_BRANCH_PROTECTION.md` §3.
+- **B1/B2 verified**: the workflow executes every required check class (lockfile install, eslint, tsc, vitest, licence manifest, DB bootstrap + seed, prod build, full e2e incl. backup/DR + retention + the new NG-S14 isolation section) — verified by executed runs, not by reading the YAML. Reliability audit: block-style YAML, concurrency + 20-min timeout, `permissions: {contents: read}` (least privilege), only two official actions **SHA-pinned**, npm cache keyed on the lockfile, no repository secrets consumed (all keys generated per run, never logged), failure reporting strengthened (full failure list + last 200 app-server lines on failure).
+- **B4 branch protection — BLOCKED (recorded, not bypassed)**: `main` is currently **unprotected** (read via API). The work environment's GitHub identity is an integration without repository administration rights — `PUT …/branches/main/protection` returns **403 "Resource not accessible by integration"**. Per brief: not claimed active; exact owner procedure (Web UI checkboxes + equivalent CLI) is committed in `GITHUB_CI_AND_BRANCH_PROTECTION.md` §4.
+- **Acceptance status**: "green CI on `main`" requires the owner to merge PR #6 (branch runs are green; `main` moves only on merge — a green branch with an open PR does not meet the stated acceptance). The final Day 2 run on `60f9c63` (this commit series) is tracked in `CITYCARE_DAY_2_REPORT.md`.
+- **Status: PARTIALLY IMPLEMENTED** (CI gate executes + green on the Day 2 branch; green-on-main PENDING OWNER MERGE; branch protection BLOCKED on owner-side permission).
+- **Complexity**: Small
 
 #### NG-G04 — Production e2e not re-run since F5/F18 (live site unverified)
 - **Category**: Security & Ops → Production verification

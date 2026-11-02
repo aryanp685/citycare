@@ -1602,7 +1602,7 @@ if (!LOCAL || !process.env.DATABASE_URL) {
       catch { try { pilotProc.kill("SIGKILL"); } catch { /* already gone */ } }
     }
     await new Promise((r) => setTimeout(r, 1000)); // let the killed app's sockets close
-    for (const [dbName, c] of Object.entries(scratchClients)) {
+    for (const c of Object.values(scratchClients)) {
       try { await c.end(); } catch { /* ignore */ }
     }
     const leftover = [];
