@@ -1,9 +1,22 @@
 # F19 — CI gate: the same four checks the deploy script relies on, on every push / PR.
 # Runs against a throw-away Postgres 17 so the e2e suite (286 HTTP checks) is real, not mocked.
+#
+# 2026-11-02 (NG-S11, Day 2): CI e2e was failing because the backup/DR section (B + S16)
+# needs a backup store, which the CI env did not provide. CI now generates a throwaway
+# BACKUP_KEY and uses a local BACKUP_DIR, so the backup cron, file verify, full restore
+# drill and document-level drill all execute in CI. CAVEAT: RETENTION_POLICY=demo and the
+# throwaway keys are CI config for a synthetic throwaway env — they must NEVER be blindly
+# copied into production deployment config (see
+# web/docs/operations/GITHUB_CI_AND_BRANCH_PROTECTION.md).
+#
+# 2026-11-02 (NG-S11, Day 2): least-privilege token (contents: read) + both third-party
+# actions pinned to immutable commit SHAs (official actions, no others used).
 name: ci
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -26,24 +39,30 @@ jobs:
       ANCHOR_OTS: "0"           # never call public calendars from CI
       TZ_POLICY: Asia/Kolkata
       RETENTION_POLICY: demo  # CI is a demo-equivalent throwaway env; the S15 e2e checks assert the armed sweep + matching notice copy
+      BACKUP_DIR: /tmp/ci-backups  # throwaway local backup store for the e2e B/S16 backup + restore-drill checks
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci
-      - name: generate CI-only keys (document encryption + anchor signing)
+      - name: generate CI-only keys (document encryption + anchor signing + backup encryption)
         run: |
           echo "DOCUMENT_KEY=$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')" >> "$GITHUB_ENV"
           echo "ANCHOR_SIGNING_KEY=$(node -e 'const {privateKey}=require("crypto").generateKeyPairSync("ed25519");console.log(privateKey.export({format:"der",type:"pkcs8"}).toString("base64"))')" >> "$GITHUB_ENV"
+          echo "BACKUP_KEY=$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')" >> "$GITHUB_ENV"
       - run: npx eslint .
       - run: npx tsc --noEmit -p .
       - run: npx vitest run
       - run: node scripts/licenses.mjs
       - name: schema + demo data
-        run: sudo apt-get install -y -qq postgresql-client && FORCE_SEED=1 bash scripts/db-bootstrap.sh
+        run: sudo apt-get install -y -qq postgresql-client && FORCE_SEED=1 bash scripts/db-bootstrap.sh && mkdir -p "$BACKUP_DIR"
       - run: npx next build
       - name: e2e (HTTP, against the built app)
+        # Failure reporting: the e2e suite streams its own summary + full failure list to
+        # this job log; on failure the last 200 app-server log lines are appended for
+        # server-side context. No secrets are ever written to the log (all keys are
+        # generated per-run and never echoed).
         run: |
           (npx next start -H 127.0.0.1 -p 3000 > /tmp/next.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/health > /dev/null && break; sleep 1; done
-          node scripts/e2e.mjs || { tail -50 /tmp/next.log; exit 1; }
+          node scripts/e2e.mjs || { echo "--- app log (last 200 lines) ---"; tail -200 /tmp/next.log; exit 1; }
