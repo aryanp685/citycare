@@ -1,21 +1,44 @@
-# R1 review F1 (2026-11-02) — the PROTECTED controlled migration operation.
+# R1 review F1 (2026-11-02) + FINAL F1 pass (2026-11-02) — the PROTECTED
+# controlled migration operation.
 #
 # This is the ONLY supported way to move the production schema:
 #   * manual dispatch only (workflow_dispatch) — never triggered by push/PR;
 #   * runs in the `production` GitHub environment — the owner configures REQUIRED
 #     REVIEWERS on that environment (repo → settings → environments) so a human
-#     approves every run before a single DDL statement;
-#   * explicit inputs: the 40-hex commit SHA being released + the NEWEST migration
-#     filename in that commit (both validated before any connection);
-#   * the migration destination is MIGRATION_DATABASE_URL — a GitHub secret that is
-#     NOT a Vercel build variable (owner-created; later R7: a least-privilege
-#     DDL-capable role). The destination URL is validated independently and only
-#     its HOST is ever logged.
+#     approves every run before a single DDL statement. CODE CANNOT VERIFY that
+#     configuration exists — the validate step prints a prerequisite banner in
+#     every run log (D83);
+#   * explicit inputs: the 40-hex commit SHA being released (must be a real
+#     commit REACHABLE FROM main) + the NEWEST migration filename in that commit
+#     (both validated before any connection);
+#   * the migration destination is MIGRATION_DATABASE_URL — a GitHub ENVIRONMENT
+#     secret that is NOT a Vercel build/runtime variable. It MUST be a DEDICATED
+#     migration credential (owner-side), not a copy of the runtime credential;
+#     only its HOST is ever logged.
+#
+# FINAL F1 pass — the authorization boundary, stated honestly (D84): no
+# environment variable is treated as proof of workflow identity. The direct
+# bootstrap entry points (db-bootstrap-node.mjs / db-bootstrap.sh) are
+# loopback-ONLY and cannot be pointed at a remote database by any declared
+# context. This workflow's apply step therefore uses a DEDICATED entry point,
+# web/scripts/migration-apply-node.mjs (DDL only, NO seed phase, NO TRUNCATE —
+# e2e-pinned against the file's source). Its authorization comes from:
+#   (1) the secret's scope (this job, this environment — owner-side GitHub),
+#   (2) the migration role's least-privilege grant (DDL only; the RUNTIME role
+#       has NO DDL/TRUNCATE privilege — owner-side Neon, verified locally by
+#       e2e 18.23f–g with a scratch least-privilege role),
+#   (3) the manual-dispatch + required-reviewer + no-cancel protections above.
+#   The script itself is not an authorization — it is a tool that can only ever
+#   do as much as the credential it is given allows.
 #
 # Normal Vercel production builds are PERMANENTLY verify-only: the prebuild gate
 # refuses apply inside a Vercel build (VERCEL_PROJECT_ID/VERCEL_GIT_COMMIT_SHA
 # markers) — see web/src/lib/prebuild-gate-core.mjs. Runbook:
 # web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md §7.2.
+#
+# DO NOT DISPATCH this workflow until the owner has (a) configured the
+# `production` environment with required reviewers, (b) created the dedicated
+# MIGRATION_DATABASE_URL secret, and (c) explicitly approved a migration run.
 name: migration
 on:
   workflow_dispatch:
@@ -36,9 +59,18 @@ concurrency:
 jobs:
   apply-migrations:
     runs-on: ubuntu-latest
-    # OWNER ACTION (one-time): create the `production` environment with REQUIRED
-    # REVIEWERS (repo → settings → environments). Until then this job is still
-    # manual-only — it cannot be triggered by any push/PR.
+    # OWNER ACTIONS (one-time, BEFORE any dispatch):
+    #   1. create the `production` environment with REQUIRED REVIEWERS
+    #      (repo → settings → environments). Until then this job is still
+    #      manual-only (it cannot be triggered by any push/PR) but the
+    #      human-approval layer is NOT active — the validate step's banner in
+    #      the run log says exactly that;
+    #   2. create MIGRATION_DATABASE_URL as an environment secret on
+    #      `production` with a DEDICATED migration credential (least-privilege
+    #      DDL role) — NOT a copy of the runtime credential;
+    #   3. strip DDL/TRUNCATE privilege from the runtime role (the credential
+    #      behind Vercel's DATABASE_URL) so runtime credentials cannot perform
+    #      schema changes or seeds even if exfiltrated.
     environment: production
     timeout-minutes: 30
     defaults: { run: { working-directory: web } }
@@ -56,13 +88,14 @@ jobs:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
         run: node scripts/migration-validate-node.mjs
       - name: apply migrations (the controlled DDL operation — the run log is the audit record)
+        # Dedicated entry point (final F1 pass): DDL only, NO seed phase, NO
+        # TRUNCATE — e2e 18.23 pins those against the file's source. No declared
+        # context is passed or read for authorization: the boundary is this
+        # job's secret scope + the migration role's privileges (D84).
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_TARGET: ${{ github.event.inputs.migration_target }}
-          RETENTION_POLICY: demo
-          SEED_DEMO: "0"          # a production run never seeds — the gate skips (and would refuse anything else)
-          SEED_CONTEXT: ci        # declared isolated context for the seed phase (F3); SEED_DEMO=0 makes it a no-op
-        run: node scripts/db-bootstrap-node.mjs
+        run: node scripts/migration-apply-node.mjs
       - name: verify the production schema (read-only, against the same destination)
         env:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}

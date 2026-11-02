@@ -36,25 +36,30 @@ if (!rawUrl) {
 // process will connect to) independently — defense in depth for direct invocations
 // (the prebuild gate validates too, but a direct bootstrap run has no gate in front).
 // Only the host is logged — never the connection string or credentials.
-const { dbUrlIdentity, isolatedContextDeclared } = await import("../src/lib/prebuild-gate-core.mjs");
+const { dbUrlIdentity } = await import("../src/lib/prebuild-gate-core.mjs");
 const dest = dbUrlIdentity(rawUrl);
 if (!dest.ok) {
   console.error(`✗ ${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"} failed validation (${dest.reason}) — refusing before any connection`);
   process.exit(1);
 }
 console.log(`[bootstrap] migration destination host: ${dest.host} (${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"})`);
-// FINAL REVIEW (2026-11-02): direct bootstrap runs may run DDL on a NON-LOOPBACK
-// destination only when they declare an isolated controlled context
-// (SEED_CONTEXT=ci|local-demo) — that is exactly how the protected migration
-// workflow (migration.yml) runs it, with production-environment approval on top.
-// An undeclared direct run against a remote (production-shaped) database is
-// refused BEFORE any connection: no DDL, no probe, nothing.
-if (!dest.loopback && !isolatedContextDeclared(process.env)) {
+// FINAL F1 FIX (2026-11-02): the direct bootstrap is LOOPBACK-ONLY, UNCONDITIONALLY.
+// No environment variable — SEED_CONTEXT, VERCEL_ENV, or any other caller-
+// controlled value — can authorize remote DDL from this entry point: a declared
+// context is a self-attested label, NOT proof of protected-workflow identity, and
+// code alone cannot prove that identity (D84). The ONLY authorized remote-DDL path
+// is the protected migration workflow (.github/workflows/migration.yml), which uses
+// its dedicated entry point scripts/migration-apply-node.mjs, and whose real
+// authorization is the GitHub environment secret scope + the least-privilege
+// migration role — not any variable this script reads.
+if (!dest.loopback) {
   console.error(
-    `✗ direct bootstrap with a NON-LOOPBACK migration destination (host: ${dest.host}) and no declared isolated ` +
-      "context — refusing before any connection. Same-machine (loopback) destinations are the local development " +
-      "flow; the authorized non-loopback path is the protected migration workflow (.github/workflows/migration.yml), " +
-      "which declares the context and carries production-environment approval",
+    `✗ direct bootstrap with a NON-LOOPBACK destination (host: ${dest.host}) — refusing before any connection. ` +
+      "The direct bootstrap entry point is same-machine (loopback) only, for local development and isolated CI; " +
+      "NO environment variable (SEED_CONTEXT, VERCEL_ENV, or any other) can authorize remote DDL from it. " +
+      "The only authorized remote-DDL path is the protected migration workflow " +
+      "(.github/workflows/migration.yml → scripts/migration-apply-node.mjs), whose authorization is the " +
+      "GitHub environment secret scope + the least-privilege migration role — not a declared context",
   );
   process.exit(1);
 }

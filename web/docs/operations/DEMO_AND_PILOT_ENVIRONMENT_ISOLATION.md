@@ -228,14 +228,32 @@ Notes:
   e2e 18.20 pins the owner's exact scenario + all variants against the REAL
   entry points (the "production" URL in tests is a guaranteed-NXDOMAIN
   `.invalid` host — even a bug could not touch anything real).
-- **Direct bootstrap DDL gate (same review):** a direct bootstrap run may run
-  DDL on a **non-loopback** destination only with a declared isolated context —
-  exactly how the protected migration workflow runs it (it declares
-  `SEED_CONTEXT=ci` and carries production-environment approval). An undeclared
-  direct run against a remote database is refused BEFORE the first connection
-  (no DDL, no probe). Same-machine bootstraps (local dev, CI) are unchanged.
-  Both the node and the bash bootstrap carry the gate; the validator
-  (`migration-validate-node.mjs`) enforces the workflow's own preconditions.
+- **Direct bootstrap is loopback-ONLY, unconditionally (final F1 pass,
+  2026-11-02):** the earlier rule (a declared `SEED_CONTEXT` may authorize
+  remote DDL on the direct bootstrap) was the hole the owner identified —
+  `SEED_CONTEXT` is a caller-controlled self-attested label, NOT proof of
+  protected-workflow identity (live-reproduced: `SEED_CONTEXT=ci` + a remote
+  URL passed the gate and reached the first connection attempt). The fix:
+  `db-bootstrap-node.mjs` and `db-bootstrap.sh` refuse **any** non-loopback
+  destination before the first connection, and **no environment variable
+  combination** (context, `VERCEL_ENV`, mode, target, flags) can override it.
+  Code alone cannot prove workflow identity (D84), so the only remote-DDL
+  entry point is a dedicated tool, `web/scripts/migration-apply-node.mjs`
+  (DDL only — **no seed phase, no TRUNCATE**, e2e-pinned against the file's
+  source), used exclusively by the protected migration workflow. That tool's
+  authorization is NOT the tool itself: it is (1) the GitHub **environment
+  secret scope** (`MIGRATION_DATABASE_URL` — a dedicated migration credential
+  that is not a Vercel build/runtime variable) and (2) the **least-privilege
+  migration role** (DDL-only; the runtime role has no DDL/TRUNCATE privilege).
+  e2e 18.23 proves the boundary locally with a real least-privilege scratch
+  role (migration DDL denied, TRUNCATE denied, nothing written) and 18.23a–d
+  pin that no declared context can re-open the direct paths.
+- **Loopback allowlist correction (same pass):** `0.0.0.0` was removed from
+  `LOOPBACK_HOSTS` — it is the unspecified/bind-all address, not a standard
+  loopback address, and an ambiguous destination must not silently pass an
+  identity gate (fail closed). `127.0.0.1` / `localhost` / `[::1]` remain
+  (bracket-stripped, case/whitespace-normalised; unit-pinned incl. malformed
+  and unspecified addresses).
 - `SCHEMA_SYNC_MODE` is a **build-time** knob; it changes nothing at runtime.
 - **Honest trade-off:** `verify` asserts end-state invariants, not per-file
   migration application. A *future* unapplied migration is therefore NOT detected
@@ -269,6 +287,28 @@ apply a migration is the protected workflow `.github/workflows/migration.yml`:
   logged; the validate → apply → verify sequence makes the run log the audit
   record (target + destination host + `migration applied:` lines + the final
   read-only verify).
+- **The apply step is DDL-only (final F1 pass)** — it runs the dedicated
+  `web/scripts/migration-apply-node.mjs` (not the general bootstrap): it
+  re-checks the destination identity (host only, before the first connection),
+  requires `MIGRATION_TARGET` to exist and be newest, applies the base schema
+  only to a fresh database, applies the ordered migrations, verifies
+  structural invariants (table/ledger/trigger/index counts, UTC), and has
+  **no seed phase and no TRUNCATE** (e2e 18.23j pins this against the file's
+  own source). The workflow passes it ONLY `MIGRATION_DATABASE_URL` +
+  `MIGRATION_TARGET`.
+- **What actually authorizes remote DDL (honest boundary, D84)** — the code
+  cannot prove that a script is running inside a protected workflow: scripts
+  are ordinary executables and every environment variable they read is
+  caller-settable. The real boundary is entirely owner-side configuration:
+  (1) `MIGRATION_DATABASE_URL` scoped to the GitHub `production` environment
+  so only the approved workflow can receive it; (2) the credential pointing
+  at a **least-privilege DDL-only role** (the application/runtime role holds
+  no DDL and no TRUNCATE — then even a leaked runtime credential cannot
+  migrate or wipe a database, proven locally by e2e 18.23g/h with a
+  CONNECT-only scratch role); (3) manual dispatch + required reviewers. Until
+  (1)–(3) are configured, the direct entry points are safe by construction
+  (loopback-only, e2e-pinned) and the workflow entry point is safe only in
+  exactly the same sense as the credential scope is.
 
 Deploying a **new migration** = (1) merge it to `main` (the automatic production
 build is verify-only and does NOT apply it — that is by design); (2) run the
@@ -324,10 +364,13 @@ claimed beyond its evidence class:
 | Vercel production builds are PERMANENTLY verify-only (no DDL from build-time vars) | **Code-proven + loopback-tested** (the Vercel-side marker presence itself is a GitHub/Vercel fact, verified by Vercel's documented build env — not re-proven against a live Vercel build in this repo) | gate unit tests (marker rows); e2e 18.17a–c |
 | Migration destination validated independently; host-only logging; no credential leakage | **Code-proven + loopback-tested** | `validateDbUrl`/`dbUrlIdentity` unit tests; e2e 18.18a–c; unit leak assertions |
 | A declared context can never seed/truncate a non-loopback (production-shaped) database | **Code-proven + loopback-tested** — the production *destination* in tests is a guaranteed-NXDOMAIN `.invalid` host; the real production host is never touched | e2e 18.20a–h (real entry points, byte-for-byte preservation) |
-| Undeclared direct runs can never DDL/probe a non-loopback database | **Code-proven + loopback-tested** (same `.invalid` host discipline) | e2e 18.21a–b; bash gate smoke 2026-11-02 |
+| Direct bootstrap (node + bash) can NEVER DDL on a non-loopback database — UNCONDITIONALLY, with or without a declared context; no environment-variable combination authorizes it (final F1 pass) | **Code-proven + loopback-tested** (same `.invalid` host discipline) | e2e 18.21a–b, 18.23a–d (incl. production-shaped URL + ALL caller flags, and the build-hook path); bash gate smoke 2026-11-02 |
+| `0.0.0.0` / ambiguous destinations are NOT treated as loopback (fail closed) | **Code-proven** | `isLoopbackHost` unit tests (unspecified + malformed + bracketed IPv6 + case/whitespace rows) |
+| The workflow's apply step is a dedicated DDL-only tool — no seed phase, no TRUNCATE (verified against the file's own source) | **Code-proven + loopback-tested** | e2e 18.23i–j |
 | The migration workflow is manual-dispatch-only, no-cancel, SHA-validated | **GitHub-configuration prerequisite** — the trigger/concurrency/checkout facts are in the workflow file (reviewable), the `production` environment's **required reviewers must be configured by the owner**; the validator prints a prerequisite banner in every run log | workflow YAML; validator banner (e2e 18.22f) |
 | The workflow may only apply main-reachable commits with their newest migration | **Code-proven + loopback-tested** | validator unit-level e2e 18.22a–f (real `git` against this repo) |
-| Production credentials carry no seed/TRUNCATE privilege (a least-privilege demo-seed role) | **NOT YET VERIFIED — owner-side database action** (Neon role creation/modification is outside this repo's authority; the code-side identity gate above is the current guarantee) | documented gap (D82) |
+| Production credentials carry no DDL/seed/TRUNCATE privilege (least-privilege split) | **Partially proven — owner-side Neon action still pending**: the DENIAL shape is locally proven with a real least-privilege (CONNECT-only) scratch role — migration DDL denied, TRUNCATE denied, nothing written; creating/altering the actual Neon roles is outside this repo's authority | e2e 18.23g/h (loopback); documented gap (D82, D84) |
+| Remote DDL is authorized ONLY by owner-side configuration (GitHub environment secret scope + least-privilege migration role + manual dispatch/reviewers) — code CANNOT prove workflow identity, and this is stated as such (no env var is claimed to be unforgeable) | **NOT code-proven — BY DESIGN (D84)**; the code side proves the direct paths are closed and the workflow tool is DDL-only, and every run log states the prerequisite | D84; §7.2 honest-boundary note; validator/apply banners |
 | The actual production database is schema-current + verify-green under the new gate | **NOT YET VERIFIED** — no production connection/probe was made (boundary); the next post-merge production build's verify step performs this | pending S2 |
 
 Loopback-tested means: executed on 2026-11-02 against a real local PostgreSQL

@@ -380,11 +380,17 @@ describe("9. destination identity gate — a declared context never overrides da
     expect(resolveDemoSeedAction({ VERCEL_ENV: "preview", RETENTION_POLICY: "demo", SEED_DEMO: "1", DATABASE_URL: "postgresql://x:x@127.0.0.1:5432/db" })).toMatchObject({ action: "seed" });
   });
 
-  it("all loopback spellings are same-machine (127.0.0.1 / localhost / ::1 / 0.0.0.0, case-insensitive host)", () => {
-    for (const host of ["127.0.0.1", "localhost", "[::1]", "0.0.0.0"]) { // IPv6 = bracketed per URL spec
+  it("standard loopback spellings are same-machine (127.0.0.1 / localhost / [::1], case-insensitive host)", () => {
+    for (const host of ["127.0.0.1", "localhost", "[::1]"]) { // IPv6 = bracketed per URL spec
       expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: `postgresql://u:p@${host}:5432/db` }).action, host).toBe("seed");
     }
     expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: "postgresql://u:p@LOCALHOST:5432/db" }).action).toBe("seed");
+  });
+
+  it("the unspecified address 0.0.0.0 is NOT loopback (final F1 pass) — an ambiguous destination fails closed", () => {
+    const r = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: "postgresql://u:p@0.0.0.0:5432/db" });
+    expect(r.action).toBe("refuse");
+    expect(r.reason).toContain("NOT a same-machine (loopback) database");
   });
 
   it("an identity that CANNOT be established fails closed: missing DATABASE_URL or unparseable URL → REFUSE (never seed on an unknown destination)", () => {

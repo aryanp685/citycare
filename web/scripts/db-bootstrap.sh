@@ -20,20 +20,22 @@ export SCRYPT_N="${SCRYPT_N:-16384}"
 die() { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 q()   { psql "$DATABASE_URL" -X -tAc "$1"; }
 
-# FINAL REVIEW (2026-11-02): destination identity gate, mirrored from the node
-# bootstrap and the demo-seed core (same prebuild-gate-core.mjs helpers). The
-# demo seed TRUNCATEs, and direct DDL on a remote (production-shaped) database
-# must fail closed: a non-loopback destination is only reachable by a run that
-# declares an isolated controlled context (the protected migration workflow).
-# Fires BEFORE the first psql — no connection, no probe.
+# FINAL F1 FIX (2026-11-02): the direct bootstrap is LOOPBACK-ONLY, UNCONDITIONALLY
+# (mirrored from the node bootstrap). No environment variable (SEED_CONTEXT or any
+# other caller-controlled value) can authorize remote DDL from this entry point —
+# a declared context is not proof of protected-workflow identity (D84). The only
+# authorized remote-DDL path is the protected migration workflow's dedicated
+# entry point (scripts/migration-apply-node.mjs), authorized by its GitHub
+# environment secret scope + least-privilege migration role. Fires BEFORE the
+# first psql — no connection, no probe.
 DEST_CHECK="$(DATABASE_URL="$DATABASE_URL" node --input-type=module -e '
-import { dbUrlIdentity, isolatedContextDeclared } from "./src/lib/prebuild-gate-core.mjs";
+import { dbUrlIdentity } from "./src/lib/prebuild-gate-core.mjs";
 const id = dbUrlIdentity(process.env.DATABASE_URL);
 if (!id.ok) console.log("refuse " + id.reason);
-else if (!id.loopback && !isolatedContextDeclared(process.env)) console.log("refuse non-loopback destination (host: " + id.host + ") without a declared isolated context");
+else if (!id.loopback) console.log("refuse non-loopback destination (host: " + id.host + ") — the direct bootstrap is loopback-only, no env var authorizes remote DDL");
 else console.log("ok " + id.host);')" || die "destination identity check crashed — refusing"
 case "$DEST_CHECK" in
-  refuse*) die "DATABASE_URL failed the destination identity check ($DEST_CHECK) — refusing before any connection (loopback = local development; non-loopback requires the protected migration workflow)" ;;
+  refuse*) die "DATABASE_URL failed the destination identity check ($DEST_CHECK) — refusing before any connection (the only authorized remote-DDL path is the protected migration workflow)" ;;
 esac
 echo "▶ destination identity: $DEST_CHECK"
 

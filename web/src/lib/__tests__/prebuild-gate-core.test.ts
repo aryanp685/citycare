@@ -368,10 +368,12 @@ describe("9. the migration destination is validated independently (review F2)", 
 // scripts — one rule, one place.
 describe("10. database identity helpers (loopback = same-machine)", () => {
   it("isLoopbackHost recognises the four same-machine spellings, incl. bracketed IPv6, and rejects remote hosts", () => {
-    for (const ok of ["127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0", "LOCALHOST", " 127.0.0.1 "]) {
+    for (const ok of ["127.0.0.1", "localhost", "::1", "[::1]", "LOCALHOST", " 127.0.0.1 "]) {
       expect(isLoopbackHost(ok), ok).toBe(true);
     }
-    for (const bad of ["db-1.neon.tech", "db-1.eu-central-1.aws.neon.tech", "10.0.0.9", "192.168.1.5", "127.0.0.2", "127.1", "localhost.evil.com", "", undefined, null, "0.0.0.1"]) {
+    // FINAL F1 pass (2026-11-02): 0.0.0.0 is the UNSPECIFIED/bind-all address, not
+    // a standard loopback — it is refused (ambiguous destinations fail closed).
+    for (const bad of ["db-1.neon.tech", "db-1.eu-central-1.aws.neon.tech", "10.0.0.9", "192.168.1.5", "127.0.0.2", "127.1", "localhost.evil.com", "", undefined, null, "0.0.0.1", "0.0.0.0", "[0.0.0.0]", "[:::]", "localhost:5432", "127.0.0.1/db"]) {
       expect(isLoopbackHost(bad as string), JSON.stringify(bad)).toBe(false);
     }
   });
@@ -380,6 +382,8 @@ describe("10. database identity helpers (loopback = same-machine)", () => {
     expect(dbUrlIdentity("postgresql://u:p@127.0.0.1:5432/db")).toEqual({ ok: true, host: "127.0.0.1", loopback: true });
     expect(dbUrlIdentity("postgres://u:p@localhost:5432/db")).toEqual({ ok: true, host: "localhost", loopback: true });
     expect(dbUrlIdentity("postgresql://u:p@remote.example.com:5432/db")).toEqual({ ok: true, host: "remote.example.com", loopback: false });
+    expect(dbUrlIdentity("postgresql://u:p@0.0.0.0:5432/db")).toEqual({ ok: true, host: "0.0.0.0", loopback: false }); // unspecified address is not same-machine
+    expect(dbUrlIdentity("postgresql://u:p@[::1]:5432/db")).toEqual({ ok: true, host: "[::1]", loopback: true }); // bracketed IPv6
     expect(dbUrlIdentity(undefined).ok).toBe(false);
     expect(dbUrlIdentity("   ").ok).toBe(false);
     expect(dbUrlIdentity("not a url").ok).toBe(false);

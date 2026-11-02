@@ -75,15 +75,24 @@ export function validateDbUrl(raw) {
  * and identity must be established from the destination ITSELF, never from a
  * caller-controlled declaration (SEED_CONTEXT is a self-attested label and must
  * never override database identity). The one identity the scripts can verify
- * independently is "same-machine": a loopback host (127.0.0.1 / localhost / ::1 /
- * 0.0.0.0 — 0.0.0.0 as a destination address always routes to the local machine
- * on every OS). The production database is remote (a managed host), so it is
- * structurally unreachable from the demo seed scripts. Remote/identity-unknown
- * destinations fail closed (D82 records the boundary honestly).
+ * independently is "same-machine": a loopback host (127.0.0.1 / localhost /
+ * [::1]). NOTE (final F1 pass, 2026-11-02): `0.0.0.0` was REMOVED from this
+ * allowlist — it is the unspecified/bind-all address, not a standard loopback
+ * address; a URL that names it is ambiguous and must not silently pass an
+ * identity gate (fail closed). The production database is remote (a managed
+ * host), so it is structurally unreachable from the demo seed scripts.
+ * Remote/identity-unknown destinations fail closed (D82 records the boundary
+ * honestly).
  */
-export const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "::1", "0.0.0.0"];
+export const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "::1"];
 
-/** @param {string | undefined} hostname @returns {boolean} */
+/**
+ * @param {string | undefined} hostname
+ * @returns {boolean} true only for the standard loopback spellings
+ *   (127.0.0.1 / localhost / [::1], bracket-stripped, case/whitespace-normalised).
+ *   The unspecified address 0.0.0.0 (and [0.0.0.0]) is NOT loopback here — see
+ *   the LOOPBACK_HOSTS note: fail closed on ambiguous destinations.
+ */
 export function isLoopbackHost(hostname) {
   // URL-parse normalises IPv6 hosts to bracketed form ("[::1]") — strip them.
   const h = (typeof hostname === "string" ? hostname.trim().toLowerCase() : "").replace(/^\[|\]$/g, "");
