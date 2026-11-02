@@ -1,13 +1,13 @@
 # CityCare — Day 3: Database Architecture & Data Integrity Audit
 
 **Date:** 2026-11-02 (IST)
-**Branch:** `arena/c0875faf-citycare` @ `ad6f71a` (branched from main; main CI green 41452254356)
+**Branch:** `arena/c0875faf-citycare` @ **`79bc78e`** (the reviewed head: `e950f26` = the audited fixes, `79bc78e` = the review corrections) on base commit **`ad6f71a`** (= main; main CI green 41452254356)
 **Auditor:** agent (read-only precheck → classified findings → safe in-scope fixes only)
 **Scope:** NG-D01 schema consistency · NG-D02 migration safety · NG-D03 relationships/ownership · NG-D04 indexing/performance · NG-D05 transactions/concurrency · NG-D06 clinic architecture assessment
 **Environment labels (every claim below is tied to one of these):**
 - **LOCAL-DEMO** = sandbox PostgreSQL 16.2 (`127.0.0.1:5432`, cluster `/home/user/pgbox/data`), DB `citycare` fresh-bootstrapped + demo-seeded (`RETENTION_POLICY=demo`), `web/.env.local` local-only keys. All EXPLAIN numbers below are from LOCAL-DEMO and say nothing about production scale.
 - **FRESH-DB** = second DB `driftcheck` created from the `schema/` files alone (drift check; dropped after use).
-- **PROD** = Vercel `citycare-z95n.vercel.app` on Neon 18.6 — **NOT touched** (no queries, no writes, no health probes from the sandbox; no egress to `*.vercel.app` anyway).
+- **PROD** = Vercel `citycare-z95n.vercel.app` on Neon 18.6. Precise statement (full build-log evidence in §L): the **agent/sandbox did not directly connect** to the production Neon or Vercel (no queries, no writes, no health probes; no egress to `*.vercel.app` anyway). However, **Vercel's automatic Preview build did connect** to the production Neon, and **migration 0007 was applied by that build** — the operation was **DDL-only** (the redundant duplicate `Observation` index removed; the identical base index retained). The **seed gate was skipped — no rows were written, truncated, or seeded**. The **production application deployment was not promoted** (the alias still serves `ad6f71a`).
 
 **Method:** mandatory read-only precheck first (branch/CI/DB state, `gh`/`git` only), then live introspection via `psql` on LOCAL-DEMO (tables, FKs incl. delete rules, PKs, unique/partial indexes, CHECKs, enum types, timestamp types, orphan probes, index definitions), then file-level review of `schema/` (init + constraints + ledger + migrations 0001–0006) vs live DB (pg_dump diff), then code review of `web/src/lib/` and the API routes (ownership scoping, transactions, audit placement, cascades, erasure), then `EXPLAIN (ANALYZE, BUFFERS)` on the hot queries. No schema object was modified by the audit itself until the fix phase.
 
