@@ -82,8 +82,11 @@ ledger) — the full-gate drill is what surfaces end-to-end correctness.
 3. **No legal compliance claim.** Backup/DR here is an operational control; DPDP/IT Act
    retention obligations (NMC 3 yr / DGHS 10 yr, ledger ≥ 1 yr post-erasure) are legal-hold
    decisions tracked separately (`LEGAL_COMPLIANCE.md`).
-4. **Blob document store is out of scope** of this drill (see
-   `BACKUP_AND_DISASTER_RECOVERY.md` §1).
+4. **Document-level recovery is out of scope** of this drill: the document bytes are in the
+   same dump (`DocumentBlob` section — verified byte-identical), but *decrypting* a specific
+   document from the restored scratch is defined in `DOCUMENT_STORAGE_DISASTER_RECOVERY.md`
+   §6 and has **not yet been executed**. (Corrected 2026-11-02: an earlier version of this
+   note wrongly described the documents as a separate blob store outside this backup.)
 
 ## 4. Reproduction (exact commands)
 

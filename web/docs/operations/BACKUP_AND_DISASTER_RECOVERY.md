@@ -21,7 +21,7 @@ object store (Vercel Blob `access: "private"`, or a local directory in dev).
 
 | Property | Value | Where |
 |---|---|---|
-| Frequency | daily, 21:30 UTC (02:30 IST) | `web/vercel.json` → cron `/api/cron/backup` |
+| Frequency | daily, `30 21 * * *` UTC = 21:30 UTC = **03:00 IST** (next calendar day; 30 min after the `0 21 * * *` maintenance cron, which is the 02:30 IST one) | `web/vercel.json` → cron `/api/cron/backup` |
 | Trigger auth | `Authorization: Bearer $CRON_SECRET` (unset ⇒ 503, mismatch ⇒ 401) | `src/app/api/cron/backup/route.ts` |
 | Transport | PostgreSQL `COPY … TO STDOUT` (text), table-by-table in FK topological order | `src/lib/backup-core.mjs` (`createBackup`) |
 | Encryption | AES-256-GCM, 12-byte nonce, 16-byte tag, keyed by `BACKUP_KEY` (32 B base64) | `encryptContainer` |
@@ -46,10 +46,18 @@ that can only target a scratch database whose name matches `^citycare_drill_\d{8
 
 ### What it does NOT cover (know these before you rely on it)
 
-1. **Uploaded documents** (Vercel Blob objects under `DOCUMENT_KEY`) are **not** part of the
-   database backup. They live in their own blob store; losing `DOCUMENT_KEY` loses all files.
-   This is a separate recovery track (document re-linking, not data loss of the record itself:
-   clinical notes/observations are in the DB).
+1. **Document bytes are covered (they live in the database) — the key is the real dependency.**
+   Uploaded documents are **not** in an external blob store: the bytes sit in Postgres
+   (`DocumentBlob.data`), AES-256-GCM encrypted under `DOCUMENT_KEY`, so the 36-table backup
+   **includes them** (the 2026-11-02 drill verified the `DocumentBlob` section byte-identical).
+   What the backup does NOT protect against: **losing `DOCUMENT_KEY`** — every document byte
+   (live *and* in every backup) becomes undecryptable, records included. And the **dedicated
+   document-level recovery drill** (decrypt + checksum a document from a restored scratch DB)
+   has **not been executed** — the executed drill proves byte fidelity of the encrypted rows,
+   not that a specific document decrypts and matches its plaintext checksum. The full procedure,
+   integrity checks, reconciliation queries and the not-yet-executed drill are in
+   `DOCUMENT_STORAGE_DISASTER_RECOVERY.md`. (Corrected 2026-11-02: an earlier draft of this
+   section wrongly described documents as Vercel Blob objects outside the backup.)
 2. **RPO is bounded by the daily schedule** (≤ ~24 h + run time). Changes made today can be
    lost until tomorrow's run. There is no continuous/WAL-level replication (Neon Free has
    no PITR).
@@ -118,21 +126,33 @@ target (≤ 1 h) and the sandbox evidence.
 Every failed attempt is a **row**, never a silent gap: the metadata table is the audit trail
 of backup health, and the health endpoint makes staleness visible without secrets.
 
-## 5. Key management (v1 — see drawbacks)
+## 5. Key management (v1 — full procedure in `BACKUP_CONFIGURATION.md` §6)
+
+Security facts (the *how* is in the configuration doc):
 
 - `BACKUP_KEY` (32-byte base64) is the **only** key needed to read backups. Losing it loses
-  all backup files (the files are useless without it; the key is useless without the files).
-- It is **not** derived from `SESSION_SECRET` (key separation: a session-key leak must not
-  expose backups).
-- v1 has **no key rotation**: rotating means re-keying every retained file (tracked as
-  drawback D-new in `DRAWBACKS_AND_BUGFIXES.md`).
-- Store it in the environment (Vercel env vars / a secrets manager). **Never** in git, logs,
-  error messages, or the database. The backup response and metadata carry only size, sha256,
-  counts and the db fingerprint.
+  **all** backup files (the files are useless without it; the key is useless without the
+  files). The live database is unaffected — but the RPO becomes meaningless: no point in time
+  before the next successful backup-and-key-escrow-recovery is recoverable at all.
+- **Key separation**: it is not derived from (or identical to) `SESSION_SECRET`, `CRON_SECRET`
+  or `DOCUMENT_KEY` — a session-key leak must not expose backups, and vice versa.
+- **Access surface**: exactly two actors ever see the key — the Vercel function that runs the
+  backup cron (to create files) and the human operator running `backup.mjs verify` /
+  `restore-drill.mjs` (to read them). The rest of the app never reads it. Store objects are
+  private, so a leaked *object name* without the key is useless.
+- **Rotation is not implemented (v1)** — D63. Until the versioned re-key procedure exists
+  (header `keyVersion` + re-encrypt retained files + grace period where both keys work), a
+  "rotation" means **every old file is lost**. That is why rotation is documented as a plan,
+  not a practice — and why the escrow below matters.
+- Storage, restricted access, recovery escrow and the rotation plan (incl. how old backups
+  stay recoverable during a future rotation) are specified in
+  `BACKUP_CONFIGURATION.md` §6. **Never** commit, log, or store the key in the database; the
+  backup response and metadata carry only size, sha256, counts and the db fingerprint.
 
 ## 6. Non-goals (deliberately not built)
 
 No multi-region replication, no continuous WAL shipping, no database-level HA beyond what
-Neon provides, no backup of the blob document store (separate track), no automated
-production restore (restore is human-run by design — a failed automated restore into the
-live database is worse than none).
+Neon provides, no *separate* document backup (the document bytes are inside the database —
+`DocumentBlob` — and are covered by the DB backup; see `DOCUMENT_STORAGE_DISASTER_RECOVERY.md`),
+no automated production restore (restore is human-run by design — a failed automated restore
+into the live database is worse than none).

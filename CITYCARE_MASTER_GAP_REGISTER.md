@@ -1,10 +1,11 @@
 # CityCare — MASTER GAP REGISTER (Consolidated, Step 1 Final)
 
 _Consolidated 2026-11-01 from all Step 1 audit deliverables (listed in §0), the in-repo
-registers (`web/DRAWBACKS_AND_BUGFIXES.md` A1–A76 / D1–D62, `web/LEGAL_COMPLIANCE.md`
-LG-01–LG-25), and direct re-verification against the repository (`main @ 9212ee4` +
-consolidation-time re-runs: vitest **162/162**, tsc/eslint clean, build `z3V6kdcbj_3asdYqYEvJ4`
-clean, e2e **241/241** fresh seed — all executed 2026-11-01 in this sandbox)._
+registers (`web/DRAWBACKS_AND_BUGFIXES.md` A1–A85 / D1–D69 as of 2026-11-02 Step 2 Batch 1
++ correction audit, `web/LEGAL_COMPLIANCE.md` LG-01–LG-25), and direct re-verification
+against the repository (`main @ 9212ee4` + consolidation-time re-runs: vitest **162/162**,
+tsc/eslint clean, build `z3V6kdcbj_3asdYqYEvJ4` clean, e2e **241/241** fresh seed — all
+executed 2026-11-01 in this sandbox)._
 
 **ID policy (per consolidation brief):** all Step-1 NG IDs are preserved verbatim and none
 is deleted. Seventeen new IDs are issued, none colliding with an existing one:
@@ -144,7 +145,8 @@ interviews, Hobby ToS caps non-commercial).
 - **Acceptance criteria**: **A documented, executed restore drill** whose output is committed to the repo (date, RPO/RTO, `ledger_verify` result); a cron failure is observable.
 - **External deps / approvals**: owner's prod DB access.
 - **Complexity**: Small
-- **Status**: **PARTIALLY IMPLEMENTED** (2026-11-02) — code complete + sandbox drill **executed successfully**; production execution outstanding (owner-side).
+- **Status**: **PARTIALLY IMPLEMENTED** (2026-11-02) — code complete + sandbox drill **executed successfully**; production execution outstanding (owner-side). **Plus (correction audit 2026-11-02):** `@vercel/blob` is not in the manifest (A85/D69) — the production blob store fails loudly until the owner-approved one-line install; sandbox evidence unaffected.
+  - **Document storage (correction-audit follow-up, 2026-11-02):** documents are **not** in an external blob store — the bytes live in Postgres `DocumentBlob` (AES-256-GCM under `DOCUMENT_KEY`), so the 36-table backup covers the medical-document bytes (drill: that section byte-identical). New runbook: `web/docs/operations/DOCUMENT_STORAGE_DISASTER_RECOVERY.md` (integrity layers, DB↔object reconciliation queries, deleted/unavailable handling, PHI-safe restore, retention/erasure). **Honest status:** DB-level (ciphertext) recovery drilled; the dedicated document-level drill (decrypt + checksum from scratch) is defined but **not yet executed** — a required action over there, not a tested claim.
 
 **Implementation (Step 2 Batch 1, 2026-11-01 → 2026-11-02).** Daily encrypted backup, private store, observable failures, human-run scratch-only restore, and a real executed drill. `pg_dump` was **not** used (no binary in the sandbox or Vercel; pooler-hostile) — the equivalent is a per-table `COPY TO/FROM` logical dump with a versioned, self-verifying container.
 
@@ -157,7 +159,7 @@ interviews, Hobby ToS caps non-commercial).
   - `web/docs/operations/BACKUP_AND_DISASTER_RECOVERY.md`, `RESTORE_RUNBOOK.md`, `BACKUP_CONFIGURATION.md`, `RESTORE_DRILL_REPORT.md` — the four required ops docs.
 - **Files modified**
   - `web/src/app/api/cron/backup/route.ts` (new route) — `GET`, `Bearer $CRON_SECRET` (unset ⇒ 503, mismatch ⇒ 401, timing-safe), dedicated pg client (no pool 8 s statement_timeout, 15 s connect timeout, `timezone=UTC`), read-only over the DB (no restore/delete capability), failures recorded as metadata rows.
-  - `web/vercel.json` — second cron `30 21 * * *` UTC (02:30 IST daily; offset from the 21:00 daily job). Exactly meets the Hobby 2-cron limit (D65).
+  - `web/vercel.json` — second cron `30 21 * * *` UTC = 21:30 UTC = 03:00 IST daily (the 21:00 UTC daily job is the 02:30 IST one). Exactly meets the Hobby 2-cron limit (D65).
   - `web/src/app/api/health/route.ts` — `backups: {configured, lastSuccessAt, ageMs, stale}` fact (no secrets, no PHI).
   - `web/src/lib/db.ts` — exported `nodeConnectionString()` for the dedicated client.
   - `web/scripts/e2e.mjs` — section 14 (16 backup/DR checks incl. the full drill).
@@ -190,7 +192,7 @@ interviews, Hobby ToS caps non-commercial).
 - **Acceptance criteria**: pilot env demonstrably does not erase self-registered real users (test above); `/api/health` exposes the active policy; the notice reflects it.
 - **External deps / approvals**: none (code/config only); notice text change needs the L2 discipline.
 - **Complexity**: Small
-- **Status**: **RESOLVED** (2026-11-02) — implemented + demonstrated by tests; every acceptance criterion has direct evidence below. Owner-side deploy note: the production demo must set `RETENTION_POLICY=demo` (see below).
+- **Status**: **PARTIALLY IMPLEMENTED — OWNER VERIFICATION PENDING** (2026-11-02; corrected in the same-day post-implementation audit). **Code-level: complete** — implemented and demonstrated by tests; every acceptance criterion has direct code-level evidence below. **Deployment-level: NOT verified** — the production environment variables (in particular `RETENTION_POLICY` on the instance that will serve pilot users) and the actual pilot deployment are unverified; this gap must not be marked RESOLVED until the owner confirms both. Owner-side deploy note: the production **demo** instance must set `RETENTION_POLICY=demo`; a **pilot** instance must set `RETENTION_POLICY=pilot` (or `internal`) — the fail-safe default (unset/unknown) disables the sweep and warns.
 
 **Implementation (Step 2 Batch 1, 2026-11-02).** An explicit, fail-safe policy gate between the daily cron and the erasure code — an unknown environment can never erase data.
 
