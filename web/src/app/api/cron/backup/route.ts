@@ -3,7 +3,7 @@ import path from "node:path";
 import pg from "pg";
 import { nodeConnectionString } from "@/lib/db";
 import { ok, err } from "@/lib/api";
-import { BackupError, createBackup, recordBackupMeta, dbFingerprintFromUrl } from "@/lib/backup-core.mjs";
+import { BackupError, createBackup, recordBackupMeta, dbFingerprintFromUrl, formatBackupFatalLog } from "@/lib/backup-core.mjs";
 import { withCopySupport } from "@/lib/pg-copy.mjs";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,9 @@ export async function GET(req: Request) {
     raw = new pg.Client({ connectionString: nodeConnectionString(), connectionTimeoutMillis: 15_000, options: "-c timezone=UTC" });
     await raw.connect();
   } catch (e) {
+    // DB unreachable ⇒ no backup AND no failure row possible (the audit row lives in the
+    // same database). The platform log is the only independent record of this failure.
+    console.error(formatBackupFatalLog("db", "database connect failed: " + String(e instanceof Error ? e.message : e).slice(0, 120)));
     return err(500, "backup_failed_connect", e instanceof Error ? e.message.slice(0, 200) : "database connect failed");
   }
   const client = withCopySupport(raw);
@@ -91,7 +94,9 @@ export async function GET(req: Request) {
     });
   } catch (e) {
     const code = e instanceof BackupError ? e.code : "unknown";
-    // best-effort failure record so the outage is observable in the metadata table + health
+    // best-effort failure record so the outage is observable in the metadata table + health.
+    // If THAT insert fails too (database down / missing "Backup" table before migration
+    // 0006), the platform log carries the only independent record — never swallowed silent.
     await recordBackupMeta(query, {
       ...metaBase,
       schemaVersion: null,
@@ -104,7 +109,9 @@ export async function GET(req: Request) {
       errorClass: code,
       tableCount: null,
       rowCounts: null,
-    }).catch(() => null); // e.g. missing "Backup" table before migration 0006 — the 500 still surfaces
+    }).catch((e2: unknown) => {
+      console.error(formatBackupFatalLog(code, "failure-row insert failed: " + String(e2 instanceof Error ? e2.message : e2).slice(0, 120)));
+    });
     return err(500, `backup_failed_${code}`, e instanceof Error ? e.message.slice(0, 200) : "backup failed");
   } finally {
     await raw.end().catch(() => null);

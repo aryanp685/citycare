@@ -44,6 +44,17 @@ export const DEFAULT_SOFT_LIMIT_MS = 20_000;
 /** A backup is "stale" for /api/health once older than 24 h + 6 h grace. */
 export const BACKUP_STALE_MS = (24 + 6) * 3_600_000;
 
+/** Stable, grep-able marker for the WORST failure mode: the backup failed AND the database
+ *  that stores the "Backup" audit row is itself unavailable, so the failure row cannot be
+ *  written. In that case the platform log (Vercel function logs / CLI stderr) is the ONLY
+ *  independent record of the failure, together with the HTTP 500 / non-zero exit.
+ *  Emitted by both callers (cron route, CLI) — final technical verification, finding 4.
+ *  v1 has NO automated alerting (no webhook/pager is configured) — do not claim otherwise. */
+export const BACKUP_FATAL_MARKER = "[citycare-backup] FATAL";
+export function formatBackupFatalLog(code, context) {
+  return `${BACKUP_FATAL_MARKER} backup failed (errorClass=${code}) and the failure row could NOT be recorded — the database that stores the audit trail is unavailable (${context}). The only independent records of this failure are this platform log line and the HTTP 500 / non-zero exit code. No automated alerting is configured (v1); operators should monitor for this marker and for backups.stale=true in /api/health.`;
+}
+
 /** Error with a machine-readable class used for the metadata table's errorClass column.
  *  code ∈ 'config' | 'crypto' | 'verify' | 'store' | 'db' | 'time_budget'. */
 export class BackupError extends Error {
@@ -398,7 +409,11 @@ export async function pruneBackups(env, keepDays, nowMs = Date.now()) {
     if (entries[i].mtimeMs >= cutoff) continue; // within the window — keep (newer ones all precede)
     if (kind === "blob") {
       const blob = await blobApi(env);
-      await blob.delete(entries[i].name);
+      // the SDK renamed del→delete across v2 minor versions and never shipped both at once
+      // (2.8.2 has `del` only — verified against the installed package, A86); be tolerant
+      const rm = typeof blob.delete === "function" ? blob.delete : blob.del;
+      if (typeof rm !== "function") throw new BackupError("store", "blob SDK has neither delete() nor del()");
+      await rm.call(blob, entries[i].name);
     } else {
       const dir = await localDir(env);
       await fs.promises.rm(path.join(dir, entries[i].name), { force: true });
@@ -453,14 +468,38 @@ export async function createBackup(opts) {
   const dbFingerprint = dbFingerprintFromUrl(opts.url);
   const schemaVersion = opts.migrationsDir ? schemaVersionFromDir(opts.migrationsDir) : null;
 
+  // CONSISTENT SNAPSHOT (final technical verification, 2026-11-02, finding 1):
+  // every table's count + COPY runs inside ONE REPEATABLE READ READ ONLY transaction on
+  // the dedicated connection. PostgreSQL takes the snapshot at the transaction's first
+  // statement, so all 36 tables reflect the database as of ONE instant — a cross-table
+  // mixed state (table A post-write, table B pre-write) is impossible, no matter how many
+  // concurrent writers commit during the dump. MVCC consequences, evaluated and accepted:
+  //   * concurrent writers are neither blocked nor aborted (readers never conflict);
+  //   * the open transaction pins the snapshot (delays vacuum) for at most the soft budget,
+  //     then COMMIT/ROLLBACK releases it — bounded by construction;
+  //   * COPY TO is a plain statement: fully compatible with the COPY protocol and with
+  //     transactions (pg-copy.mjs just needs plain BEGIN/COMMIT/ROLLBACK delegated);
+  //   * the 20 s soft budget bounds transaction duration; breach ⇒ ROLLBACK + no file
+  //     (the pre-existing time_budget path, now transaction-safe).
+  // READ ONLY is defence in depth: the backup connection can never write, even by accident.
+  await opts.client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+  let snapshotComplete = false;
   const tables = [];
-  for (const name of order) {
-    if (Date.now() - t0 > softLimitMs)
-      throw new BackupError("time_budget", `backup exceeded the ${softLimitMs} ms budget at table ${JSON.stringify(name)}; no partial file was written`);
-    const cnt = await opts.query(`SELECT count(*)::int AS n FROM ${quoteIdent(name)}`);
-    const chunks = [];
-    await copyTableOut(opts.client, name, (c) => chunks.push(c));
-    tables.push({ name, rows: Number(cnt.rows[0].n), copyText: Buffer.concat(chunks).toString("utf8") });
+  try {
+    for (const name of order) {
+      if (Date.now() - t0 > softLimitMs)
+        throw new BackupError("time_budget", `backup exceeded the ${softLimitMs} ms budget at table ${JSON.stringify(name)}; no partial file was written`);
+      // count on the SAME connection + inside the transaction: the manifest's row count
+      // describes the snapshot, not a second, later moment
+      const cnt = await opts.client.query(`SELECT count(*)::int AS n FROM ${quoteIdent(name)}`);
+      const chunks = [];
+      await copyTableOut(opts.client, name, (c) => chunks.push(c));
+      tables.push({ name, rows: Number(cnt.rows[0].n), copyText: Buffer.concat(chunks).toString("utf8") });
+    }
+    await opts.client.query("COMMIT");
+    snapshotComplete = true;
+  } finally {
+    if (!snapshotComplete) await opts.client.query("ROLLBACK").catch(() => null);
   }
 
   const { container, header } = buildContainer({

@@ -27,7 +27,7 @@
 | Schema | 35 tables, migrations 0001–0005 | **36 tables** (`Backup`), migrations **0001–0006** | +1 migration |
 | API routes | 54 | **55** (`cron/backup`) | +1 |
 
-Every count change is explained by the tests added in this batch; no test was deleted, weakened or skipped, and no existing assertion was changed (the pre-existing L1 cron check and the L14-era backup checks were left untouched and still pass).
+Every count change is explained by the tests added in this batch; no test was deleted, weakened or skipped, and no existing assertion was changed (the pre-existing L1 cron check and the L14-era backup checks were left untouched and still pass). §2 records the state at `4b76258`; the final-verification batch (§11, same day) moved the suites to **vitest 216/216 + e2e 286/286** — full count reconciliation with scope + date + commit in `RESTORE_DRILL_REPORT.md` §7.
 
 ## 3. WS-A — backup architecture (NG-S09)
 
@@ -52,7 +52,7 @@ manifest = exact marker bytes + byte lengths of every section (no regex re-parsi
 | Measurement | Value |
 |---|---|
 | File | `citycare-backup-20261102-060520-c3f13680.ccbk` (196,013 B; 36 tables / 765 rows; PG 18.6; schema `0006_backup_metadata`) |
-| Result | exit 0, all 7 gates green, `ledger_verify() = 0 breaks`, content byte-identical, login ok (ramesh 1/3/2), scratch dropped |
+| Result | exit 0, all 7 gates green, `ledger_verify() = 0 breaks`, content byte-identical row multiset (order-independent — A88), login ok (ramesh 1/3/2), scratch dropped |
 | RTO (file → verified scratch DB) | **609 ms** (createDb 36 / schema 98 / data 41 / content 15) |
 | RPO | design-bound ≤ ~24 h (daily cron); drill measured a fresh backup (age 118 ms) |
 
@@ -151,3 +151,50 @@ Scope: review + correct the delivered Batch 1; **no Day 2 work, no redesign of w
 - **No source files, no migrations, no tests, no `vercel.json` touched** in this audit.
 
 **Test evidence (this audit, docs-only — re-run after edits, 2026-11-02):** vitest **213/213** (6.9 s) · `tsc --noEmit` **0 errors** · `npm run lint` **0** · full e2e **272/272** (19.0 s, after clearing `RateLimit` as always). No assertions deleted or weakened; no source files touched in this audit, so the §2 behavioural evidence stands unchanged.
+
+## 11. Day 1 final technical verification (2026-11-02, owner-directed)
+
+Scope: the owner's six findings against the delivered Day 1. Findings 1–3 **authorized
+implementation** (explicit owner approval — this batch is *not* docs-only); findings 4–6 are
+observability, procedure and reporting work. Hard constraints honoured: no public document
+endpoint, no plaintext/PHI in any log or output, no secrets generated/displayed beyond the
+local sandbox `.env.local` (regenerated after a session reset — values never leave the
+sandbox), no key rotation/re-encryption, no production deploy, **NG-S09 and NG-S15 stay
+PARTIALLY IMPLEMENTED** until their acceptance requirements are verified.
+
+| # | Finding | What was done | Evidence (all executed 2026-11-02) |
+|---|---|---|---|
+| F1 | Backup must be a consistent snapshot | The whole dump (all per-table `count(*)` + all 36 `COPY TO`s) now runs inside **one** `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY … COMMIT` on the dedicated copy client; any failure ⇒ `ROLLBACK` + **no file**. MVCC trade-offs documented (snapshot held for dump duration, bounded by the 20 s soft budget; writers never blocked; read-only guard) — `BACKUP_AND_DISASTER_RECOVERY.md` §1 item 3 | Unit: statement-order pin + ROLLBACK-on-mid-dump-failure (2 new). E2e **§16a** (deterministic: open REPEATABLE READ snapshot unaffected by a concurrent commit) + **§16b** (8 real backups taken while a writer's commit lands *during* the dump; every captured cross-table (User, Patient) pair matched exactly one committed state — a mix is impossible under the snapshot and possible under the old per-table autocommit). Drill re-run after the change: all gates green, `restoreMs` 229 (`RESTORE_DRILL_REPORT.md` §6) |
+| F2 | `@vercel/blob` must be a real manifest dependency | `@vercel/blob@^2.8.2` (2.8.2 = latest stable at install time) installed in `web/` → `package.json` + `package-lock.json` (owner-approved; **not** a temporary production-only install). Installed-package API verified directly: 2.8.2 exports `put/get/list/del` — **no `delete`** (A86) | `pruneBackups` made version-tolerant (`blob.delete ?? blob.del`, loud failure if neither) + unit test pinning the installed shape. Build + vitest **216/216** + full e2e **286/286** green on the change. D69 **closed** |
+| F3 | Document-level recovery must be drilled, not just COPY-tested | Drill **gate 7** `--verify-document <id>` + new `scripts/verify-document.ts`: scratch-DB-only, decrypts **one** explicit document with the **application's own** `decryptBlob` (same crypto as downloads), checks SHA-256 vs `Document.checksumSha256` + byte length vs `Document.sizeBytes`; prints **status-only JSON** (booleans, counts, ms — never content); non-zero exit = verification problem, verdict still parsed; drill cleanup (`DrillFail` + `createdScratch`) drops the scratch on **every** path; **no endpoint created anywhere** | E2e **§16d** (synthetic canary PDF — real upload → backup → drill): `documentVerify.ok`, `checksumMatch`, `sizeMatch`, canary **absent** from stdout+stderr, `scratchDropped:true`; **negative path** unknown id ⇒ `found:false`, drill failed, scratch still dropped; cleanup deletes the synthetic doc. `DOCUMENT_STORAGE_DISASTER_RECOVERY.md` §6 step 4 executed, §8 item 1 **closed**. A successful COPY test is never presented as a decryption test — the two are separate gates |
+| F4 | A backup failure caused by the DB itself must be observable independently | The same-DB `"Backup"` row *cannot* be written when the DB is down — so both callers now emit a stable, grep-able **`[citycare-backup] FATAL`** marker (constant `BACKUP_FATAL_MARKER`, shared so it cannot drift) naming the `errorClass` (no credentials) to the **platform log**, and the CLI exits non-zero. The message and docs state plainly that **v1 has no automated alerting** — log monitoring/alert wiring is an owner-side action, not a configured capability | E2e **§16c** (4 checks, `DATABASE_URL` → dead port): exit ≠ 0, marker present, **no** `.ccbk` written, **no** spurious `"Backup"` row. Docs: `BACKUP_AND_DISASTER_RECOVERY.md` §4.1 (new), `BACKUP_CONFIGURATION.md` §4 |
+| F5 | Both `BACKUP_KEY` and `DOCUMENT_KEY` need documented escrow procedures | `BACKUP_CONFIGURATION.md` §6.3 now states its scope covers **both** keys and its status plainly: **documented, not yet executed** — the procedure (offline split copy, second holder, cross-check, exercise-on-rotation, loss consequences) is written; the **owner must perform** the escrow. No secrets were generated, rotated, displayed or transmitted in this batch (the sandbox-local `.env.local` values are regenerated per session reset and never leave the sandbox) | Owner action list below (item 2). Distinction "documented procedure ≠ executed escrow" is explicit in the doc and in this report |
+| F6 | Test counts disagree across documents (257 vs 272) | Reconciled: both were true for **different code states** (WS-A `e51e437` vs WS-B `4b76258`). Full table — suite, count, date, commit, where cited — in `RESTORE_DRILL_REPORT.md` §7; convention fixed: no bare count without scope + date + commit | Current (this commit): e2e **286/286**, vitest **216/216** (21 files), tsc 0, lint 0 (1 pre-existing-style warning fixed), build OK, drill `restoreMs` 229 @ 1,079 rows |
+
+**Changed files (this batch, precise list):**
+- `web/package.json`, `web/package-lock.json` — `@vercel/blob@^2.8.2` (F2)
+- `web/src/lib/backup-core.mjs` (+ `.d.mts`) — snapshot transaction in `createBackup` (F1); tolerant blob-prune (A86); `BACKUP_FATAL_MARKER` + `formatBackupFatalLog` (F4)
+- `web/src/app/api/cron/backup/route.ts` — FATAL marker on connect failure + unrecordable failure (F4)
+- `web/scripts/backup.mjs` — FATAL marker + clean non-zero exit on connect failure (F4)
+- `web/scripts/restore-drill.mjs` — gate 7 `--verify-document` (F3); `DrillFail`/`createdScratch` total cleanup; verdict parsing on child non-zero exit (A87)
+- `web/scripts/verify-document.ts` — **new** (F3)
+- `web/src/lib/__tests__/backup-core.test.ts` — +3 unit tests (F1 ×2, A86 ×1)
+- `web/scripts/e2e.mjs` — **section 16** (14 checks: §16a/b snapshot, §16c DB-down, §16d document drill)
+- `web/docs/operations/BACKUP_AND_DISASTER_RECOVERY.md` — snapshot §1 item 3, §4.1 DB-down observability, status header
+- `web/docs/operations/BACKUP_CONFIGURATION.md` — prerequisite 0 ✅ (F2), §4 FATAL bullet, §6.3 both-keys escrow scope/status (F5)
+- `web/docs/operations/RESTORE_DRILL_REPORT.md` — §5 document-level drill executed, §6 post-change re-run, §7 count reconciliation (F3, F6)
+- `web/docs/operations/DOCUMENT_STORAGE_DISASTER_RECOVERY.md` — §6 step 4 executed, §8 item 1 closed, status header (F3)
+- `web/DRAWBACKS_AND_BUGFIXES.md` — **A86 + A87 added; D69 closed; D66 sub-gap (b) closed** (F2, F3)
+- `CITYCARE_MASTER_GAP_REGISTER.md` — NG-S09 final-verification block (stays PARTIALLY IMPLEMENTED), NG-S15 note (unchanged, stays PARTIALLY IMPLEMENTED), doc refs
+- `CITYCARE_DAY_1_REPORT.md` — this §11 + §2 pointer
+
+**Test evidence (this batch, 2026-11-02, after all changes):** vitest **216/216** (21 files) · `tsc --noEmit` **0 errors** · `npm run lint` **0 errors / 0 warnings** · `next build` **OK** · full e2e **286/286** (after `DELETE FROM "RateLimit"` as always) · standalone drill re-run **exit 0**, all gates green, `restoreMs` 229, `scratchDropped: true`.
+
+**Outstanding owner-side actions (unchanged items + new):**
+1. **NG-S15 verification** (key to both P0 gaps): set/confirm production env vars (esp. `RETENTION_POLICY` on the pilot instance) + perform the actual pilot deployment → only then may NG-S15 move to RESOLVED.
+2. **Execute the key escrow for BOTH keys** (`BACKUP_KEY`, `DOCUMENT_KEY`) per `BACKUP_CONFIGURATION.md` §6.3 — the procedure is documented; the escrow itself is owner-executed. Until then both keys have a single system of record.
+3. **NG-S09 production verification:** deploy (with `BACKUP_KEY` + `BLOB_READ_WRITE_TOKEN` — the `@vercel/blob` prerequisite is now satisfied), first cron run, one production-size drill (`RESTORE_RUNBOOK.md` §8) → then NG-S09 can move to RESOLVED.
+4. **Backup-failure monitoring:** wire log-based alerting on the `[citycare-backup] FATAL` marker (Vercel function log) if/when desired — v1 has **no** automated alerting; the marker + non-zero CLI exit are what exist.
+5. **Optional:** manual private export of the newest `.ccbk` to a second store (durability of the Vercel Blob provider side) — only if the owner decides it is required; no public export endpoint exists or will be built.
+
+**After this verification: STOP.** No Day 2, no production deploy, no redesign — as directed.

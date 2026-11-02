@@ -1,6 +1,7 @@
 // End-to-end trust test over HTTP. Requires the dev server on :3000 and a seeded DB.
 // Run:  node scripts/e2e.mjs
 const BASE = process.env.BASE ?? "http://127.0.0.1:3000";
+import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 // Local convenience: pick CRON_SECRET / DATABASE_URL up from .env.local so the cron and the
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
@@ -1037,7 +1038,7 @@ console.log("\n— 14. backup / DR (NG-S09): encrypted daily backup, private sto
       check("B: restore drill SUCCEEDED on the isolated scratch DB", d.code === 0 && dj?.status === "success", `code ${d.code} ${d.err || JSON.stringify(dj?.failure ?? null)}`);
       check("B: restored DB passes ledger_verify() (0 breaks)", dj?.checks?.ledgerVerify?.ok === true, JSON.stringify(dj?.checks?.ledgerVerify ?? null));
       check("B: restored row counts match the backup manifest exactly", dj?.checks?.rowCounts?.ok === true, JSON.stringify(dj?.checks?.rowCounts ?? null).slice(0, 200));
-      check("B: restored table CONTENT is byte-identical to the manifest (re-COPY compare)", dj?.checks?.contentMatch?.ok === true, JSON.stringify(dj?.checks?.contentMatch ?? null).slice(0, 200));
+      check("B: restored table CONTENT matches the manifest exactly (re-COPY row-multiset compare, order-independent — A88)", dj?.checks?.contentMatch?.ok === true, JSON.stringify(dj?.checks?.contentMatch ?? null).slice(0, 200));
       check("B: login + record check passes on restored data (ramesh@demo.in)", dj?.checks?.login?.ok === true, JSON.stringify(dj?.checks?.login ?? null).slice(0, 200));
       check("B: scratch DB was dropped after the drill (no leftover)", dj?.scratchDropped === true, JSON.stringify({ dropped: dj?.scratchDropped, err: dj?.droppedError ?? null }));
       check("B: drill measured RPO (backup age) and RTO (restore duration)", Number.isFinite(dj?.measurements?.backupAgeMs) && Number.isFinite(dj?.measurements?.restoreMs), JSON.stringify(dj?.measurements ?? null));
@@ -1137,6 +1138,205 @@ console.log("\n— 15. retention sweep policy (NG-S15): explicit policy, fail-sa
     check("S15: privacy notice + terms state the demo erasure (notice matches the armed sweep)",
       notice.includes(`erased automatically ${days} days after creation`) && terms.includes(`erased after ${days} days`),
       "demo erasure clause missing from the notice copy");
+  }
+}
+
+console.log("\n— 16. final technical verification (2026-11-02): consistent snapshot · document-level recovery · DB-down observability —");
+{
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { readFileSync, mkdtempSync, rmSync, readdirSync } = await import("node:fs");
+  const run = promisify(execFile);
+  const WEB = new URL("../", import.meta.url).pathname; // web/
+  const { default: pg } = await import("pg");
+  const bc = await import("../src/lib/backup-core.mjs");
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // one user owned by this section (patient profile auto-created on signup)
+  const s16 = new Session("s16");
+  const emailU = `s16.${stamp}@e2e.citycare.test`;
+  const su = await s16.post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S16 ${stamp}`, email: emailU, phone: uniqPhone("7"), password: "e2epassword1" });
+  const uidRow = await sql(`SELECT id FROM "User" WHERE lower(email) = lower($1)`, [emailU]);
+  const uid = uidRow?.rows?.[0]?.id;
+  const patRow = await sql(`SELECT id, "fullName" FROM "Patient" WHERE "userId" = $1`, [uid]);
+  const pid = patRow?.rows?.[0]?.id;
+  const origName = patRow?.rows?.[0]?.fullName;
+  check("S16: owned test user + patient exist (used by all sub-checks)", su.status === 201 && !!uid && !!pid, `signup ${su.status} uid=${uid ?? "n/a"}`);
+
+  // ---- 16a: deterministic snapshot isolation — proves the REPEATABLE READ guarantee
+  //      the backup dump now relies on (a new transaction sees a committed writer; the
+  //      open REPEATABLE READ snapshot does NOT, no matter when the writer commits) ----
+  {
+    const connA = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    const connB = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await connA.connect();
+    await connB.connect();
+    let okA = false;
+    let detail = "setup error";
+    try {
+      await connB.query("BEGIN");
+      await connB.query(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, ["S16-SNAP-WRITE", pid]);
+      await connA.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const r1 = (await connA.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      await connB.query("COMMIT"); // writer commits while the snapshot is open
+      const r2 = (await connA.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      await connA.query("ROLLBACK");
+      const r3 = (await connB.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      okA = r1.fullName === origName && r2.fullName === origName && r3.fullName === "S16-SNAP-WRITE";
+      detail = `snapshot saw "${r1.fullName}" → "${r2.fullName}" across the commit; fresh tx saw "${r3.fullName}"`;
+    } catch (e) {
+      detail = String(e?.message ?? e);
+    } finally {
+      await connA.query("ROLLBACK").catch(() => null);
+      await connB.query("ROLLBACK").catch(() => null);
+      await connA.end().catch(() => null);
+      await connB.end().catch(() => null);
+      await sql(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [origName, pid]);
+    }
+    check("S16a: REPEATABLE READ snapshot stays stable through a concurrent commit (the guarantee the dump uses)", okA, detail);
+  }
+
+  // ---- 16b: real backups taken while a writer commits between tables ⇒ no cross-table
+  //      mixed state (User is copied before Patient in FK order; with per-statement
+  //      autocommit an interleaving commit could have landed between the two COPYs) ----
+  if (process.env.BACKUP_DIR) {
+    // The writer's commit must be able to land DURING the dump to be a real interleaving
+    // test: open the write transaction, start the backup WITHOUT awaiting it, commit after
+    // a varied delay (child-process startup means the snapshot position varies per run).
+    // INVARIANT (what a consistent snapshot means): the pair (User.phone, Patient.fullName)
+    // captured in ANY backup must equal the pair of exactly ONE committed writer state —
+    // never a combination of values from two different commits (the old per-table
+    // autocommit could produce that). We don't assert WHICH commit won the race — only
+    // that the pair is unambiguous.
+    const states = [];
+    {
+      const cur = await sql("SELECT (SELECT \"phone\" FROM \"User\" WHERE id = $1) p, (SELECT \"fullName\" FROM \"Patient\" WHERE id = $2) n", [uid, pid]);
+      states.push({ phone: cur.p, name: cur.n });
+    }
+    let okB = true;
+    let detailB = "every captured pair matches exactly one committed writer state";
+    const delays = [1, 4, 9, 16, 30, 60, 100, 150];
+    for (let i = 1; i <= 8; i++) {
+      const thisPhone = uniqPhone("6");
+      const thisName = `S16-SNAP-U${i}`;
+      const w = new pg.Client({ connectionString: process.env.DATABASE_URL });
+      await w.connect();
+      await w.query("BEGIN");
+      await w.query(`UPDATE "User" SET "phone" = $1 WHERE id = $2`, [thisPhone, uid]);
+      await w.query(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [thisName, pid]);
+      const p = run(process.execPath, ["scripts/backup.mjs", "create"], { cwd: WEB, maxBuffer: 8 * 1024 * 1024, timeout: 120_000 })
+        .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+        .catch((e) => ({ ok: false, err: String(e?.stderr ?? e?.message).slice(0, 160) }));
+      await sleep(delays[i - 1]); // position the commit at a varied point relative to the dump
+      try {
+        await w.query("COMMIT");
+      } finally {
+        await w.end().catch(() => null);
+      }
+      states.push({ phone: thisPhone, name: thisName }); // committed at this point
+      const bk = await p;
+      if (!bk.ok) { okB = false; detailB = `backup ${i} failed: ${bk.err ?? JSON.stringify(bk).slice(0, 160)}`; break; }
+      const v = bc.verifyBackupFile(readFileSync(process.env.BACKUP_DIR + "/" + bk.objectName), bc.backupKey());
+      const rowOf = (sectionName, id) =>
+        v.sections.find((s) => s.name === sectionName).copyText.split("\n").find((l) => l.startsWith(id + "\t"));
+      // User: id(0) email(1) phone(2) … · Patient: id(0) userId(1) fullName(2) …
+      const uPhone = rowOf("User", uid)?.split("\t")[2] ?? null;
+      const pName = rowOf("Patient", pid)?.split("\t")[2] ?? null;
+      const uniform = states.some((s) => s.phone === uPhone && s.name === pName);
+      if (!uniform) { okB = false; detailB = `iter ${i}: backup captured User.phone=${uPhone} + Patient.fullName="${pName}" — that combination was never committed by any single writer transaction (a mixed state ⇒ the snapshot guarantee is broken)`; break; }
+    }
+    check("S16b: 8 backups taken under concurrent writers — every captured (User, Patient) pair is one single committed state (no cross-table mixed values)", okB, detailB);
+    // reset to a fresh, collision-proof value (a fixed constant collides on re-runs:
+    // every previous e2e run's owned user still holds its reset value)
+    await sql(`UPDATE "User" SET "phone" = $1 WHERE id = $2`, [uniqPhone("7"), uid]);
+    await sql(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [origName, pid]);
+  } else {
+    skip("S16b: concurrent-writer backups", "BACKUP_DIR not set (non-local store)");
+  }
+
+  // ---- 16c: database unavailability ⇒ the failure is still independently observable
+  //      (no failure row can be written to the dead DB: the platform log line is the
+  //      independent record; v1 has no automated alerting — do not claim otherwise) ----
+  {
+    const metaBefore = (await sql(`SELECT count(*)::int n FROM "Backup"`))?.rows?.[0]?.n ?? null;
+    const deadDir = mkdtempSync("/tmp/ccbk-dbdn-");
+    let dnOk = false;
+    let dnCode = 0;
+    let dnOut = "";
+    try {
+      const r = await run(process.execPath, ["scripts/backup.mjs", "create"], {
+        cwd: WEB,
+        env: { ...process.env, DATABASE_URL: "postgresql://e2e@127.0.0.1:1/citycare", BACKUP_DIR: deadDir },
+        maxBuffer: 4 * 1024 * 1024,
+        timeout: 60_000,
+      });
+      dnOk = true;
+      dnCode = 0;
+      dnOut = String(r.stdout) + String(r.stderr);
+    } catch (e) {
+      dnCode = Number(e?.code ?? 1);
+      dnOut = String(e?.stdout ?? "") + String(e?.stderr ?? e?.message ?? "");
+    }
+    const filesBeforeClean = readdirSync(deadDir);
+    rmSync(deadDir, { recursive: true, force: true });
+    check("S16c: DB down ⇒ backup exits non-zero (no silent success)", dnOk === false && dnCode !== 0, `ok=${dnOk} code=${dnCode}`);
+    check("S16c: DB down ⇒ stable FATAL marker in the platform log (independent observability)", dnOut.includes(bc.BACKUP_FATAL_MARKER), dnOut.slice(0, 220));
+    check("S16c: DB down ⇒ no encrypted file written to the store", !filesBeforeClean.some((f) => f.endsWith(".ccbk")), `store contained: ${filesBeforeClean.join(", ") || "(empty)"}`);
+    const metaAfter = (await sql(`SELECT count(*)::int n FROM "Backup"`))?.rows?.[0]?.n ?? null;
+    check("S16c: DB down ⇒ no spurious 'Backup' metadata row", metaAfter === metaBefore, `before=${metaBefore} after=${metaAfter}`);
+  }
+
+  // ---- 16d: DOCUMENT-LEVEL recovery drill — a real document, decrypted from the
+  //      restored scratch DB with the application's own crypto (this is NOT the same
+  //      evidence as the row-multiset COPY compare — one proves bytes, the other proves
+  //      a document actually decrypts and matches its plaintext checksum) ----
+  if (process.env.BACKUP_DIR) {
+    const canary = `CCDOCVERIFY-${stamp}-${crypto.randomBytes(8).toString("hex")}`;
+    const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n${canary}\ntrailer<</Root 1 0 R>>\n%%EOF\n`;
+    const pdfBytes = new TextEncoder().encode(pdf);
+    const wantSha = crypto.createHash("sha256").update(pdfBytes).digest("hex");
+    const fd = new FormData();
+    fd.append("file", new Blob([pdfBytes], { type: "application/pdf" }), "verify.pdf");
+    fd.append("title", "Synthetic verify doc");
+    fd.append("type", "LAB_REPORT");
+    fd.append("issuedOn", "2026-09-15");
+    if (!s16.cookie) await s16.post("/api/auth/login", { email: emailU, password: "e2epassword1" });
+    const up = await s16.upload("/api/patient/documents", fd);
+    const docId = up.data?.id;
+    check("S16d: synthetic document uploaded (unique canary; server sha matches local sha256)", up.status === 201 && up.data?.sha256 === wantSha && !!docId, `${up.status} sha=${String(up.data?.sha256 ?? "").slice(0, 12)}`);
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const dts = new Date();
+    const scratch = `citycare_drill_${dts.getUTCFullYear()}${pad(dts.getUTCMonth() + 1)}${pad(dts.getUTCDate())}_${pad(dts.getUTCHours())}${pad(dts.getUTCMinutes())}${pad(dts.getUTCSeconds())}`;
+    const drill = (extraArgs) =>
+      run(process.execPath, ["scripts/restore-drill.mjs", ...extraArgs], { cwd: WEB, maxBuffer: 16 * 1024 * 1024, timeout: 300_000 })
+        .then((r) => ({ code: 0, out: String(r.stdout), err: "" }))
+        .catch((e) => ({ code: Number(e?.code ?? 1), out: String(e?.stdout ?? ""), err: String(e?.stderr ?? e?.message).slice(0, 300) }));
+    const parseDrill = (out) => { try { return JSON.parse(out.slice(out.indexOf("{"))); } catch { return null; } };
+
+    const bk2 = await run(process.execPath, ["scripts/backup.mjs", "create"], { cwd: WEB, maxBuffer: 8 * 1024 * 1024, timeout: 120_000 })
+      .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+      .catch(() => ({ ok: false }));
+    if (bk2.ok && bk2.objectName) {
+      const file2 = process.env.BACKUP_DIR + "/" + bk2.objectName;
+      const dv = await drill([file2, "--scratch", scratch, "--verify-document", docId]);
+      const dvj = parseDrill(dv.out);
+      check("S16d: drill --verify-document SUCCEEDS — a document DECRYPTED from the restored scratch (not just COPY'd)", dv.code === 0 && dvj?.status === "success" && dvj?.checks?.documentVerify?.ok === true, `code ${dv.code} ${dv.err || JSON.stringify(dvj?.checks?.documentVerify ?? dvj?.failure ?? null).slice(0, 200)}`);
+      check("S16d: decrypted bytes match the stored SHA-256 and declared byte length", dvj?.checks?.documentVerify?.checksumMatch === true && dvj?.checks?.documentVerify?.sizeMatch === true, JSON.stringify(dvj?.checks?.documentVerify ?? null));
+      check("S16d: drill output leaks NO plaintext (canary absent from stdout and stderr)", !dv.out.includes(canary) && !dv.err.includes(canary), "canary string found in drill output");
+      check("S16d: scratch DB dropped after the verify gate ran", dvj?.scratchDropped === true, JSON.stringify({ dropped: dvj?.scratchDropped, err: dvj?.droppedError ?? null }));
+
+      const badUuid = "00000000-0000-4000-8000-000000000000";
+      const dn = await drill([file2, "--scratch", scratch, "--verify-document", badUuid]);
+      const dnj = parseDrill(dn.out);
+      check("S16d: unknown document id FAILS the drill (found=false), and the scratch is STILL dropped on that failure", dnj?.status === "failed" && dnj?.checks?.documentVerify?.found === false && dnj?.scratchDropped === true, JSON.stringify(dnj?.checks?.documentVerify ?? dnj?.failure ?? null).slice(0, 200));
+    } else {
+      skip("S16d: --verify-document drill", "backup create failed (non-local store or env)");
+    }
+    const delD = docId ? await s16.del(`/api/documents/${docId}`) : null;
+    check("S16d: cleanup — synthetic document deleted (bytes removed, tombstone kept for the ledger)", !!delD && delD.status === 200 && delD.data?.deleted === true, JSON.stringify(delD?.data ?? delD?.status));
+  } else {
+    skip("S16d: document-level drill", "BACKUP_DIR not set (non-local store)");
   }
 }
 

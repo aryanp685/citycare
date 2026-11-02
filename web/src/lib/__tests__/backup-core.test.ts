@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -33,6 +33,17 @@ import {
   type QueryRunner,
   type CreateBackupOpts,
 } from "../backup-core.mjs";
+
+// The blob store's SDK is mocked: it is exercised only through its API shape (A86 pins the
+// delete/del rename). vitest hoists this above the imports, so backup-core's dynamic
+// `import("@vercel/blob")` in blobApi() receives the same mock.
+vi.mock("@vercel/blob", () => ({
+  put: vi.fn(async () => ({ url: "https://example/blob" })),
+  get: vi.fn(async () => new Response(new Uint8Array())),
+  list: vi.fn(async () => []), // v2: resolves to the item array directly
+  del: vi.fn(async () => ({})), // @vercel/blob 2.8.2 ships `del`; newer majors renamed it `delete`
+  delete: undefined, // declared (absent in 2.8.2) so the A86 rename-tolerance check is testable
+}));
 
 const KEY = crypto.randomBytes(32);
 
@@ -366,6 +377,93 @@ describe("backup core — createBackup orchestration (fake pg)", () => {
     expect(Date.now() - t0).toBeGreaterThan(50);
     expect(fs.readdirSync(dir).filter((f) => f.endsWith(".ccbk"))).toEqual([]);
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  // ---- consistent snapshot (final technical verification, finding 1, 2026-11-02) ----
+  function recordingClient(tables: Record<string, string>, slowMs = 0) {
+    const base = fakePg(tables, slowMs);
+    const stmts: string[] = [];
+    const client = {
+      query: (text: string, values?: unknown[]) => {
+        stmts.push(text);
+        return (base.client.query as unknown as (t: string, v?: unknown[]) => unknown)(text, values);
+      },
+    };
+    return { client: client as unknown as CreateBackupOpts["client"], query: base.query, stmts };
+  }
+  const classify = (s: string) =>
+    s.startsWith("BEGIN") ? "BEGIN" : s.startsWith("COMMIT") ? "COMMIT" : s.startsWith("ROLLBACK") ? "ROLLBACK" : s.startsWith("COPY") ? "COPY" : "Q";
+
+  it("snapshot: all table reads run inside ONE REPEATABLE READ READ ONLY transaction (BEGIN first, COMMIT last)", async () => {
+    const dir = tmpdir("snap");
+    const { client, query, stmts } = recordingClient({ Parent: "p1\n", Child: "c1\n", Solo: "s1\n" });
+    const res = await createBackup({
+      env: { BACKUP_KEY: KEY.toString("base64"), BACKUP_DIR: dir },
+      query,
+      client,
+      url: "postgresql://u:p@h:5432/citycare",
+      now: new Date("2026-11-02T12:00:00.000Z"),
+    });
+    const seq = stmts.map(classify);
+    const beginIdx = seq.indexOf("BEGIN");
+    const commitIdx = seq.lastIndexOf("COMMIT");
+    expect(beginIdx).toBeGreaterThanOrEqual(0); // the dump opens a transaction
+    expect(stmts[beginIdx]).toBe("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); // the isolation that makes it consistent
+    expect(commitIdx).toBeGreaterThan(beginIdx); // and closes it
+    // EVERY count + EVERY COPY is strictly between BEGIN and COMMIT (one snapshot)
+    for (let i = beginIdx + 1; i < commitIdx; i++) expect(["COPY", "Q"]).toContain(seq[i]);
+    expect(seq.slice(beginIdx + 1, commitIdx).filter((s) => s === "COPY").length).toBe(3);
+    expect(seq.slice(beginIdx + 1, commitIdx).filter((s) => s === "Q").length).toBe(3); // the counts moved inside the tx
+    // nothing is read after COMMIT
+    expect(seq.length).toBe(commitIdx + 1);
+    expect(res.header.totalRows).toBe(3);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("snapshot: a mid-dump failure ROLLBACKs (no COMMIT) and writes no file", async () => {
+    const dir = tmpdir("snapfail");
+    const { client, query, stmts } = recordingClient({ A: "a\n", B: "b\n", C: "c\n" }, 40);
+    await expect(
+      createBackup({
+        env: { BACKUP_KEY: KEY.toString("base64"), BACKUP_DIR: dir },
+        query,
+        client,
+        url: "postgresql://u:p@h:5432/x",
+        softLimitMs: 50,
+      }),
+    ).rejects.toThrowError(BackupError);
+    const seq = stmts.map(classify);
+    const beginIdx = seq.indexOf("BEGIN");
+    const rollbackIdx = seq.indexOf("ROLLBACK");
+    expect(beginIdx).toBeGreaterThanOrEqual(0);
+    expect(rollbackIdx).toBeGreaterThan(beginIdx); // the snapshot is released
+    expect(seq.lastIndexOf("COMMIT")).toBe(-1); // ...without ever committing it
+    expect(fs.readdirSync(dir).filter((f) => f.endsWith(".ccbk"))).toEqual([]);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("backup core — blob store pruning (A86: SDK renamed del→delete, never shipped both)", () => {
+  type MockedBlob = { list: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
+  it("pruneBackups deletes through the installed SDK's API (del in @vercel/blob 2.8.2)", async () => {
+    const blob = (await import("@vercel/blob")) as unknown as MockedBlob;
+    const files = [
+      { name: "citycare-backup-20261001-000000-aaaa1111.ccbk", size: 10, lastModified: "2026-10-01T00:00:00.000Z" },
+      { name: "citycare-backup-20261005-000000-bbbb2222.ccbk", size: 10, lastModified: "2026-10-05T00:00:00.000Z" },
+      { name: "citycare-backup-20261030-000000-cccc3333.ccbk", size: 10, lastModified: "2026-10-30T00:00:00.000Z" },
+    ];
+    // v2 list() resolves to the item array directly (v1 used {blobs})
+    blob.list.mockResolvedValueOnce(files as never);
+    blob.del.mockResolvedValueOnce({} as never).mockResolvedValueOnce({} as never);
+    // now = 2026-11-10 ⇒ 30-day cutoff = 2026-10-11: Oct 1 and Oct 5 are stale, Oct 30 fresh
+    const deleted = await pruneBackups({ BLOB_READ_WRITE_TOKEN: "test-token" }, 30, Date.parse("2026-11-10T00:00:00Z"));
+    // the two stale files are deleted, the fresh one (and always the newest) is kept;
+    // deletion walks newest-first, so Oct 5 goes before Oct 1
+    expect(deleted).toEqual(["citycare-backup-20261005-000000-bbbb2222.ccbk", "citycare-backup-20261001-000000-aaaa1111.ccbk"]);
+    expect(blob.del.mock.calls.map((c) => String(c[0]))).toEqual([
+      "citycare-backup-20261005-000000-bbbb2222.ccbk",
+      "citycare-backup-20261001-000000-aaaa1111.ccbk",
+    ]);
   });
 });
 

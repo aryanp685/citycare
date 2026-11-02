@@ -22,7 +22,8 @@ the script, and the script refuses to run outside its safety invariants.
    are `CREATE DATABASE` / `DROP DATABASE` for that exact scratch name.
 4. Verification is **all-or-nothing before you trust anything**: file checksum → schema apply
    → FK-ordered COPY in ONE transaction → `ledger_verify() = 0` → row counts match the
-   manifest → **table content byte-identical** (re-COPY compare) → login/record check → *then*
+   manifest → **table content matches the manifest row-for-row** (re-COPY compare,
+   order-independent — A88) → login/record check → *then*
    the scratch is dropped (unless `--keep`).
 5. **Never** restore into the live database. **Never** drop the live database before the
    restored one is verified and promoted (see §6). **Never** skip a gate to save time.
@@ -99,7 +100,7 @@ backup.
 | `dataCopied` | all 36 tables' COPY sections were applied in ONE transaction (atomic: all or nothing) |
 | `ledgerVerify` | the consent/audit **ledger hashes chain-verify with 0 breaks** on the restored data — the integrity-critical table is byte-faithful |
 | `rowCounts` | nothing lost, nothing extra (per-table counts match the manifest) |
-| `contentMatch` | **every table's full text content is byte-identical** to the manifest (re-COPY each table from the scratch and compare) — catches corrupted cell data that row counts would miss |
+| `contentMatch` | **every table's content is the exact byte-identical row multiset** of the manifest (re-COPY each table from the scratch and compare, order-independent — PostgreSQL does not guarantee COPY row order, A88) — catches corrupted cell data, NUL bytes, and missing/extra rows that row counts would miss |
 | `login` | a real account verifies (scrypt) against the restored hashes and its records (patient/encounters/consents) are present — the app is actually usable, not just populated |
 
 ## 4. Reading a failure

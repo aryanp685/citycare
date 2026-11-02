@@ -78,6 +78,12 @@ FROM "Backup" ORDER BY "createdAt" DESC LIMIT 14;
 ```
 
 - File-level integrity without restoring: `node scripts/backup.mjs verify <file>`.
+- **DB-down failure (the one the `"Backup"` row cannot cover):** the function log and the
+  CLI stdout carry a stable marker — `[citycare-backup] FATAL` (constant
+  `BACKUP_FATAL_MARKER`, identical in both callers) — plus a non-zero CLI exit. **v1 has no
+  automated alerting on this marker** (the log line says so explicitly); monitoring the log
+  or wiring a log-based alert is an owner-side action. Details + verified behaviour:
+  `BACKUP_AND_DISASTER_RECOVERY.md` §4.1.
 
 ## 5. Per-environment checklist
 
@@ -94,12 +100,18 @@ BACKUP_KEY=<fresh 32-byte b64>
 
 **Vercel production (owner-side, after explicit approval)**
 
-0. ⚠️ **Prerequisite discovered in the 2026-11-02 audit (A85/D69):** `@vercel/blob` is
-   **currently not in `web/package.json`** (the batch-1 report's "already a declared
-   dependency" was wrong — corrected there). Until it is installed, the production blob store
-   fails **loudly** (`"store": "@vercel/blob unavailable"` → failed `"Backup"` row +
-   `backups.stale:true`). Exact action: in `web/` run `npm i @vercel/blob`, rebuild, re-run
-   e2e, redeploy. (Patient documents are **not** in this store — they are Postgres rows; see
+0. ✅ **DONE (2026-11-02, owner-approved final-verification batch; A85/D69 closed):** the
+   audit found `@vercel/blob` was **not** in the manifest (the batch-1 report's "already a
+   declared dependency" was wrong). It is now pinned in `web/package.json` +
+   `web/package-lock.json` at **`@vercel/blob@^2.8.2`** (2.8.2 = latest stable at install
+   time) — a real manifest dependency, not a temporary production-only install. Verified
+   against the **installed** package (not the docs): v2.8.2 exports `put`, `get`, `list`,
+   `del` — **no `delete` export** (Vercel renamed `del`→`delete` across v2 minors and 2.8.2
+   ships only `del`). `pruneBackups` therefore resolves the name tolerantly
+   (`blob.delete ?? blob.del`) and fails loudly if neither exists; a unit test
+   (`backup-core.test.ts`, "prune tolerates the v2 del API") pins the installed shape.
+   Build + full unit + full e2e re-run green on this change (2026-11-02). (Patient documents
+   are **not** in this store — they are Postgres rows; see
    `DOCUMENT_STORAGE_DISASTER_RECOVERY.md`.)
 1. `BACKUP_KEY` — generate fresh, store as a Vercel **production** env var (not in git, not in
    the repo `.env*`).
@@ -151,6 +163,13 @@ what actually keep the backups recoverable.
   Audit who has it; remove departed members.
 
 ### 6.3 Recovery escrow
+
+**Scope: this section applies verbatim to BOTH long-lived data keys — `BACKUP_KEY` and
+`DOCUMENT_KEY`** (which protects every document byte, live and in backups — losing it is
+total document loss, §6.4). **Status of the procedure itself: documented, not yet
+executed.** The owner must actually perform each escrow (offline copy, second holder,
+cross-check) — a written procedure is not an escrow. Until the owner executes it, both keys
+have a single system of record (the environment) and no second holder.
 
 A key that only lives in one cloud env var dies with that account's access. The escrow rule:
 

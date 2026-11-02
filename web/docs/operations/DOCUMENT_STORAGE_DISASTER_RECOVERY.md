@@ -1,11 +1,16 @@
 # CityCare — Document Storage Disaster Recovery (NG-S09 companion)
 
-**Status (2026-11-02):** the database-level recovery path for documents is **covered by the
-executed restore drill** (the `DocumentBlob` section restored byte-identical, `ledger_verify()
-= 0` — see `RESTORE_DRILL_REPORT.md`). The **dedicated document-level recovery drill**
-(decrypt + checksum an actual document from a restored scratch database) is **defined in this
-document but NOT YET EXECUTED** — it is therefore *not* claimed as tested. Nothing in this
-document is a claim that document recovery has been drilled end-to-end at the document level.
+**Status (2026-11-02, final-verification update):** the database-level recovery path for
+documents is **covered by the executed restore drill** (the `DocumentBlob` section restored
+byte-identical row-for-row — order-independent compare, A88 — `ledger_verify() = 0` — see
+`RESTORE_DRILL_REPORT.md`). The **dedicated
+document-level recovery drill** (decrypt + checksum an actual document from a restored
+scratch database with the application's own crypto) **was EXECUTED 2026-11-02** — drill
+gate `--verify-document <id>` (`scripts/verify-document.ts`) + e2e §16d, happy and negative
+paths, evidence in `RESTORE_DRILL_REPORT.md` §5. The automated execution used a **synthetic
+canary document** (the only document an automated suite may decrypt — it contains no PHI);
+the drill against a *real* patient document remains an owner-run action on request
+(§6 step 4), not an automated one, by design.
 
 **Factual basis (code, read 2026-11-02):** `src/lib/storage.ts`,
 `src/app/api/patient/documents/route.ts`, `src/app/api/documents/[id]/route.ts`,
@@ -37,9 +42,10 @@ tables in the `CCB1` container (FK-topological COPY dump). The bytes reach the b
 **double-encrypted**: AES-256-GCM under `DOCUMENT_KEY` inside, then the whole container under
 `BACKUP_KEY`. The store (Vercel Blob `access:"private"` in prod, local 0600 in dev) therefore
 never holds plaintext, and a leaked object name without both keys yields nothing usable.
-(⚠️ As of 2026-11-02 the `@vercel/blob` package is not yet in the production manifest — A85/D69:
-the prod store fails loudly until it is installed; the local store and the entire executed
-drill are unaffected.)
+(✅ As of the 2026-11-02 final-verification batch the `@vercel/blob` dependency **is** in
+the manifest — `@vercel/blob@^2.8.2` in `web/package.json` + lock; A85/D69 closed. Note for
+maintainers: 2.8.2 exports `del`, not `delete` — `pruneBackups` resolves the name
+tolerantly; a unit test pins the shape.)
 
 - **RPO for documents = RPO for the database** (≤ ~24 h + run time; backup cron 21:30 UTC =
   03:00 IST).
@@ -118,11 +124,23 @@ The same invariants as the database restore apply and are **stricter here** (PHI
    bytes inside are additionally `DOCUMENT_KEY`-sealed. Neither key is in the file, the DB,
    or any log.
 3. **Verification without plaintext exposure.** Gates 1–6 (file integrity, schema, COPY,
-   `ledger_verify() = 0`, row counts, content byte-identical) operate on **ciphertext** —
+   `ledger_verify() = 0`, row counts, content byte-identical row multiset) operate on **ciphertext** —
    they prove fidelity without ever decrypting a document.
-4. **Document-level check (defined; NOT YET EXECUTED — see §8).** To prove a specific
-   document is recoverable *as a document*, an operator with **both** keys, in a restricted
-   environment, runs on the scratch DB (after a `--keep` drill or a promotion incident):
+4. **Document-level check — EXECUTED 2026-11-02 as drill gate 7 (evidence:
+   `RESTORE_DRILL_REPORT.md` §5).** The manual procedure below is now implemented as
+   `scripts/restore-drill.mjs --verify-document <documentId>`: after gates 1–6, a child
+   process (`scripts/verify-document.ts`) reads exactly ONE document's bytes from the
+   scratch DB, decrypts them with the **application's own** `decryptBlob` (same AES-256-GCM
+   path as downloads), and checks `sha256(plaintext) = Document.checksumSha256` and
+   `len(plaintext) = Document.sizeBytes`. It prints **status only** (booleans, byte counts,
+   key version, ms) — never content; the drill fails (`status: "failed"`) on a negative
+   verdict and **still drops the scratch** (cleanup on every path). Executed 2026-11-02 with
+   a synthetic canary document (e2e §16d): match on both checks, canary absent from all
+   output, scratch dropped; negative path (unknown id) ⇒ `found: false`, scratch dropped.
+   No endpoint was created — the check runs only as an operator script against the scratch
+   DB, which is dropped afterwards.
+   For a **real** patient document (rights request / incident), the operator runs the same
+   command with the patient's id, in a restricted environment; the fallback manual form:
 
    ```
    SELECT b.data, d."encryptionIv", d."checksumSha256"
@@ -156,13 +174,15 @@ The same invariants as the database restore apply and are **stricter here** (PHI
 
 ## 8. What is NOT yet true (blockers + exact required actions)
 
-1. **Standalone document recovery drill: NOT EXECUTED.** The executed 2026-11-02 drill proved
-   `DocumentBlob` byte fidelity (ciphertext) — it did not decrypt a document from the restored
-   scratch. **Required action (owner approval for a small code change):** add
-   `--verify-document <documentId>` to `restore-drill.mjs` (implement §6 step 4 on the
-   scratch before dropping) plus an e2e section 16 (upload a file → `backup.mjs create` →
-   drill with the flag → assert match). Until that runs green, document-level recovery is
-   "covered by design + ciphertext-drilled", not "drilled end-to-end".
+1. ~~**Standalone document recovery drill: NOT EXECUTED.** …~~ **CLOSED 2026-11-02 (final
+   technical verification, owner-approved code change):** `--verify-document <documentId>`
+   exists in `restore-drill.mjs` (gate 7, `scripts/verify-document.ts`, §6 step 4) and the
+   e2e section 16d executes it end-to-end with a synthetic canary document (upload → backup →
+   drill → decrypt + checksum + no-plaintext-leak + scratch-dropped, plus the unknown-id
+   negative path) — **green 2026-11-02** (e2e 286/286; evidence table in
+   `RESTORE_DRILL_REPORT.md` §5). Document-level recovery is now "drilled end-to-end" for
+   synthetic content; a real-document drill remains owner-run on request (rights/incident),
+   which is the correct scope for PHI.
 2. **`DOCUMENT_KEY` escrow: not yet performed** — apply the escrow discipline of
    `BACKUP_CONFIGURATION.md` §6 to `DOCUMENT_KEY` (same two-person, offline, exercised rule).
    Until then, loss of `DOCUMENT_KEY` is total document loss.

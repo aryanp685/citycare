@@ -6,6 +6,10 @@ export const FORMAT_VERSION: number;
 export const DEFAULT_RETENTION_DAYS: number;
 export const DEFAULT_SOFT_LIMIT_MS: number;
 export const BACKUP_STALE_MS: number;
+/** Stable grep-able marker for the DB-down failure mode (failure row unwriteable). */
+export const BACKUP_FATAL_MARKER: string;
+/** Format the fatal log line (errorClass + context; no secrets). */
+export declare function formatBackupFatalLog(code: string, context: string): string;
 
 export type BackupErrorCode = "config" | "crypto" | "verify" | "store" | "db" | "time_budget";
 

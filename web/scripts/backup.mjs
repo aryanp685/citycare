@@ -23,6 +23,7 @@ import {
   storeKind,
   dbFingerprintFromUrl,
   schemaVersionFromDir,
+  formatBackupFatalLog,
 } from "../src/lib/backup-core.mjs";
 import { withCopySupport } from "../src/lib/pg-copy.mjs";
 
@@ -51,7 +52,14 @@ const client = withCopySupport(raw);
 const query = (text, params) => client.query(text, params);
 
 try {
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (e) {
+    // DB unreachable ⇒ no backup AND no failure row possible (the audit row lives in the
+    // same database). This stderr line is the only independent record of the failure.
+    console.error(formatBackupFatalLog("db", "database connect failed: " + String(e?.message ?? e).slice(0, 120)));
+    die("cannot connect to the database (class: db)", 1);
+  }
 
   if (CMD === "create") {
     const kind = storeKind();
@@ -96,6 +104,8 @@ try {
       );
     } catch (e) {
       const code = e instanceof BackupError ? e.code : "unknown";
+      // If the failure-row insert fails too (DB down / missing "Backup" table), the
+      // platform log carries the only independent record — never swallowed silent.
       await recordBackupMeta(query, {
         ...metaBase,
         pgVersion: null,
@@ -107,7 +117,9 @@ try {
         errorClass: code,
         tableCount: null,
         rowCounts: null,
-      }).catch(() => null);
+      }).catch((e2) => {
+        console.error(formatBackupFatalLog(code, "failure-row insert failed: " + String(e2?.message ?? e2).slice(0, 120)));
+      });
       die(`${e.message} (class: ${code})`, 1);
     }
   }
