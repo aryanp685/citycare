@@ -120,13 +120,20 @@ prove that a document **decrypts** and matches its plaintext checksum. That is n
 class drill gate:
 
 - **`scripts/verify-document.ts`** (new, child-only plaintext holder): connects to the
-  **scratch** DB URL only, selects ONE explicit `Document` + `DocumentBlob` row by id,
-  decrypts with the **application's own implementation** (`decryptBlob` from
-  `src/lib/storage.ts` — the same AES-256-GCM path downloads use), and compares
-  `sha256(plaintext) = Document.checksumSha256` and `len(plaintext) = Document.sizeBytes`.
-  It prints a **status-only JSON line** (`ok`, `found`, `checksumMatch`, `sizeMatch`,
-  byte counts, key version, ms) — **never** content or PHI. Non-zero exit = verification
-  problem (not a crash); the verdict is still parsed from stdout by the drill.
+  **scratch** DB URL, then verifies the connected database's **identity** —
+  `current_database()` must match `^citycare_drill_\d{8}_\d{6}$` **before any document
+  SELECT** runs (a non-scratch target refuses with `errorClass: "unsafe_database_identity"`
+  without ever querying documents — F2, 2026-11-02 cleanup patch). It selects ONE explicit
+  `Document` + `DocumentBlob` row by id, decrypts with the **application's own
+  implementation** (`decryptBlob` from `src/lib/storage.ts` — the same AES-256-GCM path
+  downloads use), and compares `sha256(plaintext) = Document.checksumSha256` and
+  `len(plaintext) = Document.sizeBytes`. It prints a **status-only JSON line** (`ok`,
+  `found`, `checksumMatch`, `sizeMatch`, byte counts, key version, ms) — **never** content
+  or PHI. The verdict is collected, the DB client is closed in `finally` on **every** path,
+  and only then does the process exit (A89 — `process.exit` inside try/finally used to
+  skip `client.end()`). Non-zero exit = verification problem (not a crash); the verdict is
+  still parsed from stdout by the drill. Unit-tested (7 tests, incl. cleanup-after-negative
+  and identity refusal).
 - **Drill gate 7** (`restore-drill.mjs --verify-document <documentId>`): optional, runs
   **after** gates 1–6, **before** the scratch is dropped; a negative verdict fails the drill
   (`status: "failed"`), and the scratch-drop cleanup runs on **every** path (the
@@ -185,6 +192,22 @@ false-positived**:
 | Negative-path control | `--verify-document <unknown-uuid>` ⇒ `documentVerify {ok:false, found:false, errorClass:"not_found"}`, status `failed`, **exit 1**, scratch still dropped — failure paths stay loud and clean |
 | **Exit code / status** | **0 / `"status": "success"`, `"scratchDropped": true`** |
 
+### Re-run after the cleanup & safety patch (2026-11-02, ~11:38 UTC)
+
+After the A89/F2 patch to `scripts/verify-document.ts` (cleanup-first + identity gate)
+and the A90 CI fix, the drill was executed standalone twice against a fresh backup
+(`citycare-backup-20261102-113810-bf065c10.ccbk`, taken after a synthetic canary document
+was uploaded through the real API):
+
+| Run | Command | Result |
+|---|---|---|
+| **Positive** | `restore-drill.mjs <file> --scratch citycare_drill_<ts> --verify-document <canaryId>` | **exit 0** — `status: success`, all gates ok (incl. `contentMatch`), `documentVerify {ok:true, found:true, checksumMatch:true, sizeMatch:true, plaintextBytes:106, keyVersion:1}`, `restoreMs` **360**, scratch dropped |
+| **Negative** | same, `--verify-document 00000000-0000-0000-0000-00000000dead` (unknown id) | **exit 1** — `status: failed`, `documentVerify {ok:false, found:false, errorClass:"not_found"}`, all data gates still green, scratch **still** dropped |
+| Safety refusal control | scratch name with a suffix (`…_pos`) | **exit 2** — the drill refused to run: the name does not match `citycare_drill_\d{8}_\d{6}` (restore can never be pointed at an unrecognised database) |
+
+Post-run check: **zero** leftover `citycare_drill_*` databases; the canary document was
+deleted afterwards (bytes removed, tombstone kept for the ledger).
+
 ## 7. Test-count reconciliation (2026-11-02, owner-directed finding 6)
 
 The owner correctly flagged "257/257" vs "272/272" in different documents. Both were true —
@@ -199,6 +222,7 @@ for **different code states**. Every count now carries scope + date + commit:
 | vitest (unit) | 162 | 2026-11-01 | `29706c9` | Day 1 report §2 (baseline) |
 | vitest (unit) | 213 | 2026-11-02 | `bdb37df` | Day 1 report §2 (corrected) |
 | vitest (unit) | **216** (21 files) | 2026-11-02 | final-verification commit (+3: snapshot order, snapshot ROLLBACK, blob-`del` pin) | this report |
+| vitest (unit) | **223** (22 files) | 2026-11-02 | cleanup & safety patch commit (+7: verify-document A89/F2 — success, not-found, decrypt-failure, connect-failure, cleanup-after-negative, identity-refusal, usage/env) | this report §6 re-run |
 
 The discrepancy was a **citation freshness** problem (documents frozen at their write time),
 not a contradictory measurement. Convention going forward: no bare counts — always

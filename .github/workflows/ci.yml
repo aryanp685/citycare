@@ -1,10 +1,12 @@
 # F19 — CI gate: the same four checks the deploy script relies on, on every push / PR.
-# Runs against a throw-away Postgres 17 so the e2e suite (272 HTTP checks) is real, not mocked.
+# Runs against a throw-away Postgres 17 so the e2e suite (286 HTTP checks) is real, not mocked.
 name: ci
 on:
   push:
   pull_request:
-concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   web:
     runs-on: ubuntu-latest
@@ -23,6 +25,7 @@ jobs:
       CRON_SECRET: ci-cron-secret
       ANCHOR_OTS: "0"           # never call public calendars from CI
       TZ_POLICY: Asia/Kolkata
+      RETENTION_POLICY: demo  # CI is a demo-equivalent throwaway env; the S15 e2e checks assert the armed sweep + matching notice copy
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

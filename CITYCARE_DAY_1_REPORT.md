@@ -198,3 +198,79 @@ PARTIALLY IMPLEMENTED** until their acceptance requirements are verified.
 5. **Optional:** manual private export of the newest `.ccbk` to a second store (durability of the Vercel Blob provider side) — only if the owner decides it is required; no public export endpoint exists or will be built.
 
 **After this verification: STOP.** No Day 2, no production deploy, no redesign — as directed.
+
+---
+
+## 12. Final Day 1 cleanup & safety patch (2026-11-02, owner-directed)
+
+Small, bounded patch on top of §11 — no Day 2, no redesign, no deploy. Commit on
+`arena/f1f3a0ac-citycare` (parent `e11063d`, PR #6).
+
+### What changed
+
+1. **F1 — `scripts/verify-document.ts` cleanup (A89).** The old `out()` called
+   `process.exit()` from *inside* try/finally, which skips `finally` — so
+   `client.end()` never ran on early-return verdicts (`not_found`,
+   `tombstoned_anomaly`, …). Refactored: the verdict is **collected**, the client is
+   **closed in `finally` on every path**, and the exit code is applied only after
+   cleanup (`main()` returns the code; only the direct-invocation guard exits). The
+   one-JSON-line stdout contract and 0/1 exit codes are unchanged (parent drill gate 7,
+   A87, untouched). 7 unit tests added (`src/lib/__tests__/verify-document.test.ts`):
+   successful verification, document not found, decryption failure, DB connection
+   failure, cleanup-after-negative (event order `identity → docSelect → end`), identity
+   refusal, usage/env contract.
+2. **F2 — scratch identity gate.** Before any document SELECT the helper now verifies
+   `current_database()` matches `^citycare_drill_\d{8}_\d{6}$`; a non-scratch target
+   refuses with `errorClass: "unsafe_database_identity"` **without running the document
+   query** and still closes the connection. A fat-fingered production URL can no longer
+   read/decrypt a live document through this path. Parent scratch-drop cleanup unchanged
+   (independent, every path).
+3. **F3 — Gap-register consistency.** The NG-S09 statements that `@vercel/blob` was
+   missing from the manifest (A85/D69) and that the document-level drill was not executed
+   are now explicitly marked **historical/superseded** with pointers to the final-
+   verification block (item 2 / item 6). NG-S09 and NG-S15 **remain PARTIALLY
+   IMPLEMENTED** — not RESOLVED.
+4. **A90 (found while preparing F4) — the CI workflow was unparseable.**
+   `.github/workflows/ci.yml` used a flow-style mapping with an unquoted `${{ … }}`
+   expression (`concurrency: { group: ci-${{ github.ref }}, … }`) — a YAML syntax error
+   that makes **every** CI run fail at workflow-parse time, *before any test step*. The
+   line dates from `9212ee4` (PR #5 merge), so all 5 CI runs on this branch failed that
+   way: the branch was never actually CI-verified — only by the sandbox gauntlet. Fixed:
+   block-style `concurrency` (validated by re-parse) + `RETENTION_POLICY: demo` in the
+   CI env (CI is a demo-equivalent throwaway env; the S15 e2e checks assert the armed
+   sweep, and Next.js bakes build-time env into the statically-prerendered legal pages).
+   Logged as A90.
+
+### F4 — final test run (2026-11-02, sandbox, embedded PG 18.6)
+
+| Suite | Result |
+|---|---|
+| `npx vitest run` | **223/223 passed (22 files)** — 216 baseline + 7 new A89/F2 tests |
+| full e2e (`node scripts/e2e.mjs`, after `DELETE FROM "RateLimit"`) | **286/286 passed, 0 failed** |
+| `npx tsc --noEmit` | **0 errors** |
+| `npm run lint` | **0 errors / 0 warnings** |
+| `next build` (production) | **OK, 0 errors** — built with `RETENTION_POLICY=demo` in the env (legal pages are statically prerendered from build-time env) |
+| standalone restore drill — positive | **exit 0** — all gates ok, `documentVerify {ok:true, checksumMatch:true, sizeMatch:true, plaintextBytes:106}`, `restoreMs` 360, scratch dropped |
+| standalone restore drill — negative (unknown document id) | **exit 1** — `documentVerify {ok:false, found:false, errorClass:"not_found"}`, data gates green, scratch **still** dropped |
+| scratch-name safety refusal | **exit 2** — non-conforming scratch name refused (restore can never target an unrecognised DB) |
+| leftovers | **zero** `citycare_drill_*` databases; canary document deleted (bytes removed, tombstone kept) |
+
+### F5 — owner-side actions (explicitly OPEN — no production-readiness claim)
+
+1. **Production backup execution** — Vercel cron against the prod Neon DB with
+   `BACKUP_KEY` + `BLOB_READ_WRITE_TOKEN` set; first successful production run.
+2. **Production restore drill** — one drill at production data size
+   (`RESTORE_RUNBOOK.md` §8); the RTO target must be demonstrated on the real database.
+3. **`BACKUP_KEY` escrow** — procedure documented (`BACKUP_CONFIGURATION.md` §6.3);
+   the escrow itself is owner-executed (two-person, offline, exercised).
+4. **`DOCUMENT_KEY` escrow** — same discipline; loss of `DOCUMENT_KEY` = total document
+   loss (live and in every backup).
+5. **Production retention environment verification** — `RETENTION_POLICY`
+   (`demo`/`internal`/`pilot`) on the instance that will serve pilot users (NG-S15;
+   unset ⇒ sweep off by fail-safe).
+6. **Automated alerting for backup FATAL logs** — the `[citycare-backup] FATAL` marker
+   is grep-able by design, but **no alerting is configured in v1**; wiring a monitor is
+   an owner-side action.
+
+NG-S09 and NG-S15 stay **PARTIALLY IMPLEMENTED — OWNER VERIFICATION PENDING** until the
+above is done. **After this patch: STOP.** No Day 2, no production deploy, no redesign.
