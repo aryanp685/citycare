@@ -238,3 +238,51 @@ Environment: local sandbox (Node v22.22.3, PostgreSQL 16.2 via `pgserver` + comp
 - Environment labels: rows 1–6 above = LOCAL SANDBOX; row 7 = GITHUB ACTIONS / CI
   (ubuntu-latest, PostgreSQL 17). CI ≠ production verification — the live Vercel site is
   untouched and unverified by this correction (NG-G04 remains owner-side).
+
+**11.7 Production deploy (owner-approved: "ok now megre and deploy", 2026-11-02 13:05–13:15 UTC).**
+
+- **Merge:** PR #7 (https://github.com/aryanp685/citycare/pull/7) merged 13:11:21Z →
+  merge commit `2b5122c` on `main` (merge-commit convention, matching PRs #1–6). PR #7's
+  pull_request CI run: 41450392645 (sha `ba81248`) — SUCCESS.
+- **Honest account of what then happened:** the automatic production deploy of `2b5122c`
+  **FAILED** (`dpl_H6V9Hu1uzBGSJkvbwRfJXPT8JVZ8`, error `BUILD_UTILS_SPAWN_1`) — and
+  inspection of the deployment history showed **every Vercel build since `60f9c63` (WS-C)
+  had been failing**: the production Vercel project `citycare-z95n` (domain
+  `citycare-z95n.vercel.app`) had no `RETENTION_POLICY` set, so the new strictly
+  fail-closed seed gate (F1) correctly refused the prebuild bootstrap and the build
+  exited 2. Until that moment production had quietly served the **pre-Day-2 build
+  (`29706c9e`)** — no Day-1/Day-2 code, including the F1 correction itself, had reached
+  the live site. Logged as **A93** in `web/DRAWBACKS_AND_BUGFIXES.md` §A. The gate
+  behaved as designed; the missing piece was project environment configuration.
+- **Fix (Vercel project side, no code change):** set on project `citycare-z95n`
+  (targets production+preview, plain/visible): `RETENTION_POLICY=demo`,
+  `SEED_DEMO=0`, `NEXT_PUBLIC_DEMO_MODE=1`. Rationale: the live site is the **public
+  demo** — `demo` is the honest policy label for that database; `SEED_DEMO=0` keeps
+  deploys from re-seeding it (gate → **skip**: schema sync + verify only, nothing
+  written); `NEXT_PUBLIC_DEMO_MODE=1` keeps the demo-credential disclosures visible
+  exactly as the currently-live (pre-WS-C) build already shows them — WS-C gates those
+  on the build-time flag, so an unset flag would have hidden them on the new code.
+- **Verified deployment:** manual redeploy of `main` → deployment
+  **`dpl_B5fBtAoqPDrDbq2tZdZH36EMjmCe`** (commit `2b5122c`, target production, region
+  sin1, Node 26.x, build 32 s from cache): **READY + PROMOTED 13:14:22Z**, production
+  alias `citycare-z95n.vercel.app` assigned to it. Build log (13:13:51Z):
+  `verified: 36 tables · ledger_append/verify · tamper trigger · 3 partial unique
+  indexes · timezone=UTC` → `seed gate: skip — SEED_DEMO=0 — demo seed disabled;
+  nothing was written and nothing was truncated` → `✔ database ready (schema only)` —
+  **the production database was left byte-for-byte untouched**. Both crons
+  (`/api/cron/daily` `0 21 * * *` = 02:30 IST, `/api/cron/backup` `30 21 * * *` =
+  03:00 IST) are registered on the production deployment.
+- **Environment labels:** merge + deployment verified via the Vercel API (deployment
+  state, alias assignment, build logs, crons) and the GitHub API (PR state, CI runs).
+  The sandbox has no egress to `*.vercel.app`, so the **runtime probe of the public
+  URL (`GET /api/health` on `citycare-z95n.vercel.app`) remains owner-side** (NG-G04) —
+  deploy state READY/PROMOTED is not the same as a verified live response.
+- **Unchanged owner-side checklist:** NG-G04 public-URL probe, pilot env vars +
+  pilot redeploy (a SEPARATE project/DB: `RETENTION_POLICY=internal|pilot`,
+  `SEED_DEMO=0`, `NEXT_PUBLIC_DEMO_MODE=0`), branch protection, uptime monitor +
+  first probe + test alert, backup/restore drills + key escrow, existing-pilot-DB
+  `@demo.in` audit, staging outage drill (BLOCKED).
+- **Orphan note:** a second Vercel project `web` (`web-roan-eta-89.vercel.app`) is
+  also linked to `aryanp685/citycare` → `main` but has **zero env vars** (no
+  `DATABASE_URL`) — it is not the production URL and serves no usable app. Left
+  untouched; owner decides whether to delete it in the Vercel dashboard.

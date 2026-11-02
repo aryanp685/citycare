@@ -131,6 +131,17 @@ databases + a local pilot app instance; 306/306 suite green, exit 0:**
 
 ## 5. Owner-side actions (not done by the agent — no production access)
 
+**Current Vercel production configuration (set 2026-11-02 during the owner-approved
+deploy — logged as A93, Day-2 report §11.7).** The production project
+`citycare-z95n` (`citycare-z95n.vercel.app`) is the **public demo** environment and now
+runs with `RETENTION_POLICY=demo`, `SEED_DEMO=0` (deploys schema-sync + verify only —
+the seeded demo database is never touched by a deploy), and `NEXT_PUBLIC_DEMO_MODE=1`
+(demo-credential disclosures stay visible, as the previously-live build already showed
+them). This is a different environment from the pilot/production checklist below: the
+pilot gets its **own project + own database** with `RETENTION_POLICY=internal|pilot`,
+`SEED_DEMO=0`, `NEXT_PUBLIC_DEMO_MODE=0` + a dedicated redeploy.
+
+
 - [ ] **Pilot/production deployment env vars** (Vercel project → Settings → Environment
   Variables, all environments):
   - `RETENTION_POLICY=internal` (or `pilot`)
