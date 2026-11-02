@@ -19,6 +19,16 @@ if (!rawUrl) {
   console.error("✗ DATABASE_URL is not set — refusing (there is no implicit local fallback)");
   process.exit(1);
 }
+// Review F2 (2026-11-02): verify checks the RUNTIME URL (DATABASE_URL) and validates
+// it explicitly before connecting (the migration destination is the workflow's
+// concern, not the build-time verifier's). Host only in the log.
+const { validateDbUrl } = await import("../src/lib/prebuild-gate-core.mjs");
+const dest = validateDbUrl(rawUrl);
+if (!dest.ok) {
+  console.error(`✗ DATABASE_URL failed validation (${dest.reason}) — refusing before any connection`);
+  process.exit(1);
+}
+console.log(`[verify] runtime destination host: ${dest.host}`);
 const URL_ = rawUrl;
 
 const die = (msg) => {

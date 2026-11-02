@@ -218,3 +218,147 @@ describe("7. decision output hygiene", () => {
     }
   });
 });
+
+// Review F1 (2026-11-02 request-changes): normal Vercel production builds are
+// PERMANENTLY verify-only — apply is refused inside a Vercel build (detected via
+// the build markers Vercel sets: VERCEL_PROJECT_ID / VERCEL_GIT_COMMIT_SHA). The
+// controlled migration operation runs OUTSIDE Vercel (the protected GitHub
+// workflow), where no VERCEL_* build markers exist.
+describe("8. Vercel production builds are PERMANENTLY verify-only (review F1)", () => {
+  it("REFUSES apply in a Vercel build (VERCEL_PROJECT_ID) even with a valid target", () => {
+    const r = d({
+      VERCEL_ENV: "production",
+      DATABASE_URL: URL_OK,
+      SCHEMA_SYNC_MODE: "apply",
+      MIGRATION_TARGET: LATEST,
+      VERCEL_PROJECT_ID: "prj_test123",
+    });
+    expect(r).toMatchObject({ action: "refuse", exitCode: GATE_REFUSE_EXIT });
+    expect(r.reason).toContain("PERMANENTLY verify-only");
+    expect(r.target).toBeUndefined();
+  });
+
+  it("REFUSES apply in a git-linked Vercel build (VERCEL_GIT_COMMIT_SHA) too", () => {
+    const r = d({
+      VERCEL_ENV: "production",
+      DATABASE_URL: URL_OK,
+      SCHEMA_SYNC_MODE: "apply",
+      MIGRATION_TARGET: LATEST,
+      VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
+    });
+    expect(r.action).toBe("refuse");
+  });
+
+  it("Vercel build markers do NOT affect verify (the default stays verify)", () => {
+    const r = d({
+      VERCEL_ENV: "production",
+      DATABASE_URL: URL_OK,
+      VERCEL_PROJECT_ID: "prj_test123",
+      VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
+    });
+    expect(r).toMatchObject({ action: "verify", exitCode: GATE_SKIP_EXIT });
+  });
+
+  it("an explicit empty/whitespace marker is not a Vercel build (apply still allowed with a target)", () => {
+    for (const marker of ["", "   "]) {
+      expect(
+        d({
+          VERCEL_ENV: "production",
+          DATABASE_URL: URL_OK,
+          SCHEMA_SYNC_MODE: "apply",
+          MIGRATION_TARGET: LATEST,
+          VERCEL_PROJECT_ID: marker,
+        }).action,
+        `VERCEL_PROJECT_ID=${JSON.stringify(marker)}`,
+      ).toBe("apply");
+    }
+  });
+
+  it("a non-Vercel execution (no markers) can still run the controlled operation — the contrast case", () => {
+    const r = d({
+      VERCEL_ENV: "production",
+      DATABASE_URL: URL_OK,
+      SCHEMA_SYNC_MODE: "apply",
+      MIGRATION_TARGET: LATEST,
+    });
+    expect(r).toMatchObject({ action: "apply", target: LATEST });
+  });
+
+  it("preview target is unaffected by Vercel build markers (still hard skip)", () => {
+    expect(
+      d({
+        VERCEL_ENV: "preview",
+        DATABASE_URL: URL_OK,
+        SCHEMA_SYNC_MODE: "apply",
+        MIGRATION_TARGET: LATEST,
+        VERCEL_PROJECT_ID: "prj_test123",
+      }),
+    ).toMatchObject({ action: "skip" });
+  });
+});
+
+// Review F2 (2026-11-02 request-changes): the apply engine connects to
+// MIGRATION_DATABASE_URL when set — the gate must validate the ACTUAL migration
+// destination independently and report THAT host (never the DATABASE_URL host).
+describe("9. the migration destination is validated independently (review F2)", () => {
+  const applyBase = {
+    VERCEL_ENV: "production",
+    SCHEMA_SYNC_MODE: "apply",
+    MIGRATION_TARGET: LATEST,
+  } as const;
+
+  it("apply with a valid MIGRATION_DATABASE_URL (different host) validates the DESTINATION and reports its host", () => {
+    const r = d({
+      ...applyBase,
+      DATABASE_URL: URL_OK,
+      MIGRATION_DATABASE_URL: "postgres://mig-role:mig@db.example.com:5432/citycare",
+    });
+    expect(r).toMatchObject({ action: "apply", target: LATEST, destHost: "db.example.com" });
+    expect(r.reason).toContain("migration destination host: db.example.com");
+    expect(r.reason).toContain("MIGRATION_DATABASE_URL");
+  });
+
+  it("apply with a valid MIGRATION_DATABASE_URL uses the destination, not the runtime URL, as destHost", () => {
+    const r = d({
+      ...applyBase,
+      DATABASE_URL: "postgres://runtime@runtime-host.example.com/citycare",
+      MIGRATION_DATABASE_URL: "postgres://mig-role@migration-host.example.com/citycare",
+    });
+    expect(r.destHost).toBe("migration-host.example.com");
+    expect(r.reason).not.toContain("runtime-host.example.com");
+  });
+
+  it("apply with an UNPARSEABLE MIGRATION_DATABASE_URL refuses (even with a valid DATABASE_URL)", () => {
+    const r = d({ ...applyBase, DATABASE_URL: URL_OK, MIGRATION_DATABASE_URL: "not a url" });
+    expect(r).toMatchObject({ action: "refuse" });
+    expect(r.reason).toContain("MIGRATION_DATABASE_URL");
+  });
+
+  it("apply with a NON-POSTGRES MIGRATION_DATABASE_URL refuses", () => {
+    const r = d({ ...applyBase, DATABASE_URL: URL_OK, MIGRATION_DATABASE_URL: "http://x.example.com/db" });
+    expect(r.action).toBe("refuse");
+  });
+
+  it("apply with a hostname-less MIGRATION_DATABASE_URL refuses", () => {
+    const r = d({ ...applyBase, DATABASE_URL: URL_OK, MIGRATION_DATABASE_URL: "postgres://user:pass@" });
+    expect(r.action).toBe("refuse");
+  });
+
+  it("apply without MIGRATION_DATABASE_URL validates + reports the DATABASE_URL host", () => {
+    const r = d({ ...applyBase, DATABASE_URL: URL_OK });
+    expect(r).toMatchObject({ action: "apply", destHost: "db.example.com" });
+  });
+
+  it("verify always checks the RUNTIME URL: destHost is the DATABASE_URL host even when MIGRATION_DATABASE_URL is set", () => {
+    const r = d({
+      VERCEL_ENV: "production",
+      DATABASE_URL: URL_OK,
+      MIGRATION_DATABASE_URL: "postgres://mig@other-host.example.com/citycare",
+    });
+    expect(r).toMatchObject({ action: "verify", destHost: "db.example.com" });
+  });
+
+  it("production verify with a missing DATABASE_URL still refuses (dest validation covers the runtime URL too)", () => {
+    expect(d({ VERCEL_ENV: "production" })).toMatchObject({ action: "refuse" });
+  });
+});

@@ -40,6 +40,7 @@ jobs:
       ANCHOR_OTS: "0"           # never call public calendars from CI
       TZ_POLICY: Asia/Kolkata
       RETENTION_POLICY: demo  # CI is a demo-equivalent throwaway env; the S15 e2e checks assert the armed sweep + matching notice copy
+      SEED_CONTEXT: ci  # R1 review F3: CI's seed runs are the isolated CI seeding workflow — the declared context (a direct run without this declaration can never seed)
       BACKUP_DIR: /tmp/ci-backups  # throwaway local backup store for the e2e B/S16 backup + restore-drill checks
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

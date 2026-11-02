@@ -47,11 +47,33 @@ export const GATE_SKIP_EXIT = 0;
 export const GATE_REFUSE_EXIT = 1;
 
 /**
+ * Validate a database connection URL (the wire-format decision is NEVER a regex —
+ * A98 lesson). Pure + exported so the gate and the bootstrap/verify engines all
+ * validate the SAME way, independently, the URL they actually connect to.
+ * @param {string | undefined} raw
+ * @returns {{ok: true, host: string} | {ok: false, reason: string}}
+ */
+export function validateDbUrl(raw) {
+  if (typeof raw !== "string" || raw.trim() === "") return { ok: false, reason: "missing or empty" };
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return { ok: false, reason: "unparseable" };
+  }
+  if (u.protocol !== "postgres:" && u.protocol !== "postgresql:") {
+    return { ok: false, reason: `unsupported protocol '${u.protocol}' (expected postgres: or postgresql:)` };
+  }
+  if (!u.hostname) return { ok: false, reason: "empty hostname" };
+  return { ok: true, host: u.hostname };
+}
+
+/**
  * @param {Record<string, string | undefined>} env
  * @param {{ availableMigrations?: string[] }} [opts] sorted list of migration
  *   filenames present in schema/migrations (the script reads the directory and
  *   passes it in — keeps this core pure and unit-testable).
- * @returns {{action: "skip"|"verify"|"apply"|"bootstrap"|"refuse", reason: string, exitCode: 0|1, target?: string}}
+ * @returns {{action: "skip"|"verify"|"apply"|"bootstrap"|"refuse", reason: string, exitCode: 0|1, target?: string, destHost?: string}}
  */
 export function resolvePrebuildAction(env, opts = {}) {
   const available = opts.availableMigrations ?? [];
@@ -71,24 +93,22 @@ export function resolvePrebuildAction(env, opts = {}) {
   // ── production: fail-closed URL validation, then the verify/apply switch ───
   if (target === "production") {
     const rawUrl = env.DATABASE_URL ?? "";
-    let u;
-    try {
-      u = new URL(rawUrl);
-    } catch {
+    const url = validateDbUrl(rawUrl);
+    if (!url.ok) {
       return refuse(
-        "VERCEL_ENV=production but DATABASE_URL is missing or unparseable — refusing; " +
+        `VERCEL_ENV=production but DATABASE_URL failed validation (${url.reason}) — refusing; ` +
           "there is NO fallback connection string (a production build must fail loudly instead of guessing)",
       );
     }
-    if (u.protocol !== "postgres:" && u.protocol !== "postgresql:") {
-      return refuse(
-        `VERCEL_ENV=production but DATABASE_URL has unsupported protocol '${u.protocol}' ` +
-          "(expected postgres: or postgresql:) — refusing",
-      );
-    }
-    if (!u.hostname) {
-      return refuse("VERCEL_ENV=production but DATABASE_URL has an empty hostname — refusing");
-    }
+    // Review F1 (2026-11-02): Vercel sets VERCEL_PROJECT_ID (and VERCEL_GIT_COMMIT_SHA
+    // on git-linked builds) on every Vercel build. Inside such a build, apply is
+    // PERMANENTLY refused — a normal Vercel production build is verify-only and can
+    // never run DDL based on temporary environment variables. The controlled migration
+    // operation is a separate protected GitHub workflow (migration.yml) that runs
+    // OUTSIDE Vercel (no VERCEL_* build markers).
+    const isVercelBuild =
+      (typeof env.VERCEL_PROJECT_ID === "string" && env.VERCEL_PROJECT_ID.trim() !== "") ||
+      (typeof env.VERCEL_GIT_COMMIT_SHA === "string" && env.VERCEL_GIT_COMMIT_SHA.trim() !== "");
 
     const mode =
       typeof env.SCHEMA_SYNC_MODE === "string" && env.SCHEMA_SYNC_MODE.trim() !== ""
@@ -99,17 +119,37 @@ export function resolvePrebuildAction(env, opts = {}) {
       return {
         action: "verify",
         exitCode: GATE_SKIP_EXIT,
-        reason: `VERCEL_ENV=production, SCHEMA_SYNC_MODE=verify (the default) — read-only schema verification only (host: ${u.hostname}); no DDL, no migrations, no seed`,
+        destHost: url.host,
+        reason: `VERCEL_ENV=production, SCHEMA_SYNC_MODE=verify (the default) — read-only schema verification only (host: ${url.host}); no DDL, no migrations, no seed`,
       };
     }
 
     if (mode === "apply") {
+      if (isVercelBuild) {
+        return refuse(
+          "VERCEL_ENV=production inside a VERCEL BUILD (VERCEL_PROJECT_ID/VERCEL_GIT_COMMIT_SHA present) + SCHEMA_SYNC_MODE=apply — REFUSING: " +
+            "Vercel production builds are PERMANENTLY verify-only; DDL must never run from build-time environment variables. " +
+            "The controlled migration operation is the protected workflow .github/workflows/migration.yml " +
+            "(manual dispatch + production-environment approval + explicit commit SHA + newest migration target)",
+        );
+      }
+      // Review F2: the apply engine connects to MIGRATION_DATABASE_URL when set —
+      // validate the ACTUAL migration destination independently, and report THAT
+      // host (never the DATABASE_URL host) in the decision record.
+      const destRaw = env.MIGRATION_DATABASE_URL || env.DATABASE_URL;
+      const dest = validateDbUrl(destRaw);
+      if (!dest.ok) {
+        return refuse(
+          `VERCEL_ENV=production + SCHEMA_SYNC_MODE=apply: the MIGRATION DESTINATION ${env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"} ` +
+            `failed validation (${dest.reason}) — refusing before any connection`,
+        );
+      }
       const t = typeof env.MIGRATION_TARGET === "string" ? env.MIGRATION_TARGET.trim() : "";
       if (t === "") {
         return refuse(
           "VERCEL_ENV=production + SCHEMA_SYNC_MODE=apply WITHOUT MIGRATION_TARGET — refusing: " +
-            "a temporary SCHEMA_SYNC_MODE=apply alone must never apply migrations. Apply is bound to an " +
-            "explicit controlled migration operation (runbook: web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md §7)",
+            "a temporary SCHEMA_SYNC_MODE=apply alone must never apply migrations. Apply is bound to the protected " +
+            "migration workflow (runbook: web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md §7.2)",
         );
       }
       if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(t)) {
@@ -132,7 +172,10 @@ export function resolvePrebuildAction(env, opts = {}) {
         action: "apply",
         exitCode: GATE_SKIP_EXIT,
         target: t,
-        reason: `CONTROLLED MIGRATION OPERATION: VERCEL_ENV=production + SCHEMA_SYNC_MODE=apply + MIGRATION_TARGET=${t} (host: ${u.hostname}) — full idempotent bootstrap (DDL)`,
+        destHost: dest.host,
+        reason:
+          `CONTROLLED MIGRATION OPERATION (non-Vercel execution): VERCEL_ENV=production + SCHEMA_SYNC_MODE=apply + MIGRATION_TARGET=${t}; ` +
+          `migration destination host: ${dest.host}${env.MIGRATION_DATABASE_URL ? " (MIGRATION_DATABASE_URL)" : " (DATABASE_URL)"} — full idempotent bootstrap (DDL)`,
       };
     }
 

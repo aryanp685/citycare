@@ -86,6 +86,31 @@ export function resolveDemoSeedAction(env) {
     );
   }
 
+  // R1 review F3 (2026-11-02): a MISSING/UNKNOWN execution context (VERCEL_ENV absent
+  // or not one of production|preview|development) identifies a DIRECT invocation —
+  // `npm run seed`, the bootstrap scripts, a manual run — which may be pointed at
+  // ANY database, including production (whose config carries no VERCEL_ENV either).
+  // Such a run may seed ONLY when it additionally declares an isolated demo execution
+  // context: SEED_CONTEXT=ci|local-demo. Production environments never set
+  // SEED_CONTEXT, so a direct run with production-shaped config can neither seed nor
+  // TRUNCATE (seed.mjs truncates only after the gate passes). Known non-production
+  // targets (preview/development) are explicit declarations in their own right and
+  // keep the existing matrix; a declared isolated context falls through to it.
+  const target = typeof env.VERCEL_ENV === "string" ? env.VERCEL_ENV.trim().toLowerCase() : "";
+  const context = typeof env.SEED_CONTEXT === "string" ? env.SEED_CONTEXT.trim().toLowerCase() : "";
+  const knownNonProductionTarget = target === "preview" || target === "development";
+  if (!knownNonProductionTarget) {
+    // production already returned above; this covers missing/empty/unknown targets
+    if (context !== "ci" && context !== "local-demo") {
+      return refuse(
+        `unverified execution context: VERCEL_ENV is missing/unknown (got: ${JSON.stringify(target === "" ? null : target)}) ` +
+          `and SEED_CONTEXT=${JSON.stringify(context === "" ? null : context)} is not an isolated demo context (ci | local-demo) — ` +
+          "a direct run in an undeclared context may never create demo accounts and therefore may never TRUNCATE a database; " +
+          "declare SEED_CONTEXT=ci|local-demo for an isolated demo environment (production environments must never set it)",
+      );
+    }
+  }
+
   // Strictly fail-closed (F1 rule 5): a missing/invalid RETENTION_POLICY identifies an
   // UNVERIFIED environment. It never seeds — and it never "skips" either: any assumption
   // about what an unverified database contains is unsafe, so the run refuses loudly

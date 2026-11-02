@@ -7,7 +7,7 @@ import { readFileSync, readdirSync } from "node:fs";
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
   for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY)=(.*)$/);
+    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY|SEED_CONTEXT)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
   }
 } catch { /* no .env.local — fine */ }
@@ -1402,6 +1402,7 @@ if (!LOCAL || !process.env.DATABASE_URL) {
     const env = { ...process.env };
     env.DATABASE_URL = scratchUrl(dbName);
     env.SCRYPT_N = "4096"; // fast hashes for the throwaway scratch DBs
+    env.SEED_CONTEXT = "ci"; // R1 review F3: these scratch-DB runs are the isolated CI seeding workflow — declared explicitly
     if (policy === undefined) delete env.RETENTION_POLICY;
     else env.RETENTION_POLICY = policy;
     if (seed === undefined) delete env.SEED_DEMO;
@@ -1939,6 +1940,107 @@ if (LOCAL) {
       const s15d = await snapshotState();
       check("18.15c production controlled op + SEED_DEMO=1 REFUSES (no demo seed can ever reach a production target)", r15c.status === 1 && out(r15c).toLowerCase().includes("refus"), `status=${r15c.status}`);
       check("18.15d refused seed left the DB untouched (users + ledger identical)", s15c.users === s15d.users && s15c.ledger === s15d.ledger, JSON.stringify({ a: s15c, b: s15d }));
+
+      // ---- 18.16 the REAL npm lifecycle hook (review: test `npm run prebuild`, not just `npx next build`) ----
+      // Vercel runs the npm build script (which fires this hook); npx next build does not.
+      // These spawn the actual `npm run prebuild` so the lifecycle path itself is pinned.
+      const webRoot = new URL("..", import.meta.url).pathname;
+      const runNpmPrebuild = (extra) =>
+        spawnSync("npm", ["run", "prebuild", "--silent"], { encoding: "utf8", cwd: webRoot, env: { ...process.env, ...extra } });
+      const r16a = runNpmPrebuild({ VERCEL_ENV: "", DATABASE_URL: gateUrl });
+      check("18.16a npm run prebuild, missing VERCEL_ENV + valid URL → refuses (exit 1, FAIL CLOSED)", r16a.status === 1 && out(r16a).includes("FAIL CLOSED"), `status=${r16a.status}`);
+      const r16b = runNpmPrebuild({ VERCEL_ENV: "preview", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG });
+      check("18.16b npm run prebuild, preview + apply → exits 0 via hard skip", r16b.status === 0 && out(r16b).includes("hard skip"), `status=${r16b.status}`);
+      const r16c = runNpmPrebuild({ VERCEL_ENV: "production", DATABASE_URL: gateUrl });
+      check("18.16c npm run prebuild, production (no mode) → exits 0 on read-only verify", r16c.status === 0 && out(r16c).includes("verify: OK"), `status=${r16c.status}`);
+
+      // ---- 18.17 review F1: a Vercel production build is PERMANENTLY verify-only ----
+      const stripVercelMarkers = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.VERCEL_PROJECT_ID;
+        delete e.VERCEL_GIT_COMMIT_SHA;
+        return e;
+      };
+      const r17a = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: { ...process.env, VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, VERCEL_PROJECT_ID: "prj_e2e", VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567" },
+      });
+      check("18.17a apply inside a Vercel build (markers present) → REFUSES (production builds are permanently verify-only)", r17a.status === 1 && out(r17a).includes("PERMANENTLY verify-only") && !out(r17a).includes("migration applied"), `status=${r17a.status}`);
+      const s17 = await snapshotState();
+      const r17b = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" }),
+      });
+      const s17b = await snapshotState();
+      check("18.17b the SAME inputs without Vercel markers (non-Vercel controlled run) → proceeds (contrast case)", r17b.status === 0 && out(r17b).includes("controlled migration operation"), `status=${r17b.status}`);
+      check("18.17c the contrast run changed nothing on an up-to-date DB (idempotent)", s17.t === s17b.t && s17.users === s17b.users, JSON.stringify({ a: s17, b: s17b }));
+
+      // ---- 18.18 review F2: the migration destination is validated independently ----
+      const r18a = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" }),
+      });
+      check("18.18a apply with MIGRATION_DATABASE_URL (loopback) → exits 0 and records the DESTINATION host in the log", r18a.status === 0 && out(r18a).includes("migration destination host: 127.0.0.1"), `status=${r18a.status}`);
+      const r18b = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: "not a url", SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.18b apply with an UNPARSEABLE MIGRATION_DATABASE_URL → refuses (the valid DATABASE_URL does not mask it)", r18b.status === 1 && out(r18b).includes("MIGRATION_DATABASE_URL"), `status=${r18b.status}`);
+      const r18c = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: "http://elsewhere.example.com/db", SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.18c apply with a NON-POSTGRES MIGRATION_DATABASE_URL → refuses", r18c.status === 1 && out(r18c).toLowerCase().includes("protocol"), `status=${r18c.status}`);
+
+      // ---- 18.19 review F3: a direct invocation with missing/unknown context can never seed/truncate ----
+      // The regression the owner asked for: a production DB must not be truncated or seeded
+      // through a direct script invocation with missing/unknown target context. The marker is
+      // a specific user's password hash (a truncate+reseed would change the salt).
+      const noContextEnv = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.VERCEL_ENV;
+        delete e.SEED_CONTEXT;
+        return e;
+      };
+      const noSeedContextEnv = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.SEED_CONTEXT;
+        return e;
+      };
+      const hashMarker = async () => (await sql('SELECT "passwordHash" FROM "User" WHERE "email" = $1', ["ramesh@demo.in"])).rows[0]?.passwordHash ?? null;
+      const h19a = await hashMarker();
+      const r19a = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" }),
+      });
+      const h19b = await hashMarker();
+      check("18.19a direct bootstrap, no VERCEL_ENV/SEED_CONTEXT + FORCE_SEED=1 → REFUSED (exit 1, unverified execution context)", r19a.status === 1 && out(r19a).includes("unverified execution context"), `status=${r19a.status}`);
+      check("18.19b the refused direct run did NOT truncate/reseed (demo user hash byte-identical)", h19a !== null && h19a === h19b);
+      const r19c = spawnSync(process.execPath, ["scripts/seed.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1" }),
+      });
+      const h19d = await hashMarker();
+      check("18.19c direct `node scripts/seed.mjs` (npm run seed path), undeclared context → REFUSED", r19c.status !== 0 && out(r19c).includes("unverified execution context"), `status=${r19c.status}`);
+      check("18.19d the refused direct seed did NOT truncate/reseed (demo user hash byte-identical)", h19a === h19d);
+      const r19e = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noSeedContextEnv({ VERCEL_ENV: "ci", DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" }),
+      });
+      check("18.19e an UNKNOWN non-empty VERCEL_ENV (ci) without context → also refuses", r19e.status === 1 && out(r19e).includes("unverified execution context"), `status=${r19e.status}`);
+      const e19f = noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" });
+      e19f.SEED_CONTEXT = "ci"; // declared isolated context (the one dimension 18.19a/c/e strip)
+      const r19f = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: e19f,
+      });
+      const h19g = await hashMarker();
+      check("18.19f the DECLARED isolated context (SEED_CONTEXT=ci) still seeds — the existing CI/local workflow is preserved", r19f.status === 0 && out(r19f).includes("database ready") && (await sql('SELECT count(*)::int n FROM "User"')).rows[0].n >= 9, `status=${r19f.status}`);
+      check("18.19g the reseed changed the salt (proof that the refused runs were the ones that left the DB untouched)", h19g !== null && h19g !== h19a);
     }
   }
 }

@@ -183,7 +183,8 @@ unexpected.
 | `preview` | anything | anything (ignored) | **hard skip, exit 0** — preview builds never touch a database; flag-proof (even `apply`) |
 | `production` | missing / unparseable / non-postgres | — | **refuse, exit 1** — there is no fallback connection string anywhere |
 | `production` | ok | missing → `verify` | **read-only verify** (`db-verify-node.mjs`): the same invariants the bootstrap asserts (tables, ledger functions, tamper trigger, partial indexes, UTC), using only SELECT/SHOW |
-| `production` | ok | `apply` | **apply only as a controlled migration operation** — additionally requires `MIGRATION_TARGET` = the **newest** migration filename present in `schema/migrations/`; the mode variable alone refuses |
+| `production` | ok | `apply` **in a Vercel build** (Vercel build markers present) | **PERMANENTLY refused, exit 1** (review F1): a normal Vercel production build is verify-only and can never run DDL from build-time env vars — see §7.2 |
+| `production` | ok | `apply` **outside a Vercel build** (the protected workflow) | apply **only** with `MIGRATION_TARGET` = the **newest** migration filename in `schema/migrations/` (the mode variable alone refuses); the migration **destination** (`MIGRATION_DATABASE_URL` when set, else `DATABASE_URL`) is validated independently and its host recorded (review F2) |
 | `production` | ok | unknown value | **refuse, exit 1** |
 | `development` | missing | — | skip, exit 0 (no implicit local default) |
 | `development` | ok | ignored | full idempotent bootstrap (the explicit local dev flow) |
@@ -191,33 +192,59 @@ unexpected.
 
 Notes:
 - The URL is parsed with `new URL()` (never regex — A98 lesson); only the host is
-  ever logged, never the connection string.
+  ever logged, never the connection string. **Every URL the chain connects to is
+  validated by the shared `validateDbUrl` helper** (gate decision, bootstrap
+  engine, verifier, migration validator — same rule, independently) (review F2).
+- **Vercel build detection (review F1):** the gate refuses apply when the env
+  carries Vercel's build markers (`VERCEL_PROJECT_ID` or `VERCEL_GIT_COMMIT_SHA`) —
+  every Vercel build sets them, a GitHub Actions / manual run sets neither. The
+  detection is declaration-based (like everything in this gate); the **primary**
+  control is that the controlled operation lives in a separate protected workflow
+  (§7.2), not in Vercel at all. D80 records the residual boundary honestly.
 - The seed dimension is closed at its own chokepoint too: `demo-seed-core.mjs`
   refuses **all** demo seeding on a `production` target (the only skip is
   `SEED_DEMO=0` on a verified `RETENTION_POLICY`), whatever the build path is.
+  Review F3 adds the **execution-context** rule: a *direct* invocation
+  (`npm run seed`, the bootstrap scripts, a manual run) with a missing/unknown
+  `VERCEL_ENV` may seed **only** when it declares an isolated demo context —
+  `SEED_CONTEXT=ci` (CI, e2e scratch runs) or `SEED_CONTEXT=local-demo` (local
+  development). Production environments never set `SEED_CONTEXT`, so a direct
+  run with production-shaped config can neither seed nor TRUNCATE a production
+  database (e2e 18.19 proves it byte-for-byte on a real database).
 - `SCHEMA_SYNC_MODE` is a **build-time** knob; it changes nothing at runtime.
 - **Honest trade-off:** `verify` asserts end-state invariants, not per-file
   migration application. A *future* unapplied migration is therefore NOT detected
   by a normal build — deploying a new migration requires the controlled operation
   below (until the P2 `schema_migrations` ledger table lands).
 
-### 7.2 Controlled migration operation (runbook)
+### 7.2 Controlled migration operation (runbook, review F1)
 
-Deploying a **new migration** is a two-step, explicitly-authorized operation:
-1. Merge the migration (in `schema/migrations/`, named `NNNN_snake_name.sql`) to `main`.
-2. For that one production build only, set the two production-only build variables:
-   - `SCHEMA_SYNC_MODE=apply`
-   - `MIGRATION_TARGET=<the newest migration filename>`
-   (Optionally, once R7 lands: `MIGRATION_DATABASE_URL` for a least-privilege
-   DDL-capable migration role.)
-3. The build log is the audit record: it must contain
-   `controlled migration operation: MIGRATION_TARGET=<file>` and
-   `migration applied: <file>`. A normal merge-deploy (no variables) stays
-   read-only `verify`.
+**Normal Vercel production builds are permanently verify-only.** The gate refuses
+apply inside a Vercel build (code-enforced), so no combination of temporary Vercel
+environment variables can move the production schema. The **only** supported way to
+apply a migration is the protected workflow `.github/workflows/migration.yml`:
 
-A temporary `SCHEMA_SYNC_MODE=apply` **alone** can never apply migrations — the
-gate refuses without `MIGRATION_TARGET`, and refuses any target that is not the
-newest migration present in the code being built.
+- **Manual dispatch only** (`workflow_dispatch`) — it cannot be triggered by any
+  push, PR, or schedule;
+- **Production-environment approval** — the job runs in the GitHub `production`
+  environment; the owner configures **required reviewers** there (repo → settings
+  → environments), so a human approves every run before a single DDL statement;
+- **Explicit inputs** — the 40-hex `commit_sha` being released AND the newest
+  `migration_target` filename in that commit. The validate step
+  (`web/scripts/migration-validate-node.mjs`) fails closed unless the SHA is
+  well-formed, the target exists in the checked-out commit, is the newest
+  migration, and the destination URL is valid;
+- **Separate credentials** — the destination is `MIGRATION_DATABASE_URL`, a
+  GitHub secret that is NOT a Vercel build variable (owner-created; when R7
+  lands it becomes a least-privilege DDL-capable role). Only its **host** is
+  logged; the validate → apply → verify sequence makes the run log the audit
+  record (target + destination host + `migration applied:` lines + the final
+  read-only verify).
+
+Deploying a **new migration** = (1) merge it to `main` (the automatic production
+build is verify-only and does NOT apply it — that is by design); (2) run the
+workflow with the merge commit SHA + the new filename; (3) the next automatic
+production build's verify confirms the schema state.
 
 ### 7.3 Local + CI builds (2026-11-02 behaviour change)
 
@@ -234,6 +261,14 @@ newest migration present in the code being built.
   CI build performs **no** database work; the throwaway CI Postgres is prepared
   only by the explicit "schema + demo data" step (direct bootstrap of the
   isolated CI database).
+- **Seed declarations (review F3):** the CI job env sets `SEED_CONTEXT: ci`, so
+  its seed runs (the "schema + demo data" step, the e2e scratch-DB section) keep
+  working — they are the declared isolated CI seeding workflow. Local direct seed
+  / bootstrap runs (`npm run seed`, the bootstrap scripts, `FORCE_SEED=1`
+  reseeds) now need `SEED_CONTEXT=local-demo` exported (it is in the `.env.local`
+  template line for the demo environment); a direct run **without** the
+  declaration refuses before any write (D81 documents this as a deliberate
+  declaration burden, the same pattern as D68).
 
 ### 7.4 Environment decisions recorded (owner, 2026-11-02)
 

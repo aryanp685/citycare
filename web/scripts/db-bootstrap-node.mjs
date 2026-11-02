@@ -32,6 +32,17 @@ if (!rawUrl) {
   console.error("✗ DATABASE_URL (or MIGRATION_DATABASE_URL) is not set — refusing (there is no implicit local fallback; export DATABASE_URL for your environment)");
   process.exit(1);
 }
+// Review F2 (2026-11-02): validate the ACTUAL migration destination (the URL this
+// process will connect to) independently — defense in depth for direct invocations
+// (the prebuild gate validates too, but a direct bootstrap run has no gate in front).
+// Only the host is logged — never the connection string or credentials.
+const { validateDbUrl } = await import("../src/lib/prebuild-gate-core.mjs");
+const dest = validateDbUrl(rawUrl);
+if (!dest.ok) {
+  console.error(`✗ ${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"} failed validation (${dest.reason}) — refusing before any connection`);
+  process.exit(1);
+}
+console.log(`[bootstrap] migration destination host: ${dest.host} (${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"})`);
 const URL_ = rawUrl;
 process.env.DATABASE_URL = URL_; // seed.mjs reads the same variable
 
