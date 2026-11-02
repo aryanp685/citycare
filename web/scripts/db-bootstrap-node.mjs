@@ -21,7 +21,18 @@ import pg from "pg";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(here, "..");
 const SCHEMA = path.resolve(WEB, "..", "schema");
-const URL_ = process.env.DATABASE_URL ?? "postgres://citycare:citycare@127.0.0.1:5432/citycare";
+// R1 (2026-11-02): the implicit local fallback is GONE — a missing DATABASE_URL
+// fails loudly instead of silently pointing at 127.0.0.1. (The prebuild gate
+// already enforces this per target; this guard covers direct invocations too.)
+const rawUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+// MIGRATION_DATABASE_URL (optional, R7-ready): when a least-privilege
+// DDL-capable migration role is introduced later, the apply path can use it
+// while the runtime/verify path keeps the no-DDL role on DATABASE_URL.
+if (!rawUrl) {
+  console.error("✗ DATABASE_URL (or MIGRATION_DATABASE_URL) is not set — refusing (there is no implicit local fallback; export DATABASE_URL for your environment)");
+  process.exit(1);
+}
+const URL_ = rawUrl;
 process.env.DATABASE_URL = URL_; // seed.mjs reads the same variable
 
 const die = (msg) => {
@@ -40,6 +51,13 @@ const q1 = (sql) => c.query(sql).then((r) => r.rows[0]);
 const db = await q1("select current_database() as d");
 const ver = await q1("show server_version");
 console.log(`▶ database: ${db.d} (PostgreSQL ${ver.server_version})`);
+// R1: when this bootstrap runs as the production "apply" path, the prebuild gate
+// has already verified the controlled-operation inputs (production target +
+// SCHEMA_SYNC_MODE=apply + MIGRATION_TARGET=newest). The target name is echoed
+// so the build log is the audit record of the controlled operation.
+if (process.env.MIGRATION_TARGET) {
+  console.log(`▶ controlled migration operation: MIGRATION_TARGET=${process.env.MIGRATION_TARGET} (full idempotent chain, DDL allowed)`);
+}
 
 // 1) schema ───────────────────────────────────────────────────────────────────
 const hasUser = (await q1(`select to_regclass('public."User"') is not null as has`)).has;

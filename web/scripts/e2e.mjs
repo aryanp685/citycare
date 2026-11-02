@@ -1860,6 +1860,87 @@ if (LOCAL) {
       }
     }
   }
+
+  // ---- 18.10–18.15 R1 prebuild target gate: preview hard-skip, production verify-default, fail-closed ----
+  // R1 (2026-11-02, P0 isolation remediation): the build hook must never let a preview
+  // build touch a database, must keep production builds on the read-only verify path by
+  // default, and must fail closed on any environment it does not explicitly know.
+  // These checks SPAWN THE REAL prebuild script against the local demo DB (loopback-gated
+  // like §18.9 — refused anywhere else), so they prove behaviour, not just the decision
+  // table. The §18.15 controlled operation is idempotent on an up-to-date demo DB.
+  {
+    const gateUrl = process.env.DATABASE_URL;
+    let gateLoopback = false;
+    try {
+      const u = new URL(gateUrl);
+      gateLoopback = u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname === "::1";
+    } catch { /* unparseable — refuse */ }
+    if (!gateLoopback) {
+      skip("18.10–18.15 R1 prebuild gate", "DATABASE_URL is not a local loopback database — spawning the build hook against it is refused (safety gate)");
+    } else {
+      const { spawnSync } = await import("node:child_process");
+      const prebuild = new URL("../scripts/prebuild-schema-sync.mjs", import.meta.url).pathname;
+      const LATEST_MIG = "0007_dedup_observation_index.sql"; // newest file in schema/migrations (§18.7 pins the folder)
+      const runGate = (extra) =>
+        spawnSync(process.execPath, [prebuild], { encoding: "utf8", env: { ...process.env, ...extra } });
+      const out = (r) => `${r.stdout ?? ""}${r.stderr ?? ""}`;
+      const snapshotState = async () => {
+        const t = (await sql("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public'")).rows[0]?.n;
+        const i = (await sql("SELECT count(*)::int AS n FROM pg_indexes WHERE schemaname='public'")).rows[0]?.n;
+        const f = (await sql("SELECT count(*)::int AS n FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname='public')")).rows[0]?.n;
+        const users = (await sql('SELECT count(*)::int AS n FROM "User"')).rows[0]?.n;
+        const ledger = (await sql('SELECT count(*)::int AS n FROM "AuditLog" WHERE seq IS NOT NULL')).rows[0]?.n;
+        return { t, i, f, users, ledger };
+      };
+
+      // 18.10 preview: hard skip, flag-proof, zero connections
+      const beforeConn = (await sql("SELECT count(*)::int AS n FROM pg_stat_activity")).rows[0]?.n;
+      const r10 = runGate({ VERCEL_ENV: "preview", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG });
+      const afterConn = (await sql("SELECT count(*)::int AS n FROM pg_stat_activity")).rows[0]?.n;
+      check("18.10a preview prebuild exits 0 via the hard-skip path", r10.status === 0 && out(r10).includes("hard skip"), `status=${r10.status} ${out(r10).slice(0, 120)}`);
+      check("18.10b preview is FLAG-PROOF (DATABASE_URL + apply + target all present — still skipped)", out(r10).includes("no database work executed"), out(r10).slice(0, 160));
+      check("18.10c preview made ZERO database connections (pg_stat_activity delta = 0)", beforeConn === afterConn, `before=${beforeConn} after=${afterConn}`);
+
+      // 18.11 production default: read-only verify, zero DDL
+      const s11a = await snapshotState();
+      const r11 = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl });
+      const s11b = await snapshotState();
+      check("18.11a production prebuild (no mode) exits 0 on the read-only verify path", r11.status === 0 && out(r11).includes("verify: OK"), `status=${r11.status} ${out(r11).slice(0, 120)}`);
+      check("18.11b verify executed ZERO DDL (tables + indexes + functions identical)", s11a.t === s11b.t && s11a.i === s11b.i && s11a.f === s11b.f, JSON.stringify({ a: s11a, b: s11b }));
+
+      // 18.12 production without DATABASE_URL: fail loudly (no fallback)
+      const r12 = runGate({ VERCEL_ENV: "production", DATABASE_URL: "" });
+      check("18.12 production + missing DATABASE_URL fails the build (exit 1, no fallback)", r12.status === 1 && out(r12).toLowerCase().includes("no fallback"), `status=${r12.status}`);
+
+      // 18.13 unknown / missing VERCEL_ENV: FAIL CLOSED even with a valid URL
+      const r13a = runGate({ DATABASE_URL: gateUrl });
+      check("18.13a missing VERCEL_ENV → refuses (exit 1) even with a valid DATABASE_URL", r13a.status === 1 && out(r13a).includes("FAIL CLOSED"), `status=${r13a.status}`);
+      const r13b = runGate({ VERCEL_ENV: "ci", DATABASE_URL: gateUrl });
+      check("18.13b unexpected environment (VERCEL_ENV=ci) → refuses (exit 1)", r13b.status === 1 && out(r13b).includes("FAIL CLOSED"), `status=${r13b.status}`);
+
+      // 18.14 apply is bound to an explicit controlled migration operation
+      const r14a = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply" });
+      check("18.14a apply WITHOUT MIGRATION_TARGET refuses (a temporary mode variable alone never applies)", r14a.status === 1 && out(r14a).includes("MIGRATION_TARGET"), `status=${r14a.status}`);
+      const r14b = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: "0006_backup_metadata.sql" });
+      check("18.14b apply with a STALE target refuses (a controlled operation names the newest migration)", r14b.status === 1 && out(r14b).includes("newest"), `status=${r14b.status}`);
+
+      // 18.15 full controlled operation (production + apply + newest target) — idempotent on an
+      // up-to-date DB. The production seed config is SEED_DEMO=0 (the only non-refusing
+      // production seed state), so the operation completes schema-only.
+      const s15a = await snapshotState();
+      const r15 = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" });
+      const s15b = await snapshotState();
+      check("18.15a controlled operation exits 0 and records itself in the build log", r15.status === 0 && out(r15).includes("controlled migration operation") && out(r15).includes(LATEST_MIG), `status=${r15.status}`);
+      check("18.15b controlled operation on an up-to-date DB changes NOTHING (tables + users + ledger identical)", s15a.t === s15b.t && s15a.users === s15b.users && s15a.ledger === s15b.ledger, JSON.stringify({ a: s15a, b: s15b }));
+      // 18.15c a controlled operation on a production target can NEVER seed: SEED_DEMO=1
+      // refuses in the bootstrap (the production rule in demo-seed-core), DB untouched.
+      const s15c = await snapshotState();
+      const r15c = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "1" });
+      const s15d = await snapshotState();
+      check("18.15c production controlled op + SEED_DEMO=1 REFUSES (no demo seed can ever reach a production target)", r15c.status === 1 && out(r15c).toLowerCase().includes("refus"), `status=${r15c.status}`);
+      check("18.15d refused seed left the DB untouched (users + ledger identical)", s15c.users === s15d.users && s15c.ledger === s15d.ledger, JSON.stringify({ a: s15c, b: s15d }));
+    }
+  }
 }
 
 if (pgClient) await pgClient.end();

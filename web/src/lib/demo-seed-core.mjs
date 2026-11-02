@@ -64,6 +64,28 @@ export function resolveDemoSeedAction(env) {
   const policy = typeof env.RETENTION_POLICY === "string" ? env.RETENTION_POLICY.trim().toLowerCase() : "";
   const flag = normalizeSeedFlag(env.SEED_DEMO);
 
+  // R1 (2026-11-02, P0 isolation remediation): a PRODUCTION target may never
+  // demo-seed, whatever RETENTION_POLICY says. The only skip is an explicit
+  // SEED_DEMO=0 on a VERIFIED policy; SEED_DEMO=1 / unset / invalid — and any
+  // unverified policy — refuse. (The prebuild gate already keeps production
+  // builds on the read-only verify path by default; this closes the seed
+  // dimension of the same hole at its own chokepoint, incl. direct runs.)
+  const isProductionTarget =
+    typeof env.VERCEL_ENV === "string" && env.VERCEL_ENV.trim().toLowerCase() === "production";
+  if (isProductionTarget) {
+    if (flag === "0" && RETENTION_POLICIES.includes(policy)) {
+      return skip(
+        `VERCEL_ENV=production — demo seeding is impossible on a production target; SEED_DEMO=0 on verified ` +
+          `RETENTION_POLICY=${policy} acknowledged (nothing was written and nothing was truncated)`,
+      );
+    }
+    return refuse(
+      `VERCEL_ENV=production — demo seeding is REFUSED on a production target regardless of RETENTION_POLICY ` +
+        `(policy: ${JSON.stringify(env.RETENTION_POLICY ?? null)}, SEED_DEMO: ${JSON.stringify(env.SEED_DEMO ?? null)}); ` +
+        "demo accounts can only ever be created on a verified demo environment (RETENTION_POLICY=demo outside a production target)",
+    );
+  }
+
   // Strictly fail-closed (F1 rule 5): a missing/invalid RETENTION_POLICY identifies an
   // UNVERIFIED environment. It never seeds — and it never "skips" either: any assumption
   // about what an unverified database contains is unsafe, so the run refuses loudly

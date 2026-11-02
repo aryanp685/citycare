@@ -169,3 +169,68 @@ describe("6. no PHI/secrets in the decision output (alertable strings are safe)"
     expect(JSON.stringify(r)).not.toContain("SOME_OTHER_SECRET");
   });
 });
+// R1 (2026-11-02, P0 isolation remediation): a PRODUCTION target may never
+// demo-seed, whatever RETENTION_POLICY says. The only skip is SEED_DEMO=0 on a
+// VERIFIED policy; SEED_DEMO=1 / unset / invalid — and any unverified policy —
+// refuse. This closes the seed dimension of the shared-credential hole at its
+// own chokepoint (incl. direct bootstrap runs, not just builds).
+describe("7. production target (VERCEL_ENV=production) — seeding is impossible", () => {
+  it("production + RETENTION_POLICY=demo + SEED_DEMO=0 → skip (explicit opt-out acknowledged)", () => {
+    expect(d({ VERCEL_ENV: "production", RETENTION_POLICY: "demo", SEED_DEMO: "0" })).toMatchObject({
+      action: "skip",
+      exitCode: DEMO_SEED_SKIP_EXIT,
+    });
+  });
+
+  it("production + real-data policy + SEED_DEMO=0 → skip (pilot/internal)", () => {
+    for (const policy of ["pilot", "internal"]) {
+      expect(d({ VERCEL_ENV: "production", RETENTION_POLICY: policy, SEED_DEMO: "0" }).action, policy).toBe("skip");
+    }
+  });
+
+  it("production + SEED_DEMO=1 REFUSES regardless of RETENTION_POLICY (demo or real-data)", () => {
+    for (const policy of ["demo", "pilot", "internal"]) {
+      const r = d({ VERCEL_ENV: "production", RETENTION_POLICY: policy, SEED_DEMO: "1" });
+      expect(r.action, `policy=${policy}`).toBe("refuse");
+      expect(r.exitCode).toBe(DEMO_SEED_REFUSE_EXIT);
+    }
+  });
+
+  it("production + SEED_DEMO UNSET refuses (the demo-default must never auto-seed a production build)", () => {
+    for (const policy of ["demo", "pilot", "internal"]) {
+      expect(d({ VERCEL_ENV: "production", RETENTION_POLICY: policy }).action, `policy=${policy}`).toBe("refuse");
+    }
+  });
+
+  it("production + invalid SEED_DEMO refuses (never guessed)", () => {
+    for (const bad of ["2", "true", "on", "01"]) {
+      expect(d({ VERCEL_ENV: "production", RETENTION_POLICY: "demo", SEED_DEMO: bad }).action, bad).toBe("refuse");
+    }
+  });
+
+  it("production + unverified RETENTION_POLICY refuses even with SEED_DEMO=0 (an unverified env refuses loudly)", () => {
+    for (const policy of [undefined, "bogus", ""]) {
+      const env: Record<string, string | undefined> = { VERCEL_ENV: "production", SEED_DEMO: "0" };
+      if (policy !== undefined) env.RETENTION_POLICY = policy;
+      expect(resolveDemoSeedAction(env).action, `policy=${JSON.stringify(policy)}`).toBe("refuse");
+    }
+  });
+
+  it("normalizes case (PRODUCTION) — still refuses SEED_DEMO=1", () => {
+    expect(d({ VERCEL_ENV: "PRODUCTION", RETENTION_POLICY: "demo", SEED_DEMO: "1" }).action).toBe("refuse");
+    expect(d({ VERCEL_ENV: "PRODUCTION", RETENTION_POLICY: "demo", SEED_DEMO: "0" }).action).toBe("skip");
+  });
+
+  it("the production rule never leaks the environment beyond the config variables' names/values", () => {
+    const r = resolveDemoSeedAction({
+      VERCEL_ENV: "production",
+      RETENTION_POLICY: "demo",
+      SEED_DEMO: "1",
+      DATABASE_URL: "postgresql://leak-me:leak@10.0.0.8:5432/x",
+    });
+    const wire = JSON.stringify(r);
+    expect(wire).not.toContain("leak-me");
+    expect(wire).not.toContain("10.0.0.8");
+    expect(wire).not.toContain("postgresql://");
+  });
+});

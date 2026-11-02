@@ -165,3 +165,85 @@ pilot gets its **own project + own database** with `RETENTION_POLICY=internal|pi
   — pinned by e2e).
 - Not a data migration or deletion (no patient records or audit history modified).
 - Not a claim about the live production/pilot DB state — that is the owner's audit above.
+
+## 7. Build-time database access — the R1 prebuild target gate (2026-11-02, P0 isolation remediation)
+
+Background: the original `prebuild` hook (A76) had a single "is `DATABASE_URL` set?"
+guard with no target awareness. Vercel injects the production credentials into
+**every** build (production and preview), so every preview build connected to the
+**production** database and ran the full DDL pass. The 2026-11-02 read-only isolation
+audit (`CITYCARE_PREVIEW_PRODUCTION_ISOLATION_AUDIT.md`) confirmed this and the shared
+secrets. R1 makes the build target an explicit input and fails closed on anything
+unexpected.
+
+### 7.1 The gate (`web/src/lib/prebuild-gate-core.mjs`, unit-tested; enforced by `web/scripts/prebuild-schema-sync.mjs`)
+
+| `VERCEL_ENV` | `DATABASE_URL` | `SCHEMA_SYNC_MODE` | behaviour |
+|---|---|---|---|
+| `preview` | anything | anything (ignored) | **hard skip, exit 0** — preview builds never touch a database; flag-proof (even `apply`) |
+| `production` | missing / unparseable / non-postgres | — | **refuse, exit 1** — there is no fallback connection string anywhere |
+| `production` | ok | missing → `verify` | **read-only verify** (`db-verify-node.mjs`): the same invariants the bootstrap asserts (tables, ledger functions, tamper trigger, partial indexes, UTC), using only SELECT/SHOW |
+| `production` | ok | `apply` | **apply only as a controlled migration operation** — additionally requires `MIGRATION_TARGET` = the **newest** migration filename present in `schema/migrations/`; the mode variable alone refuses |
+| `production` | ok | unknown value | **refuse, exit 1** |
+| `development` | missing | — | skip, exit 0 (no implicit local default) |
+| `development` | ok | ignored | full idempotent bootstrap (the explicit local dev flow) |
+| missing / unknown (e.g. `ci`, `prod`, `test`) | anything | anything | **refuse, exit 1 — FAIL CLOSED**: CI and any unexpected environment can never run bootstrap/migrations through the build hook |
+
+Notes:
+- The URL is parsed with `new URL()` (never regex — A98 lesson); only the host is
+  ever logged, never the connection string.
+- The seed dimension is closed at its own chokepoint too: `demo-seed-core.mjs`
+  refuses **all** demo seeding on a `production` target (the only skip is
+  `SEED_DEMO=0` on a verified `RETENTION_POLICY`), whatever the build path is.
+- `SCHEMA_SYNC_MODE` is a **build-time** knob; it changes nothing at runtime.
+- **Honest trade-off:** `verify` asserts end-state invariants, not per-file
+  migration application. A *future* unapplied migration is therefore NOT detected
+  by a normal build — deploying a new migration requires the controlled operation
+  below (until the P2 `schema_migrations` ledger table lands).
+
+### 7.2 Controlled migration operation (runbook)
+
+Deploying a **new migration** is a two-step, explicitly-authorized operation:
+1. Merge the migration (in `schema/migrations/`, named `NNNN_snake_name.sql`) to `main`.
+2. For that one production build only, set the two production-only build variables:
+   - `SCHEMA_SYNC_MODE=apply`
+   - `MIGRATION_TARGET=<the newest migration filename>`
+   (Optionally, once R7 lands: `MIGRATION_DATABASE_URL` for a least-privilege
+   DDL-capable migration role.)
+3. The build log is the audit record: it must contain
+   `controlled migration operation: MIGRATION_TARGET=<file>` and
+   `migration applied: <file>`. A normal merge-deploy (no variables) stays
+   read-only `verify`.
+
+A temporary `SCHEMA_SYNC_MODE=apply` **alone** can never apply migrations — the
+gate refuses without `MIGRATION_TARGET`, and refuses any target that is not the
+newest migration present in the code being built.
+
+### 7.3 Local + CI builds (2026-11-02 behaviour change)
+
+- The implicit local fallback in `db-bootstrap-node.mjs`
+  (`?? postgres://citycare:citycare@127.0.0.1:5432/citycare`) is **removed**: a
+  missing `DATABASE_URL` now fails loudly (direct bootstrap runs included).
+- `npm run build` (fires the prebuild hook) now requires an explicit `VERCEL_ENV`:
+  local development = `VERCEL_ENV=development npm run build` (with
+  `DATABASE_URL` exported for the auto-bootstrap, or without it for a no-DB
+  build). The plain `npx next build` used by the ops contract and by CI does not
+  fire the hook at all and is unchanged.
+- CI declares the build step as an explicit development environment
+  (`VERCEL_ENV=development`) with `DATABASE_URL` removed from that step, so the
+  CI build performs **no** database work; the throwaway CI Postgres is prepared
+  only by the explicit "schema + demo data" step (direct bootstrap of the
+  isolated CI database).
+
+### 7.4 Environment decisions recorded (owner, 2026-11-02)
+
+- **Preview database: Option A** — an isolated Neon database (separate project or
+  database + role) for the preview target; production and preview get separate
+  `DATABASE_URL` values and separate `SESSION_SECRET` / `DOCUMENT_KEY` /
+  `ANCHOR_SIGNING_KEY` / `CRON_SECRET` values. (Console execution is a separate
+  owner action — see `CITYCARE_P0_ISOLATION_REMEDIATION_PLAN.md` §2.)
+- **`TZ_POLICY`: keep the SAME value on both targets** — the policy semantics are
+  identical in production and preview (it is a display/normalisation policy, not a
+  credential and not environment-specific data); splitting would create two
+  sources of truth for one policy with no functional gain. Revisit only if a
+  preview-specific policy experiment is ever needed.
