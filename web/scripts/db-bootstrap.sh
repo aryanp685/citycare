@@ -66,9 +66,12 @@ PARTIALS="$(q "select count(*) from pg_indexes where indexname in ('one_live_app
 echo "  verified: $TABLES tables · ledger_append/verify · tamper trigger · 3 partial unique indexes · timezone=UTC"
 
 # 2) demo data ─────────────────────────────────────────────────────────────────
-# NG-S14 (Day 2) — demo-seed gate (single decision point in src/lib/demo-seed-core.mjs):
-# skip  → SEED_DEMO=0: leave the database without demo data (schema-only is a valid state)
-# refuse → real-data policy (internal/pilot) or unverified env without explicit SEED_DEMO=1
+# NG-S14 (Day 2, strictly fail-closed) — demo-seed gate (single decision point in
+# src/lib/demo-seed-core.mjs):
+# seed   → ONLY RETENTION_POLICY=demo with SEED_DEMO unset or 1 (the synthetic demo env)
+# skip   → SEED_DEMO=0 on a VERIFIED policy (schema-only is a valid state)
+# refuse → real-data policy (internal/pilot) without SEED_DEMO=0; missing/invalid
+#          RETENTION_POLICY (regardless of SEED_DEMO); or an invalid SEED_DEMO value
 SEED_ACTION="$(node --input-type=module -e "import { resolveDemoSeedAction } from './src/lib/demo-seed-core.mjs'; const d = resolveDemoSeedAction(process.env); console.error('  seed gate: ' + d.action + ' — ' + d.reason + (d.warning ? ' (WARNING: ' + d.warning + ')' : '')); console.log(d.action);")"
 if [ "$SEED_ACTION" = "refuse" ]; then
   die "demo-seed gate REFUSED the bootstrap (database left untouched) — see the 'seed gate' line above and web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md"

@@ -86,17 +86,24 @@ consolidation-time snapshot and are superseded for these IDs only):**
 - **NG-S10** (was PARTIALLY VERIFIED) → **PARTIALLY IMPLEMENTED**: health/cron routes
   hardened + liveness/readiness contract + 6 unit tests + live before/after probes +
   monitoring ops doc with owner-side monitor setup; external monitor still BLOCKED (owner
-  account). Not RESOLVED.
+  account). Final correction (same day): the outage-drill procedure is now **staging-only**
+  (dedicated staging deployment + isolated DB; never production credentials/traffic) and
+  stays BLOCKED until staging exists. Not RESOLVED.
 - **NG-S11** (was BLOCKED — "Actions disabled") → **PARTIALLY IMPLEMENTED**: the premise was
   stale — runs had been executing; A90/A91 fixed in Day 2, CI **green on the branch**
-  (41441262459 + 41441271173 on `6475348`, both SUCCESS). Green-on-`main` PENDING OWNER
-  MERGE; branch protection BLOCKED (403 from the work environment — owner procedure
-  committed). Not RESOLVED.
+  (41441262459 + 41441271173 on `6475348`, both SUCCESS). PR #6 **merged 2026-11-02**
+  (merge commit `c47f9ff`, owner-approved) and **green CI on `main` was achieved**
+  (run 41446145656, push, SUCCESS) — the register keeps this PARTIALLY IMPLEMENTED because
+  branch protection (B4) is still owner-side (403 from the work environment — owner
+  procedure committed). Not RESOLVED.
 - **NG-S14** (was Open) → **PARTIALLY IMPLEMENTED**: demo-seed gate (refuse/skip/seed,
-  fail-safe, no writes before the gate) in `seed.mjs` + both bootstraps; UI disclosures
-  `DEMO_MODE`-gated (pilot build ships zero demo strings — build-verified); 14 unit tests +
-  19 e2e isolation checks (305/305, exit 0). Pilot-URL acceptance + any pre-existing pilot
-  DB audit are owner-side. Not RESOLVED.
+  no writes before the gate) in `seed.mjs` + both bootstraps; UI disclosures
+  `DEMO_MODE`-gated (pilot build ships zero demo strings — build-verified). Final
+  correction (same day) made the gate **strictly fail-closed**: missing/invalid
+  `RETENTION_POLICY` now REFUSES regardless of `SEED_DEMO` (the "unverified env + SEED_DEMO=1
+  seeds with a warning" path was removed), and invalid `SEED_DEMO` values refuse. 20 unit
+  tests + 20 e2e isolation checks (306/306, exit 0). Pilot-URL acceptance + any pre-existing
+  pilot DB audit are owner-side. Not RESOLVED.
 
 **P0 launch blockers (6)** — must close before any real patient data:
 1. **NG-S09** no database backup / DR / tested restore
@@ -112,10 +119,10 @@ demo-credential isolation (NG-S14) · external pen test (NG-S17) · production e
 officer (NG-F02) · Marathi/Hindi (NG-F03) · ABHA identifier (NG-F05) · verifiable guardian
 age (NG-L11).
 
-**Blocked items (5):** NG-S11 *(superseded 2026-11-02: Actions is executing — CI green on
-the branch; remaining owner actions = merge to main + branch-protection permission)* ·
-NG-G04 (owner must run prod e2e) · NG-S17 (external budget/approval) · NG-L11 (DigiLocker
-partner credentials) · NG-L19 (ABDM/HPR credentials).
+**Blocked items (5):** NG-S11 *(superseded 2026-11-02: Actions executing; PR #6 merged as
+`c47f9ff`, green CI on `main` achieved — remaining owner action = branch-protection
+permission only)* · NG-G04 (owner must run prod e2e) · NG-S17 (external budget/approval) ·
+NG-L11 (DigiLocker partner credentials) · NG-L19 (ABDM/HPR credentials).
 **External dependencies (non-blocked):** owner's Resend key + verified domain (NG-F01),
 grievance-officer appointment (NG-F02), translation legal review (NG-F03), prod DB access
 for backup drills (NG-S09), 2+ practising physicians (NG-C06), qualified Indian counsel
@@ -286,6 +293,16 @@ interviews, Hobby ToS caps non-commercial).
 - **Test evidence**: 6/6 new unit tests; live before/after DB-down probes (17:33 / 17:35 IST); e2e 305/305 (incl. §16c FATAL-marker checks) on the rebuilt app (2026-11-02).
 - **Owner-side actions**: monitor account + config per ops doc §3/§5 checklist; 5-minute controlled outage drill per ops doc §6 (production outage deliberately not performed from the sandbox).
 - **Remaining blockers**: external monitor account/verification (owner); staging outage drill (owner).
+- **Final security correction (2026-11-02, F2+F3)**: monitoring JSON assertions
+  reconciled against the actual `/api/health` schema (the one incorrect field —
+  `$.database === "ok"` — corrected to the real readiness signal; the four monitored
+  classes — HTTP availability, database readiness, backup freshness, ledger integrity —
+  are now explicitly separated with exact JSON paths in the ops doc §1); the outage-drill
+  procedure (ops doc §6) is now **staging-only**: a dedicated staging deployment +
+  isolated throwaway database, with the setup/drill/recovery/evidence steps documented and
+  an explicit prohibition on simulating the outage by breaking production credentials or
+  pausing production traffic — **BLOCKED until staging exists** (it does not). No monitor
+  is claimed configured (UptimeRobot/Better Stack remain owner choices, nothing active).
 - **Status: PARTIALLY IMPLEMENTED** (code + local evidence complete; external monitoring BLOCKED on owner-side account — **not RESOLVED**).
 - **Acceptance criteria**: monitor live on the production URL; an induced outage is caught + notified in < 10 min; evidence (screenshot/log) committed.
 - **External deps / approvals**: owner account.
@@ -338,6 +355,25 @@ interviews, Hobby ToS caps non-commercial).
 - **Changed files**: `web/src/lib/demo-seed-core.mjs` + `.d.mts` (new), `web/src/lib/__tests__/demo-seed-core.test.ts` (new, 14 tests), `web/scripts/seed.mjs`, `web/scripts/db-bootstrap.sh`, `web/scripts/db-bootstrap-node.mjs`, `web/src/app/login/page.tsx`, `web/src/app/page.tsx`, `web/.env.example`, `web/scripts/e2e.mjs` (§17, 19 checks), `web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md` (new).
 - **Test evidence** (all executed 2026-11-02): 14/14 unit tests on the gate matrix; **e2e 305/305, exit 0** — the new §17 section (19 checks) runs on isolated scratch DBs + a real pilot app instance on a fresh pilot DB: demo seed (11 identities, `SEED_DEMO=1` + default); pilot `SEED_DEMO` unset → REFUSE (exit 2, zero rows) and `SEED_DEMO=0` → skip (zero rows, nothing truncated); internal `SEED_DEMO=0` → skip; contradictory (`SEED_DEMO=1` on real data) → REFUSE **with a pre-seeded marker row surviving** (proves no write before the gate); unverified env (no policy, no flag) → REFUSE by default; pilot app boots (health 200, `policy=pilot`, sweep disabled); **published demo creds `ramesh@demo.in` + `dr.kulkarni@demo.in` → 401** on the fresh pilot DB; normal patient + doctor registration/auth works (201 / 200); **zero `@demo.in` users + zero seeded hospitals** in the pilot DB while the real registration is present; pilot cron sweep disabled (0 swept); existing public demo still functional on the synthetic env (login 200 + home 200); cleanup drops all scratch DBs with no leftovers.
   - A related defect found *during* WS-C is logged as **A92** (`DRAWBACKS_AND_BUGFIXES.md`): the e2e pilot-app section originally orphaned the `next-server` child when it killed only the `npx` pid, which kept the port + scratch DB alive and contaminated the next run — fixed with a `detached` spawn + whole-process-group kill + port pre-check; the re-run that surfaced it is the 305/305 run above.
+
+**Final security correction (2026-11-02, post-merge review — F1):**
+- **Gap found**: the Day-2 matrix permitted demo seeding when `RETENTION_POLICY` was
+  missing/invalid but `SEED_DEMO=1` ("seed + loud warning on an unverified environment"),
+  and it treated invalid `SEED_DEMO` values as *unset* (so `SEED_DEMO=yes` on a demo env
+  silently seeded). Both paths let an **unverified environment** gain demo accounts.
+- **Fix (strictly fail-closed)**: the ONLY seed path is now `RETENTION_POLICY=demo` with
+  `SEED_DEMO` unset or exactly `1`. Missing/invalid `RETENTION_POLICY` → **refuse
+  regardless of `SEED_DEMO`** (an unverified environment never seeds — and never silently
+  "skips" either); invalid `SEED_DEMO` value (present, non-empty, not `0`/`1`) → **refuse**.
+  The gate still fires before any database connection or write; a refused run performs no
+  TRUNCATE/insert/mutation (pinned by e2e: a pre-seeded marker row survives every refused
+  run, including the new missing-policy + `SEED_DEMO=1` case).
+- **Test evidence (executed 2026-11-02)**: gate unit tests **20/20** (the full 25-way
+  policy × flag matrix asserted exactly, incl. missing-policy + `SEED_DEMO=1` → refuse);
+  e2e §17 now **20 checks** (added: unverified env + `SEED_DEMO=1` REFUSED, exit 2, marker
+  survives, zero users); full suite **306/306, exit 0** (local sandbox, production build,
+  `RETENTION_POLICY=demo`); GitHub CI green on the correction commit (link in
+  `CITYCARE_DAY_2_REPORT.md` §11). No test deleted or weakened — additions only.
 - **Owner-side actions (NOT done from the sandbox — no production access)**: set production/pilot env vars (`RETENTION_POLICY=internal|pilot`, `SEED_DEMO=0`, `NEXT_PUBLIC_DEMO_MODE=0` — the last is build-time, so a **redeploy** is required), and audit any **existing** pilot DB that was bootstrapped before this patch (`SELECT count(*) FROM "User" WHERE email ILIKE '%@demo.in'`) — this patch prevents future seeding and removes the UI presentation, but deliberately does **not** touch existing rows (no silent deletion, no patient/audit modification). Full steps: `DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md` §5.
 - **Remaining blockers**: owner deployment of the flag + redeploy; owner audit/cleanup of any pre-existing pilot DB; owner verification that the live pilot URL shows 0 seeded users.
 - **Status: PARTIALLY IMPLEMENTED** (code + tests + docs complete and green locally/CI; pilot-URL acceptance is owner-verified — **not RESOLVED** on local code alone).
@@ -384,8 +420,20 @@ interviews, Hobby ToS caps non-commercial).
 - **What actually happened**: Actions runs had been executing all along (they were never "disabled" — the 0-second failures were the A90 YAML parse error, fixed in `2caee66` on Day 2's first push). Once the workflow parsed, the FIRST runs that actually executed exposed **A91**: the CI env lacked `BACKUP_KEY` + a writable `BACKUP_DIR`, so the (correctly-failing) backup/DR e2e section turned the whole job red on `f56ea86` (runs [41438463442](https://github.com/aryanp685/citycare/actions/runs/41438463442) push + [41438467092](https://github.com/aryanp685/citycare/actions/runs/41438467092) pull_request, both FAILURE). Root cause fixed in `6475348` (per-run generated `BACKUP_KEY`, explicit `BACKUP_DIR=/tmp/ci-backups` + `mkdir -p`) **without weakening any check**; the affected checks were re-run on GitHub (not locally only): runs [41441262459](https://github.com/aryanp685/citycare/actions/runs/41441262459) (push) + [41441271173](https://github.com/aryanp685/citycare/actions/runs/41441271173) (pull_request) on `6475348` — **both SUCCESS** (12:00–12:03 UTC, all steps green). Full run table: `web/docs/operations/GITHUB_CI_AND_BRANCH_PROTECTION.md` §3.
 - **B1/B2 verified**: the workflow executes every required check class (lockfile install, eslint, tsc, vitest, licence manifest, DB bootstrap + seed, prod build, full e2e incl. backup/DR + retention + the new NG-S14 isolation section) — verified by executed runs, not by reading the YAML. Reliability audit: block-style YAML, concurrency + 20-min timeout, `permissions: {contents: read}` (least privilege), only two official actions **SHA-pinned**, npm cache keyed on the lockfile, no repository secrets consumed (all keys generated per run, never logged), failure reporting strengthened (full failure list + last 200 app-server lines on failure).
 - **B4 branch protection — BLOCKED (recorded, not bypassed)**: `main` is currently **unprotected** (read via API). The work environment's GitHub identity is an integration without repository administration rights — `PUT …/branches/main/protection` returns **403 "Resource not accessible by integration"**. Per brief: not claimed active; exact owner procedure (Web UI checkboxes + equivalent CLI) is committed in `GITHUB_CI_AND_BRANCH_PROTECTION.md` §4.
-- **Acceptance status**: "green CI on `main`" requires the owner to merge PR #6 (branch runs are green; `main` moves only on merge — a green branch with an open PR does not meet the stated acceptance). The final Day 2 run on `60f9c63` (this commit series) is tracked in `CITYCARE_DAY_2_REPORT.md`.
-- **Status: PARTIALLY IMPLEMENTED** (CI gate executes + green on the Day 2 branch; green-on-main PENDING OWNER MERGE; branch protection BLOCKED on owner-side permission).
+- **Acceptance status**: the "green CI on `main`" criterion is now **met** — PR #6 was
+  merged on the owner's explicit approval (2026-11-02, merge commit `c47f9ff`) and the
+  push run on `main` was **SUCCESS** (Actions run **41446145656**, push, sha `c47f9ff`,
+  12:36:56→12:39:55 UTC). The finding nonetheless stays **PARTIALLY IMPLEMENTED**, not
+  RESOLVED, because the B4 branch-protection piece is still owner-side (the work
+  environment's GitHub identity got 403 on the protection write — exact owner procedure
+  committed in the CI doc §4), and a green CI + no branch protection is not the full
+  "automated gate on merge" the finding asks for.
+- **Final security correction (2026-11-02)**: no CI change needed for F1–F4; the
+  correction commit runs the same CI gate (305→306 e2e checks via the F1 e2e addition).
+  Green run on the correction commit is recorded in `CITYCARE_DAY_2_REPORT.md` §11.
+- **Status: PARTIALLY IMPLEMENTED** (CI gate executes + green on the branch and on
+  `main` after the owner-approved merge; branch protection BLOCKED on owner-side
+  permission).
 - **Complexity**: Small
 
 #### NG-G04 — Production e2e not re-run since F5/F18 (live site unverified)

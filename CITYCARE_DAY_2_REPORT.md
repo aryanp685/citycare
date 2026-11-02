@@ -30,7 +30,7 @@
 **Changes**
 - `/api/health`: DB-down 503 now returns **static safe** text `{"error":"database unreachable"}` (code `db_unreachable`); driver error classes logged server-side only. Same treatment to `/api/cron/backup` + `/api/cron/daily` (no user-facing error echo; `[citycare-backup] FATAL` machine marker retained).
 - Liveness (HTTP-level failure) vs readiness (503 `db_unreachable` / `degraded`) contract documented in-code + in the ops doc; the app no longer depends on the broken self-probe claim.
-- `web/docs/operations/MONITORING_AND_ALERTING.md`: 2 free external-monitor options with field-by-field setup (UptimeRobot, Better Stack), JSON assertion `$.database === "ok"`, recovery notifications, **required first-probe + test-alert verification before "active" may be claimed**, owner checklist, failure-mode→signal table, alert rules R1–R3 (log rule on `FATAL`, stale-backup assertion, recovery), 5-minute controlled outage drill procedure.
+- `web/docs/operations/MONITORING_AND_ALERTING.md`: 2 free external-monitor options with field-by-field setup (UptimeRobot, Better Stack), JSON assertion `backups.stale == false` (the actual field — the earlier draft text `$.database === "ok"` was an error corrected in the final consistency pass, see §11), recovery notifications, **required first-probe + test-alert verification before "active" may be claimed**, owner checklist, failure-mode→signal table, alert rules R1–R3 (log rule on `FATAL`, stale-backup assertion, recovery), 5-minute controlled outage drill procedure (staging-only per §11/F3).
 - `CITYCARE_DAY_2_MONITORING_REPORT.md`: full evidence record (T1–T9, exact UTC+IST timestamps, A4 criteria table).
 
 **Evidence (executed)**
@@ -55,7 +55,7 @@
 - `web/src/lib/demo-seed-core.mjs` (+ `.d.mts`): the single demo-seed gate. `RETENTION_POLICY` + `SEED_DEMO` → exactly one of `seed` / `skip` / `refuse` (reason + exit code). Fail-safe matrix: `internal`/`pilot` + unset/`1` → **refuse exit 2 (before any DB connection/write)**; `internal`/`pilot` + `0` → skip exit 0 (nothing written, nothing truncated); `demo` + unset/`1` → seed (synthetic default preserved); unverified env + unset → refuse; `SEED_DEMO` accepts only exactly `0`/`1`. No hostname inference.
 - `scripts/seed.mjs` + `scripts/db-bootstrap.sh` + `scripts/db-bootstrap-node.mjs` honour the gate (skip = "schema only, no demo data" success; refuse = exit 2, target DB untouched).
 - UI: login pre-fill + demo-credential hint and the landing demo-CTA are now `DEMO_MODE`-gated (these two were the only ungated disclosures). `web/.env.example` documents the matrix.
-- `web/scripts/e2e.mjs` **§17 (19 new checks)** on isolated scratch DBs + a real pilot app instance: demo seeding intact in synthetic envs; pilot skip/refuse/refuse-contradiction (with a pre-seeded marker row surviving, proving no write before the gate); unverified-env refusal; pilot app boot + health reports `policy=pilot, enabled=false, policy_disables_sweep`; **published demo creds `ramesh@demo.in` + `dr.kulkarni@demo.in` → 401 on a fresh pilot DB**; normal patient/doctor registration + auth works on the pilot DB; **zero `@demo.in` users and zero seeded hospitals** while the real registration is present; pilot cron sweep disabled (0 swept); existing public demo still functional on the synthetic env; scratch-DB cleanup with no leftovers.
+- `web/scripts/e2e.mjs` **§17 (19 new checks, 20 after the final correction — see §11)** on isolated scratch DBs + a **local pilot app instance on an isolated scratch database** (127.0.0.1:3007 — an isolated *test* deployment; **not** the live Vercel deployment and **not** any real pilot database — see §11/F4): demo seeding intact in synthetic envs; pilot skip/refuse/refuse-contradiction (with a pre-seeded marker row surviving, proving no write before the gate); unverified-env refusal (now incl. `SEED_DEMO=1`); pilot app boot + health reports `policy=pilot, enabled=false, policy_disables_sweep`; **published demo creds `ramesh@demo.in` + `dr.kulkarni@demo.in` → 401 on a fresh pilot DB**; normal patient/doctor registration + auth works on the pilot DB; **zero `@demo.in` users and zero seeded hospitals** while the real registration is present; pilot cron sweep disabled (0 swept); existing public demo still functional on the synthetic env; scratch-DB cleanup with no leftovers.
 - **A92 (found during WS-C, logged in `DRAWBACKS_AND_BUGFIXES.md`)**: the e2e pilot-app section killed only the `npx` pid, orphaning the `next-server` child — which kept port 3007 + the previous run's scratch DB alive and silently served the next run's "pilot" checks against the **wrong database** (18/19 green on contaminated data). Proven via `EADDRINUSE` in the app log + the orphan's `/proc/<pid>/environ`. Fixed: `detached` spawn, whole-process-group SIGKILL, port pre-check (foreign listener = loud failure), DROP retries.
 
 **Evidence (executed 2026-11-02)**
@@ -137,4 +137,104 @@
 
 ## 10. Non-goals honoured
 
-No 2FA/passkeys (NG-S13), no UI redesign, no OCR/AI clinical, no ABHA/ABDM, no payments, no architecture changes (raw `pg` + SQL unchanged, no Prisma at runtime), no microservices/K8s/Redis/queues, no new portals, no unrelated refactoring. No secrets printed/committed (CI keys generated per run; nothing in logs). No test deleted or weakened (e2e 286 → 305, only additions; vitest 229 → 243, only additions). **No Day 3. No production deploy. No merge. STOP.**
+No 2FA/passkeys (NG-S13), no UI redesign, no OCR/AI clinical, no ABHA/ABDM, no payments, no architecture changes (raw `pg` + SQL unchanged, no Prisma at runtime), no microservices/K8s/Redis/queues, no new portals, no unrelated refactoring. No secrets printed/committed (CI keys generated per run; nothing in logs). No test deleted or weakened (e2e 286 → 306, only additions; vitest 229 → 249, only additions — counts include the final security correction, §11). **No Day 3. No production deploy. No merge of the correction without owner approval. STOP.**
+
+---
+
+## 11. Day 2 final security correction (2026-11-02, post-merge owner review)
+
+After the owner approved the merge (PR #6 → `c47f9ff`), a final security correction was
+issued and applied on the follow-up branch `arena/9f15ad3b-citycare`. No Day 3, no deploy,
+no new merge. This section supersedes any conflicting statement above; the four
+workstream statuses (NG-S10/S11/S14) remain **PARTIALLY IMPLEMENTED** — none moved to
+RESOLVED.
+
+### F1 — demo seeding made strictly fail-closed
+
+- **Gap**: the Day-2 matrix permitted demo seeding when `RETENTION_POLICY` was
+  missing/invalid but `SEED_DEMO=1` ("seed + loud warning on an unverified environment"),
+  and treated invalid `SEED_DEMO` values as *unset* (so `SEED_DEMO=yes` on a demo env
+  silently seeded). Both let an **unverified environment** gain demo accounts.
+- **New policy (all six rules from the brief, in code)**:
+  1. `demo` + `SEED_DEMO` unset/`1` → **seed** (only seed path)
+  2. `demo` + `SEED_DEMO=0` → **skip**
+  3. `internal`/`pilot` + `SEED_DEMO=0` → **skip**
+  4. `internal`/`pilot` + `SEED_DEMO` unset/`1` → **refuse**
+  5. `RETENTION_POLICY` missing/invalid → **refuse regardless of `SEED_DEMO`** (no longer
+     "skip" on `0`, no longer "seed+warn" on `1`)
+  6. invalid `SEED_DEMO` value (present, non-empty, not exactly `0`/`1`) → **refuse**
+     (never guessed as unset/0/1)
+- **Where**: `web/src/lib/demo-seed-core.mjs` (gate), honoured by `scripts/seed.mjs` and
+  both bootstrap scripts (unchanged wiring — they already exit 2 / leave the DB untouched
+  on refuse, before any `new Client`). **No TRUNCATE/insert/mutation on a refused run** —
+  the gate fires before any database connection.
+- **Tests (additions only, nothing deleted/weakened)**:
+  - `demo-seed-core.test.ts`: 14 → **20** tests — the full 25-way `RETENTION_POLICY ×
+    SEED_DEMO` matrix is asserted exactly, including **missing-policy + `SEED_DEMO=1` →
+    refuse** and **missing-policy + `SEED_DEMO=0` → refuse**, plus invalid-flag cases and a
+    no-`DATABASE_URL`-leak assertion for every combination.
+  - e2e §17: 19 → **20** checks — added "unverified env (no `RETENTION_POLICY`) +
+    `SEED_DEMO=1` is REFUSED (exit 2), marker row survives, zero users".
+
+### F2 — monitoring JSON assertions reconciled to the real schema
+
+Inspected `web/src/app/api/health/route.ts` + `web/src/lib/api.ts` for the actual response
+shape and reconciled every monitoring JSON reference in the three monitoring documents.
+- **Fixed**: the DAY-2 report's `$.database === "ok"` (a field that does not exist) → the
+  real readiness signal (HTTP 200 + `status:"ok"` + `db.reachable == true`); the ops-doc
+  M6 path now `db.ledgerBreaks`; the DB-down 503 body (`{"error":"database
+  unreachable","code":"db_unreachable"}`) is documented as its own shape (no `db` object).
+- **Clarified** (ops doc §1): the four monitored classes are explicitly separated —
+  **HTTP availability** (the request itself), **database readiness** (200 +
+  `db.reachable`), **backup freshness** (`backups.stale`, a fact that never flips the
+  status code), **ledger integrity** (`db.ledgerBreaks`).
+- The sample JSON in the ops doc is marked "field names exact, values illustrative".
+- **No UptimeRobot/Better Stack is claimed configured** — both remain owner choices with
+  nothing active; re-verified in all three documents.
+
+### F3 — safe (staging-only) outage drill
+
+`MONITORING_AND_ALERTING.md` §6 rewritten: the controlled outage test must use a
+**dedicated staging deployment and an isolated throwaway database** (setup, 5-minute
+duration, expected alert + recovery alert, evidence collection, disposal all documented).
+It must **not** be simulated by breaking production DB credentials or pausing production
+traffic. **If staging is unavailable the drill stays BLOCKED** — current state, no staging
+exists.
+
+### F4 — consistency + honest statuses
+
+- Every "pilot mode" e2e result is now explicitly labelled as an **isolated test
+  deployment/database** (scratch DBs + a local `next start` on 127.0.0.1), **not** a
+  production pilot — stated in the isolation doc §4, this report §5, and the register.
+- NG-S10 / NG-S11 / NG-S14 all remain **PARTIALLY IMPLEMENTED** until their owner-side
+  acceptance criteria are met (monitor + staging drill; branch protection; pilot-URL
+  verification + any pre-existing pilot-DB audit). No RESOLVED on local code alone.
+
+### F5 — verification for the correction (exact commands, counts, SHA, CI)
+
+Environment: local sandbox (Node v22.22.3, PostgreSQL 16.2 via `pgserver` + compiled
+`pgcrypto`, production build) unless labelled. Commit SHA and CI run links in §11.6.
+
+| # | Check | Exact command (from `web/`) | Result |
+|---|---|---|---|
+| 1 | Unit | `npx vitest run` | **24 files, 249/249 passed, exit 0** (was 243; +6 gate tests) |
+| 2 | TypeScript | `npx tsc --noEmit -p .` | exit 0, 0 errors |
+| 3 | ESLint | `npm run lint` | exit 0, 0 problems |
+| 4 | e2e full | `node scripts/e2e.mjs` (server `:3000` demo build) | **306/306 passed, 0 failed, exit 0** (was 305; +1 fail-closed check) |
+| 5 | Prod build demo | `NODE_OPTIONS=--max-old-space-size=1150 RETENTION_POLICY=demo npx next build` | exit 0 |
+| 6 | Prod build pilot | `NODE_OPTIONS=--max-old-space-size=1150 NEXT_PUBLIC_DEMO_MODE=0 RETENTION_POLICY=pilot npx next build` | exit 0 |
+| 7 | GitHub Actions CI | push to `arena/9f15ad3b-citycare` | green (run link + SHA below) |
+
+**11.6 Commit + CI (correction).**
+
+- **Commit:** `93d5c5d` on `arena/9f15ad3b-citycare` (the correction; pushed to the session
+  branch only — **not merged, no deploy**, per the brief).
+- **GitHub Actions CI on the correction commit: SUCCESS** — run
+  [41448969087](https://github.com/aryanp685/citycare/actions/runs/41448969087) (push, sha
+  `93d5c5d`, started 12:58:04 UTC 2026-11-02, completed SUCCESS). This run executed the
+  full gate on the corrected code — lint, tsc, vitest (249), licence manifest, DB
+  bootstrap + seed (now through the fail-closed gate), production build, and the full e2e
+  suite **including the 20th §17 fail-closed check** (306 checks).
+- Environment labels: rows 1–6 above = LOCAL SANDBOX; row 7 = GITHUB ACTIONS / CI
+  (ubuntu-latest, PostgreSQL 17). CI ≠ production verification — the live Vercel site is
+  untouched and unverified by this correction (NG-G04 remains owner-side).

@@ -1480,6 +1480,18 @@ if (!LOCAL || !process.env.DATABASE_URL) {
       s4b.code === 2 && /missing\/invalid/i.test(s4b.out) && (await totalRows(scratch.prod)) === 0,
       `exit ${s4b.code} ${s4b.out.slice(0, 160)}`,
     );
+    // 4c. strictly fail-closed (Day 2 final security correction): an UNVERIFIED env that
+    // explicitly requests seeding (SEED_DEMO=1, no RETENTION_POLICY) is ALSO refused — and,
+    // like every refused run, leaves the database byte-for-byte untouched (marker survives).
+    const s4c = await runSeed(scratch.prod, undefined, "1");
+    const markerLeft2 = Number(
+      (await scratchClients[scratch.prod].query(`SELECT count(*)::int n FROM "Hospital" WHERE name = 'NGS14 Marker Clinic'`)).rows[0].n,
+    );
+    check(
+      "NG-S14: unverified env (no RETENTION_POLICY) + SEED_DEMO=1 is REFUSED — strictly fail-closed (exit 2, marker row survives, zero users)",
+      s4c.code === 2 && /missing\/invalid/i.test(s4c.out) && markerLeft2 === 1 && (await totalRows(scratch.prod)) === 0,
+      `exit ${s4c.code} marker=${markerLeft2} ${s4c.out.slice(0, 160)}`,
+    );
 
     // 5. a real pilot APP on the fresh pilot DB (schema-only, SEED_DEMO=0 env)
     {

@@ -42,19 +42,32 @@ Day 2 work environment, and none of the steps below that require an account were
   alert path (§4), not by declaring the whole app down.
 
 **Response shape** (safe by construction — no PHI, no secret values, no connection
-strings, no backup object names):
+strings, no backup object names). Field names are exact (from the route); the values are
+illustrative:
 
 ```json
 {
   "status": "ok",
   "db": { "reachable": true, "timezone": "UTC", "statementTimeout": "8s", "postgres": "17.x", "ledgerBreaks": 0 },
   "config": { "documentKey": "env", "anchorSigning": true, "emailDelivery": false },
-  "retention": { "policy": "demo|pilot|…(safe enum)", "enabled": true, "reason": "ok", "days": 7, "protectedDomain": "demo.in" },
+  "retention": { "policy": "demo", "enabled": true, "reason": "ok", "days": 7, "protectedDomain": "demo.in" },
   "backups": { "configured": true, "lastSuccessAt": "ISO-8601|null", "ageMs": 12345, "stale": false },
   "latencyMs": 42,
   "at": "ISO-8601"
 }
 ```
+
+**DB-down 503** has a different, static body (no `db` object at all):
+`{ "error": "database unreachable", "code": "db_unreachable" }`
+
+**The four monitored classes and their exact signals** (do not conflate them):
+
+| Class | What it answers | Signal (exact) |
+|---|---|---|
+| **HTTP availability** (liveness) | Is the process alive at all? | The HTTP request itself: connection failure / non-HTTP response / platform status. No JSON body is involved. |
+| **Database readiness** (readiness) | Can the app reach its DB, in UTC, with an intact ledger? | HTTP **200** + `$.status == "ok"` + `$.db.reachable == true`. DB down ⇒ **503** `$.code == "db_unreachable"`; ledger break or non-UTC ⇒ **503** `$.status == "degraded"` (with `$.db.ledgerBreaks` / `$.db.timezone` showing why). |
+| **Backup freshness** | Did a backup succeed recently? | `$.backups.stale == false` (and `$.backups.configured == true`). A stale backup **never** changes the HTTP status — it is a separate alert path (§4). |
+| **Ledger integrity** | Is the hash chain unbroken? | `$.db.ledgerBreaks == 0` (count from `ledger_verify()`). A break flips the app to 503 `degraded`, so M1's availability alert also fires — the ledger is therefore covered twice (availability + this field for root-cause). |
 
 Security notes enforced in code and pinned by tests:
 
@@ -80,7 +93,7 @@ well under 500 ms. Suggested monitor timeout: **10 s**; suggested slow-response 
 | M3 | Backup ran successfully (freshness) | `/api/health` → `backups.stale == false` and `backups.configured == true` | monitor JSON assertion or owner check | `stale == true` (no good backup in the last **30 h** — `BACKUP_STALE_MS`) |
 | M4 | Backup failed but DB alive (failure row) | `Backup` metadata row `status='failed'` | Vercel dashboard (manual) or DB check | any new `failed` row — the daily cron's HTTP 500 (`backup_failed_<class>`) is the trigger event |
 | M5 | Backup failed AND DB down (worst case) | platform log line **`[citycare-backup] FATAL`** | Vercel function logs of the backup-cron function | line appears at all (see §4) |
-| M6 | Ledger integrity | `/api/health` → `ledgerBreaks == 0` / `status:"ok"` | covered by M1 (503 on break) | 503 `degraded` |
+| M6 | Ledger integrity | `/api/health` → `db.ledgerBreaks == 0` / `status:"ok"` | covered by M1 (503 on break) | 503 `degraded` |
 | M7 | Recovery (all of the above) | return to 200 / `stale == false` | same monitor | recovery notification must be ON |
 
 The production backup cron runs **03:00 IST** (`30 21 * * *` UTC, Vercel cron). M3 is
@@ -191,31 +204,74 @@ Implemented and tested in Day 1 (F1–F4) + Day 2 sweep:
 - [ ] Test alert actually **received** in the owner inbox (not merely sent)
 - [ ] Log-based rule for `[citycare-backup] FATAL` configured (or: documented decision to rely on R2 daily check instead)
 - [ ] `CITYCARE_DAY_2_MONITORING_REPORT.md` updated with monitor URL, config, first-UP timestamp, test-alert receipt
-- [ ] Staging outage drill performed by the owner (see §6)
+- [ ] Staging outage drill performed by the owner — **staging deployment + isolated DB
+      only** (§6); BLOCKED until staging exists — never against production
 
 Until every box is ticked, the register status for the monitoring items is **BLOCKED
 (owner-side account/permission required)** — not RESOLVED.
 
-## 6. The 5-minute controlled outage test (A4 criterion) — how to do it, and why it is an owner action
+## 6. The 5-minute controlled outage test (A4 criterion) — staging-only procedure
 
 Acceptance asks for: controlled 5-minute outage ⇒ alert reaches the owner contact within
 10 minutes ⇒ recovery notification on restore.
 
-- It **cannot be run from the Day 2 work environment**: that sandbox has no access to
-  the production deployment, and deliberately taking the **production** service down is
-  out of scope (no production deploy or production change on Day 2; this is a live
-  patient-facing deployment even if currently under use by the pilot group).
+**Hard rule (Day 2 final security correction, 2026-11-02):** the drill must be run against
+a **dedicated staging deployment and an isolated (throwaway) database only**. It must NOT
+be simulated by breaking production database credentials, pausing production traffic, or
+any other change to the production deployment. **If no staging deployment exists, the drill
+stays BLOCKED** — that is the current state.
+
+- It **cannot be run from the Day 2 work environment** (no access to any Vercel
+  deployment; no production change of any kind on Day 2).
 - The **local equivalent was executed** and is the evidence of the mechanism (Day 2,
   see report): a running app instance pointed at a dead database URL returns `503
   {"code":"db_unreachable"}` with the static safe body in < 1 s, and the backup path
   under a dead DB emits the FATAL marker + non-zero exit (e2e §16c, 4 checks, green in
-  every gauntlet run).
-- **Owner procedure (when the monitor is live):** pick a low-traffic window; from the
-  Vercel project, either (a) set the health function's DB credential temporarily wrong,
-  or (b) pause the deployment (Vercel → Deployments → pause traffic), for **5 minutes**;
-  confirm the monitor fired (timestamp difference ≤ 10 min); restore; confirm the
-  recovery notification. Record both timestamps in the monitoring report.
-- Recovery notification is a monitor setting (§3), verified with the test alert.
+  every gauntlet run). This proves the signals; it is **not** the acceptance drill.
+
+### Staging setup (owner, ~30 min, one-time)
+
+1. **Isolated database**: create a throwaway database dedicated to staging
+   (e.g. a separate Neon branch/database, or any other DB provider's scratch
+   instance). It must be a **different** resource from production — the whole point is
+   that breaking it costs nothing.
+2. **Staging deployment**: in Vercel, either (a) a second project (or the same project's
+   preview deployment) of the same code, with its own environment variables
+   (`DATABASE_URL` → the isolated DB, fresh `SESSION_SECRET`/`CRON_SECRET`,
+   `RETENTION_POLICY` per your choice, `NEXT_PUBLIC_DEMO_MODE` per your choice), or
+   (b) a long-lived preview deployment of a `staging` branch. Record its URL
+   (`https://citycare-….vercel.app`, distinct from production).
+3. **Staging monitor**: create a second monitor (§3, same settings) pointed at the
+   **staging** health URL, with its own alert label (e.g. `CityCare STAGING /api/health`)
+   so drill alerts are not confused with production alerts. Confirm ≥2 UP probes.
+
+### The drill (owner, each time)
+
+1. **Duration: 5 minutes.** Cause the staging database to become unreachable — e.g.
+   pause/suspend the isolated DB's compute at the DB provider (the recommended way: no
+   credential or config change), or stop it however the provider supports. The staging
+   **app stays running** (we are testing detection, not deployment health).
+2. **Expected alert**: the staging monitor goes DOWN and the alert reaches the owner
+   contact. **Record**: alert-sent timestamp, monitor timestamp, and the difference.
+   (With a 5-minute probe interval + 3 retries, a DOWN verdict lands ~5–15 min after
+   the start — budget for that; the alert→restore and recovery evidence below are the
+   binding checks.)
+3. **Recover**: resume the isolated DB (≤ 5 minutes total outage, note the end
+   timestamp).
+4. **Expected recovery alert**: the monitor returns UP and the **recovery
+   notification** is delivered (recovery notification ON per §3). Record both
+   timestamps.
+5. **Evidence collection** (append to `CITYCARE_DAY_2_MONITORING_REPORT.md`):
+   staging URL + isolated-DB identifier (the name is fine — **no credentials, no
+   connection strings**), outage start/end timestamps, alert timestamp, recovery
+   timestamp, and screenshots of the monitor history showing DOWN → UP.
+6. **Disposal**: if the staging deploy is later no longer needed, delete it and the
+   isolated DB (documented disposal).
+
+**Status: BLOCKED (no staging deployment exists yet).** The mechanism is proven locally
+(e2e §16c + the before/after probes); the acceptance drill is the owner's action,
+staging-only, and stays BLOCKED until a staging deployment + isolated DB exist.
+
 
 ## 7. What is explicitly NOT done / not claimed
 
