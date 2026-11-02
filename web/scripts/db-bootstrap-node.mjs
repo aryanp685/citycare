@@ -21,7 +21,49 @@ import pg from "pg";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(here, "..");
 const SCHEMA = path.resolve(WEB, "..", "schema");
-const URL_ = process.env.DATABASE_URL ?? "postgres://citycare:citycare@127.0.0.1:5432/citycare";
+// R1 (2026-11-02): the implicit local fallback is GONE — a missing DATABASE_URL
+// fails loudly instead of silently pointing at 127.0.0.1. (The prebuild gate
+// already enforces this per target; this guard covers direct invocations too.)
+const rawUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+// MIGRATION_DATABASE_URL (optional, R7-ready): when a least-privilege
+// DDL-capable migration role is introduced later, the apply path can use it
+// while the runtime/verify path keeps the no-DDL role on DATABASE_URL.
+if (!rawUrl) {
+  console.error("✗ DATABASE_URL (or MIGRATION_DATABASE_URL) is not set — refusing (there is no implicit local fallback; export DATABASE_URL for your environment)");
+  process.exit(1);
+}
+// Review F2 (2026-11-02): validate the ACTUAL migration destination (the URL this
+// process will connect to) independently — defense in depth for direct invocations
+// (the prebuild gate validates too, but a direct bootstrap run has no gate in front).
+// Only the host is logged — never the connection string or credentials.
+const { dbUrlIdentity } = await import("../src/lib/prebuild-gate-core.mjs");
+const dest = dbUrlIdentity(rawUrl);
+if (!dest.ok) {
+  console.error(`✗ ${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"} failed validation (${dest.reason}) — refusing before any connection`);
+  process.exit(1);
+}
+console.log(`[bootstrap] migration destination host: ${dest.host} (${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"})`);
+// FINAL F1 FIX (2026-11-02): the direct bootstrap is LOOPBACK-ONLY, UNCONDITIONALLY.
+// No environment variable — SEED_CONTEXT, VERCEL_ENV, or any other caller-
+// controlled value — can authorize remote DDL from this entry point: a declared
+// context is a self-attested label, NOT proof of protected-workflow identity, and
+// code alone cannot prove that identity (D84). The ONLY authorized remote-DDL path
+// is the protected migration workflow (.github/workflows/migration.yml), which uses
+// its dedicated entry point scripts/migration-apply-node.mjs, and whose real
+// authorization is the GitHub environment secret scope + the least-privilege
+// migration role — not any variable this script reads.
+if (!dest.loopback) {
+  console.error(
+    `✗ direct bootstrap with a NON-LOOPBACK destination (host: ${dest.host}) — refusing before any connection. ` +
+      "The direct bootstrap entry point is same-machine (loopback) only, for local development and isolated CI; " +
+      "NO environment variable (SEED_CONTEXT, VERCEL_ENV, or any other) can authorize remote DDL from it. " +
+      "The only authorized remote-DDL path is the protected migration workflow " +
+      "(.github/workflows/migration.yml → scripts/migration-apply-node.mjs), whose authorization is the " +
+      "GitHub environment secret scope + the least-privilege migration role — not a declared context",
+  );
+  process.exit(1);
+}
+const URL_ = rawUrl;
 process.env.DATABASE_URL = URL_; // seed.mjs reads the same variable
 
 const die = (msg) => {
@@ -40,6 +82,13 @@ const q1 = (sql) => c.query(sql).then((r) => r.rows[0]);
 const db = await q1("select current_database() as d");
 const ver = await q1("show server_version");
 console.log(`▶ database: ${db.d} (PostgreSQL ${ver.server_version})`);
+// R1: when this bootstrap runs as the production "apply" path, the prebuild gate
+// has already verified the controlled-operation inputs (production target +
+// SCHEMA_SYNC_MODE=apply + MIGRATION_TARGET=newest). The target name is echoed
+// so the build log is the audit record of the controlled operation.
+if (process.env.MIGRATION_TARGET) {
+  console.log(`▶ controlled migration operation: MIGRATION_TARGET=${process.env.MIGRATION_TARGET} (full idempotent chain, DDL allowed)`);
+}
 
 // 1) schema ───────────────────────────────────────────────────────────────────
 const hasUser = (await q1(`select to_regclass('public."User"') is not null as has`)).has;

@@ -7,7 +7,7 @@ import { readFileSync, readdirSync } from "node:fs";
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
   for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY)=(.*)$/);
+    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY|SEED_CONTEXT)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
   }
 } catch { /* no .env.local — fine */ }
@@ -1402,6 +1402,7 @@ if (!LOCAL || !process.env.DATABASE_URL) {
     const env = { ...process.env };
     env.DATABASE_URL = scratchUrl(dbName);
     env.SCRYPT_N = "4096"; // fast hashes for the throwaway scratch DBs
+    env.SEED_CONTEXT = "ci"; // R1 review F3: these scratch-DB runs are the isolated CI seeding workflow — declared explicitly
     if (policy === undefined) delete env.RETENTION_POLICY;
     else env.RETENTION_POLICY = policy;
     if (seed === undefined) delete env.SEED_DEMO;
@@ -1858,6 +1859,463 @@ if (LOCAL) {
         const live2 = (await sql(`SELECT id FROM "Consent" WHERE "patientId" = $1 AND "doctorId" = $2 AND status = 'APPROVED' LIMIT 1`, [e2ePid, e2eDoctorId])).rows[0]?.id;
         if (live2) await pat.patch(`/api/patient/consents?id=${live2}`, { reason: "day3 18.9 restore" });
       }
+    }
+  }
+
+  // ---- 18.10–18.15 R1 prebuild target gate: preview hard-skip, production verify-default, fail-closed ----
+  // R1 (2026-11-02, P0 isolation remediation): the build hook must never let a preview
+  // build touch a database, must keep production builds on the read-only verify path by
+  // default, and must fail closed on any environment it does not explicitly know.
+  // These checks SPAWN THE REAL prebuild script against the local demo DB (loopback-gated
+  // like §18.9 — refused anywhere else), so they prove behaviour, not just the decision
+  // table. The §18.15 controlled operation is idempotent on an up-to-date demo DB.
+  {
+    const gateUrl = process.env.DATABASE_URL;
+    let gateLoopback = false;
+    try {
+      const u = new URL(gateUrl);
+      gateLoopback = u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname === "::1";
+    } catch { /* unparseable — refuse */ }
+    if (!gateLoopback) {
+      skip("18.10–18.15 R1 prebuild gate", "DATABASE_URL is not a local loopback database — spawning the build hook against it is refused (safety gate)");
+    } else {
+      const { spawnSync } = await import("node:child_process");
+      const prebuild = new URL("../scripts/prebuild-schema-sync.mjs", import.meta.url).pathname;
+      const LATEST_MIG = "0007_dedup_observation_index.sql"; // newest file in schema/migrations (§18.7 pins the folder)
+      const runGate = (extra) =>
+        spawnSync(process.execPath, [prebuild], { encoding: "utf8", env: { ...process.env, ...extra } });
+      const out = (r) => `${r.stdout ?? ""}${r.stderr ?? ""}`;
+      const snapshotState = async () => {
+        const t = (await sql("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public'")).rows[0]?.n;
+        const i = (await sql("SELECT count(*)::int AS n FROM pg_indexes WHERE schemaname='public'")).rows[0]?.n;
+        const f = (await sql("SELECT count(*)::int AS n FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname='public')")).rows[0]?.n;
+        const users = (await sql('SELECT count(*)::int AS n FROM "User"')).rows[0]?.n;
+        const ledger = (await sql('SELECT count(*)::int AS n FROM "AuditLog" WHERE seq IS NOT NULL')).rows[0]?.n;
+        return { t, i, f, users, ledger };
+      };
+
+      // 18.10 preview: hard skip, flag-proof, zero connections
+      const beforeConn = (await sql("SELECT count(*)::int AS n FROM pg_stat_activity")).rows[0]?.n;
+      const r10 = runGate({ VERCEL_ENV: "preview", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG });
+      const afterConn = (await sql("SELECT count(*)::int AS n FROM pg_stat_activity")).rows[0]?.n;
+      check("18.10a preview prebuild exits 0 via the hard-skip path", r10.status === 0 && out(r10).includes("hard skip"), `status=${r10.status} ${out(r10).slice(0, 120)}`);
+      check("18.10b preview is FLAG-PROOF (DATABASE_URL + apply + target all present — still skipped)", out(r10).includes("no database work executed"), out(r10).slice(0, 160));
+      check("18.10c preview made ZERO database connections (pg_stat_activity delta = 0)", beforeConn === afterConn, `before=${beforeConn} after=${afterConn}`);
+
+      // 18.11 production default: read-only verify, zero DDL
+      const s11a = await snapshotState();
+      const r11 = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl });
+      const s11b = await snapshotState();
+      check("18.11a production prebuild (no mode) exits 0 on the read-only verify path", r11.status === 0 && out(r11).includes("verify: OK"), `status=${r11.status} ${out(r11).slice(0, 120)}`);
+      check("18.11b verify executed ZERO DDL (tables + indexes + functions identical)", s11a.t === s11b.t && s11a.i === s11b.i && s11a.f === s11b.f, JSON.stringify({ a: s11a, b: s11b }));
+
+      // 18.12 production without DATABASE_URL: fail loudly (no fallback)
+      const r12 = runGate({ VERCEL_ENV: "production", DATABASE_URL: "" });
+      check("18.12 production + missing DATABASE_URL fails the build (exit 1, no fallback)", r12.status === 1 && out(r12).toLowerCase().includes("no fallback"), `status=${r12.status}`);
+
+      // 18.13 unknown / missing VERCEL_ENV: FAIL CLOSED even with a valid URL
+      const r13a = runGate({ DATABASE_URL: gateUrl });
+      check("18.13a missing VERCEL_ENV → refuses (exit 1) even with a valid DATABASE_URL", r13a.status === 1 && out(r13a).includes("FAIL CLOSED"), `status=${r13a.status}`);
+      const r13b = runGate({ VERCEL_ENV: "ci", DATABASE_URL: gateUrl });
+      check("18.13b unexpected environment (VERCEL_ENV=ci) → refuses (exit 1)", r13b.status === 1 && out(r13b).includes("FAIL CLOSED"), `status=${r13b.status}`);
+
+      // 18.14 apply is bound to an explicit controlled migration operation
+      const r14a = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply" });
+      check("18.14a apply WITHOUT MIGRATION_TARGET refuses (a temporary mode variable alone never applies)", r14a.status === 1 && out(r14a).includes("MIGRATION_TARGET"), `status=${r14a.status}`);
+      const r14b = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: "0006_backup_metadata.sql" });
+      check("18.14b apply with a STALE target refuses (a controlled operation names the newest migration)", r14b.status === 1 && out(r14b).includes("newest"), `status=${r14b.status}`);
+
+      // 18.15 full controlled operation (production + apply + newest target) — idempotent on an
+      // up-to-date DB. The production seed config is SEED_DEMO=0 (the only non-refusing
+      // production seed state), so the operation completes schema-only.
+      const s15a = await snapshotState();
+      const r15 = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" });
+      const s15b = await snapshotState();
+      check("18.15a controlled operation exits 0 and records itself in the build log", r15.status === 0 && out(r15).includes("controlled migration operation") && out(r15).includes(LATEST_MIG), `status=${r15.status}`);
+      check("18.15b controlled operation on an up-to-date DB changes NOTHING (tables + users + ledger identical)", s15a.t === s15b.t && s15a.users === s15b.users && s15a.ledger === s15b.ledger, JSON.stringify({ a: s15a, b: s15b }));
+      // 18.15c a controlled operation on a production target can NEVER seed: SEED_DEMO=1
+      // refuses in the bootstrap (the production rule in demo-seed-core), DB untouched.
+      const s15c = await snapshotState();
+      const r15c = runGate({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "1" });
+      const s15d = await snapshotState();
+      check("18.15c production controlled op + SEED_DEMO=1 REFUSES (no demo seed can ever reach a production target)", r15c.status === 1 && out(r15c).toLowerCase().includes("refus"), `status=${r15c.status}`);
+      check("18.15d refused seed left the DB untouched (users + ledger identical)", s15c.users === s15d.users && s15c.ledger === s15d.ledger, JSON.stringify({ a: s15c, b: s15d }));
+
+      // ---- 18.16 the REAL npm lifecycle hook (review: test `npm run prebuild`, not just `npx next build`) ----
+      // Vercel runs the npm build script (which fires this hook); npx next build does not.
+      // These spawn the actual `npm run prebuild` so the lifecycle path itself is pinned.
+      const webRoot = new URL("..", import.meta.url).pathname;
+      const runNpmPrebuild = (extra) =>
+        spawnSync("npm", ["run", "prebuild", "--silent"], { encoding: "utf8", cwd: webRoot, env: { ...process.env, ...extra } });
+      const r16a = runNpmPrebuild({ VERCEL_ENV: "", DATABASE_URL: gateUrl });
+      check("18.16a npm run prebuild, missing VERCEL_ENV + valid URL → refuses (exit 1, FAIL CLOSED)", r16a.status === 1 && out(r16a).includes("FAIL CLOSED"), `status=${r16a.status}`);
+      const r16b = runNpmPrebuild({ VERCEL_ENV: "preview", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG });
+      check("18.16b npm run prebuild, preview + apply → exits 0 via hard skip", r16b.status === 0 && out(r16b).includes("hard skip"), `status=${r16b.status}`);
+      const r16c = runNpmPrebuild({ VERCEL_ENV: "production", DATABASE_URL: gateUrl });
+      check("18.16c npm run prebuild, production (no mode) → exits 0 on read-only verify", r16c.status === 0 && out(r16c).includes("verify: OK"), `status=${r16c.status}`);
+
+      // ---- 18.17 review F1: a Vercel production build is PERMANENTLY verify-only ----
+      const stripVercelMarkers = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.VERCEL_PROJECT_ID;
+        delete e.VERCEL_GIT_COMMIT_SHA;
+        return e;
+      };
+      const r17a = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: { ...process.env, VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, VERCEL_PROJECT_ID: "prj_e2e", VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567" },
+      });
+      check("18.17a apply inside a Vercel build (markers present) → REFUSES (production builds are permanently verify-only)", r17a.status === 1 && out(r17a).includes("PERMANENTLY verify-only") && !out(r17a).includes("migration applied"), `status=${r17a.status}`);
+      const s17 = await snapshotState();
+      const r17b = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" }),
+      });
+      const s17b = await snapshotState();
+      check("18.17b the SAME inputs without Vercel markers (non-Vercel controlled run) → proceeds (contrast case)", r17b.status === 0 && out(r17b).includes("controlled migration operation"), `status=${r17b.status}`);
+      check("18.17c the contrast run changed nothing on an up-to-date DB (idempotent)", s17.t === s17b.t && s17.users === s17b.users, JSON.stringify({ a: s17, b: s17b }));
+
+      // ---- 18.18 review F2: the migration destination is validated independently ----
+      const r18a = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: gateUrl, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" }),
+      });
+      check("18.18a apply with MIGRATION_DATABASE_URL (loopback) → exits 0 and records the DESTINATION host in the log", r18a.status === 0 && out(r18a).includes("migration destination host: 127.0.0.1"), `status=${r18a.status}`);
+      const r18b = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: "not a url", SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.18b apply with an UNPARSEABLE MIGRATION_DATABASE_URL → refuses (the valid DATABASE_URL does not mask it)", r18b.status === 1 && out(r18b).includes("MIGRATION_DATABASE_URL"), `status=${r18b.status}`);
+      const r18c = spawnSync(process.execPath, [prebuild], {
+        encoding: "utf8",
+        env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: gateUrl, MIGRATION_DATABASE_URL: "http://elsewhere.example.com/db", SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.18c apply with a NON-POSTGRES MIGRATION_DATABASE_URL → refuses", r18c.status === 1 && out(r18c).toLowerCase().includes("protocol"), `status=${r18c.status}`);
+
+      // ---- 18.19 review F3: a direct invocation with missing/unknown context can never seed/truncate ----
+      // The regression the owner asked for: a production DB must not be truncated or seeded
+      // through a direct script invocation with missing/unknown target context. The marker is
+      // a specific user's password hash (a truncate+reseed would change the salt).
+      const noContextEnv = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.VERCEL_ENV;
+        delete e.SEED_CONTEXT;
+        return e;
+      };
+      const noSeedContextEnv = (extra) => {
+        const e = { ...process.env, ...extra };
+        delete e.SEED_CONTEXT;
+        return e;
+      };
+      const hashMarker = async () => (await sql('SELECT "passwordHash" FROM "User" WHERE "email" = $1', ["ramesh@demo.in"])).rows[0]?.passwordHash ?? null;
+      const h19a = await hashMarker();
+      const r19a = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" }),
+      });
+      const h19b = await hashMarker();
+      check("18.19a direct bootstrap, no VERCEL_ENV/SEED_CONTEXT + FORCE_SEED=1 → REFUSED (exit 1, unverified execution context)", r19a.status === 1 && out(r19a).includes("unverified execution context"), `status=${r19a.status}`);
+      check("18.19b the refused direct run did NOT truncate/reseed (demo user hash byte-identical)", h19a !== null && h19a === h19b);
+      const r19c = spawnSync(process.execPath, ["scripts/seed.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1" }),
+      });
+      const h19d = await hashMarker();
+      check("18.19c direct `node scripts/seed.mjs` (npm run seed path), undeclared context → REFUSED", r19c.status !== 0 && out(r19c).includes("unverified execution context"), `status=${r19c.status}`);
+      check("18.19d the refused direct seed did NOT truncate/reseed (demo user hash byte-identical)", h19a === h19d);
+      const r19e = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noSeedContextEnv({ VERCEL_ENV: "ci", DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" }),
+      });
+      check("18.19e an UNKNOWN non-empty VERCEL_ENV (ci) without context → also refuses", r19e.status === 1 && out(r19e).includes("unverified execution context"), `status=${r19e.status}`);
+      const e19f = noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" });
+      e19f.SEED_CONTEXT = "ci"; // declared isolated context (the one dimension 18.19a/c/e strip)
+      const r19f = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: e19f,
+      });
+      const h19g = await hashMarker();
+      check("18.19f the DECLARED isolated context (SEED_CONTEXT=ci) still seeds — the existing CI/local workflow is preserved", r19f.status === 0 && out(r19f).includes("database ready") && (await sql('SELECT count(*)::int n FROM "User"')).rows[0].n >= 9, `status=${r19f.status}`);
+      check("18.19g the reseed changed the salt (proof that the refused runs were the ones that left the DB untouched)", h19g !== null && h19g !== h19a);
+
+      // ---- 18.20 FINAL REVIEW (2026-11-02): the destination IDENTITY gate ----
+      // SEED_CONTEXT is caller-controlled — it is a self-attested label, NOT proof of
+      // database identity. The only TRUNCATE in the codebase (the demo seed) now
+      // additionally requires the destination to be a same-machine (loopback)
+      // database, established from the URL itself. The "production-shaped" URL below
+      // is a syntactically valid URL on a GUARANTEED-NXDOMAIN host (.invalid, RFC
+      // 2606): if a bug ever let it past the gate, the connection would fail instantly
+      // and nothing real could be touched. We never connect to the real production DB.
+      const PROD_SIM = "postgres://owner-sim:sim-pw-never-logged@prod-sim-1.invalid:5432/citycare";
+      const h20a = await hashMarker();
+      // Takes a FULL env object (removals must not be resurrected by re-spreads of process.env).
+      const runSeedDirect = (fullEnv) =>
+        spawnSync(process.execPath, ["scripts/seed.mjs"], { encoding: "utf8", cwd: webRoot, env: fullEnv });
+      const e20a = noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" });
+      e20a.SEED_CONTEXT = "local-demo"; // the adversarial scenario: context IS declared, identity is NOT
+      const r20a2 = runSeedDirect(e20a);
+      check("18.20a THE OWNER'S ADVERSARIAL SCENARIO: no VERCEL_ENV + SEED_CONTEXT=local-demo + demo + SEED_DEMO=1 + FORCE_SEED=1 + production-shaped URL → REFUSED before any connection (no TRUNCATE possible)", r20a2.status === 2 && out(r20a2).includes("NOT a same-machine (loopback) database") && !out(r20a2).includes("sim-pw-never-logged"), `status=${r20a2.status}`);
+      const e20b = { ...process.env, SEED_CONTEXT: "ci", DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" };
+      delete e20b.VERCEL_ENV;
+      const r20b = runSeedDirect(e20b);
+      check("18.20b production-shaped URL + CI context → REFUSED (the CI label cannot override database identity)", r20b.status === 2 && out(r20b).includes("NOT a same-machine (loopback) database"), `status=${r20b.status}`);
+      const r20c = runSeedDirect(noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" })); // full env — no resurrection
+      check("18.20c production-shaped URL + FORCE_SEED=1 + no context → REFUSED (FORCE_SEED cannot force a seed anywhere)", r20c.status === 2 && out(r20c).includes("refus"), `status=${r20c.status}`);
+      const e20d = { ...process.env, VERCEL_ENV: "prod", SEED_CONTEXT: "local-demo", DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" };
+      const r20d = runSeedDirect(e20d);
+      check("18.20d unknown VERCEL_ENV (prod) + DECLARED context + production-shaped URL → REFUSED (a declared target/context never overrides identity)", r20d.status === 2 && out(r20d).includes("NOT a same-machine (loopback) database"), `status=${r20d.status}`);
+      const h20b = await hashMarker();
+      check("18.20e every refused attempt left the real loopback DB byte-for-byte untouched (demo user hash identical after all refusals)", h20a !== null && h20a === h20b);
+      const e20f = { ...process.env, SEED_CONTEXT: "local-demo", DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" };
+      delete e20f.VERCEL_ENV;
+      const r20f = runSeedDirect(e20f);
+      check("18.20f the verified isolated LOCAL DEMO flow still works: loopback DB + local-demo → seed (exit 0, real entry point)", r20f.status === 0 && (await sql('SELECT count(*)::int n FROM "User"')).rows[0].n >= 9, `status=${r20f.status}`);
+      // Fresh isolated CI scratch DB (the real CI flow: throwaway loopback DB + declared ci context).
+      // Created inline here because runSeed/createScratch live in §17's scope, not §18's.
+      const s20g = `citycare_e2e_ci_isol_${Date.now().toString(36)}`;
+      let r20g = { status: 1 };
+      let uCI = 0;
+      try {
+        await sql(`DROP DATABASE IF EXISTS ${s20g}`);
+        await sql(`CREATE DATABASE ${s20g}`);
+        const sUrl = (() => { const u = new URL(gateUrl); u.pathname = "/" + s20g; return u.toString(); })();
+        const { default: pgCI } = await import("pg");
+        const cCI = new pgCI.Client({ connectionString: sUrl });
+        await cCI.connect();
+        const filesCI = ["../schema/citycare_init.sql", "../schema/sql/constraints.sql", "../schema/sql/ledger.sql", ...readdirSync("../schema/migrations").filter((f) => f.endsWith(".sql")).sort().map((f) => `../schema/migrations/${f}`)];
+        for (const f of filesCI) await cCI.query(readFileSync(f, "utf8"));
+        await cCI.end();
+        const eCI = { ...process.env, DATABASE_URL: sUrl, SCRYPT_N: "4096", RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci" };
+        delete eCI.VERCEL_ENV; // isolated CI run: no Vercel target — the declared ci context is the authorization
+        r20g = spawnSync(process.execPath, ["scripts/seed.mjs"], { encoding: "utf8", cwd: webRoot, env: eCI });
+        const cCount = new pgCI.Client({ connectionString: sUrl });
+        await cCount.connect();
+        uCI = (await cCount.query(`SELECT count(*)::int n FROM "User"`)).rows[0].n;
+        await cCount.end();
+      } finally {
+        try { await sql(`DROP DATABASE IF EXISTS ${s20g}`); } catch { /* best-effort drop */ }
+      }
+      check("18.20g the verified isolated CI flow still works: fresh scratch (loopback) DB + SEED_CONTEXT=ci → seed (exit 0, ≥9 users, real entry point)", r20g.status === 0 && uCI >= 9 && out(r20g).includes("seeded:"), `status=${r20g.status} users=${uCI}`);
+      const h20c = await hashMarker();
+      const r20h = runSeedDirect(noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" })); // full env — no resurrection
+      const h20d = await hashMarker();
+      check("18.20h direct loopback run, no context, FORCE_SEED=1 → REFUSED (context rule) and the hash is byte-identical (no truncate)", r20h.status === 2 && out(r20h).includes("unverified execution context") && h20c === h20d, `status=${r20h.status}`);
+
+      // ---- 18.21 FINAL REVIEW: direct bootstrap DDL gate (non-loopback ⇒ declared context) ----
+      const r21a = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "1", FORCE_SEED: "1" }),
+      });
+      check("18.21a direct bootstrap, non-loopback destination, no context → REFUSED before any connection (no DDL, no probe)", r21a.status === 1 && out(r21a).includes("NO environment variable") && !out(r21a).includes("migration applied") && !out(r21a).includes("database:"), `status=${r21a.status}`);
+      const r21b2 = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: (() => { const e = noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "0" }); e.SEED_CONTEXT = "ci"; return e; })(),
+      });
+      // FINAL F1 pass (2026-11-02): the old assertion (a declared context passes the
+      // DDL gate and reaches the connection) pinned exactly the hole the owner
+      // identified — SEED_CONTEXT is caller-controlled, not proof of workflow
+      // identity. The direct bootstrap is now loopback-ONLY, unconditionally.
+      check("18.21b the DECLARED context (the old 'workflow shape') CANNOT authorize remote DDL on the direct bootstrap — refused before any connection", r21b2.status === 1 && out(r21b2).includes("NO environment variable") && !out(r21b2).includes("cannot connect") && !out(r21b2).includes("migration applied"), `status=${r21b2.status}`);
+
+      // ---- 18.22 FINAL REVIEW: the migration workflow's validator (migration-validate-node.mjs) ----
+      const runValidator = (fullEnv) =>
+        spawnSync(process.execPath, ["scripts/migration-validate-node.mjs"], { encoding: "utf8", cwd: webRoot, env: fullEnv });
+      const valEnv = (extra) => { const e = { ...process.env, ...extra }; if (!("MIGRATION_DATABASE_URL" in (extra ?? {}))) delete e.MIGRATION_DATABASE_URL; if (!("DATABASE_URL" in (extra ?? {}))) delete e.DATABASE_URL; return e };
+      const branchHead = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+      // Fetch main explicitly: GHA checkouts are shallow (depth 1) — the origin/main
+      // ref and the main-tip object do not exist locally until fetched.
+      const mainFetch = spawnSync("git", ["fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], { encoding: "utf8" });
+      const mainHead =
+        (mainFetch.status === 0 ? spawnSync("git", ["rev-parse", "origin/main"], { encoding: "utf8" }).stdout.trim() : "") ||
+        (mainFetch.status === 0 ? spawnSync("git", ["rev-parse", "FETCH_HEAD"], { encoding: "utf8" }).stdout.trim() : "");
+      const r22a = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: "abc", MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
+      check("18.22a malformed SHA (not 40-hex) → refuses", r22a.status === 1 && out(r22a).includes("40-hex"), `status=${r22a.status}`);
+      if (!mainHead) {
+        skip("18.22b–f validator git-reachability suite", "origin/main could not be fetched in this environment (no git network) — these checks enforce in GHA, where network is always available");
+      }
+      const r22b = mainHead ? runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: "f".repeat(40), MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl })) : null;
+      if (r22b) {
+        check("18.22b a 40-hex SHA that is not a commit in this repository → refuses", r22b.status === 1 && out(r22b).includes("not a commit in this repository"), `status=${r22b.status}`);
+        const r22c = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: branchHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22c a real commit NOT reachable from main (this PR's head) → refuses (only main-reachable commits may migrate production)", r22c.status === 1 && out(r22c).includes("NOT reachable from the protected production release branch"), `status=${r22c.status}`);
+        const r22d = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: "9999_nope.sql", MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22d a target that does not exist in the commit → refuses", r22d.status === 1 && out(r22d).includes("not present in schema/migrations"), `status=${r22d.status}`);
+        const r22e = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG }));
+        check("18.22e no migration destination URL → refuses before any connection", r22e.status === 1 && out(r22e).includes("failed validation"), `status=${r22e.status}`);
+        const r22f = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22f a fully valid operation (main-reachable commit + newest target + valid loopback destination) → passes, logs host only + the owner-side prerequisite banner", r22f.status === 0 && out(r22f).includes("validated: commit=") && out(r22f).includes("destination host: 127.0.0.1") && out(r22f).includes("PREREQUISITE CHECK") && !out(r22f).includes("citycare:citycare"), `status=${r22f.status}`);
+      }
+
+      // ---- 18.23 FINAL F1 pass (2026-11-02): the remote-DDL authorization boundary ----
+      // The owner's finding: SEED_CONTEXT=ci|local-demo (caller-controlled) authorized
+      // remote DDL on the direct bootstrap. Fixed: the direct bootstrap is
+      // LOOPBACK-ONLY unconditionally; the only remote-DDL entry is the workflow's
+      // dedicated migration-apply-node.mjs, whose authorization is the GitHub secret
+      // scope + the least-privilege migration role — not any env var (D84).
+      // Real entry points; loopback + fake .invalid hosts only. The least-privilege
+      // scratch role below is created on THIS local test cluster and dropped in
+      // finally (synthetic loopback credential, never production).
+      const noprivSuffix = Date.now().toString(36);
+      const noprivRole = `e2e_nopriv_${noprivSuffix}`;
+      const noprivEmptyDb = `citycare_e2e_nopriv_empty_${noprivSuffix}`;
+      const noprivFullDb = `citycare_e2e_nopriv_full_${noprivSuffix}`;
+      const noprivUrl = (dbName) => `postgres://${noprivRole}:e2enoprivpw@127.0.0.1:5432/${dbName}`;
+      const h23a = await hashMarker();
+      try {
+        // 18.23a/b — remote URL + declared context cannot authorize direct DDL (required 1–2)
+        const e23a = noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "0" });
+        e23a.SEED_CONTEXT = "ci";
+        const r23a = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], { encoding: "utf8", cwd: webRoot, env: e23a });
+        check("18.23a remote URL + SEED_CONTEXT=ci → direct DDL REFUSED (the declared context is not workflow authorization)", r23a.status === 1 && out(r23a).includes("NO environment variable") && !out(r23a).includes("cannot connect"), `status=${r23a.status}`);
+        const e23b = noContextEnv({ DATABASE_URL: PROD_SIM, RETENTION_POLICY: "demo", SEED_DEMO: "0" });
+        e23b.SEED_CONTEXT = "local-demo";
+        const r23b = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], { encoding: "utf8", cwd: webRoot, env: e23b });
+        check("18.23b remote URL + SEED_CONTEXT=local-demo → direct DDL REFUSED", r23b.status === 1 && out(r23b).includes("NO environment variable") && !out(r23b).includes("cannot connect"), `status=${r23b.status}`);
+
+        // 18.23c — EVERY caller-controlled flag combined cannot authorize (required 3)
+        const r23c = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], {
+          encoding: "utf8",
+          cwd: webRoot,
+          env: {
+            ...process.env,
+            VERCEL_ENV: "production",
+            SCHEMA_SYNC_MODE: "apply",
+            MIGRATION_TARGET: LATEST_MIG,
+            SEED_CONTEXT: "ci",
+            RETENTION_POLICY: "demo",
+            SEED_DEMO: "1",
+            FORCE_SEED: "1",
+            DATABASE_URL: PROD_SIM,
+            MIGRATION_DATABASE_URL: PROD_SIM,
+          },
+        });
+        check("18.23c production-shaped URL + ALL caller-controlled flags (VERCEL_ENV, mode, target, context, FORCE_SEED) → direct DDL still REFUSED", r23c.status === 1 && out(r23c).includes("NO environment variable") && !out(r23c).includes("cannot connect") && !out(r23c).includes("migration applied"), `status=${r23c.status}`);
+
+        // 18.23d — the build-hook path (prebuild gate's apply) against a remote destination
+        const r23d = spawnSync(process.execPath, [new URL("../scripts/prebuild-schema-sync.mjs", import.meta.url).pathname], {
+          encoding: "utf8",
+          cwd: webRoot,
+          env: stripVercelMarkers({ VERCEL_ENV: "production", DATABASE_URL: PROD_SIM, SCHEMA_SYNC_MODE: "apply", MIGRATION_TARGET: LATEST_MIG, RETENTION_POLICY: "demo", SEED_DEMO: "0" }),
+        });
+        check("18.23d the build-hook controlled-op path against a remote destination → the loopback-only bootstrap refuses (the hook can never do remote DDL)", r23d.status === 1 && out(r23d).includes("NO environment variable"), `status=${r23d.status}`);
+
+        // 18.23e/f — the verified isolated flows are UNCHANGED (required 4–5)
+        const e23e = noContextEnv({ DATABASE_URL: gateUrl, RETENTION_POLICY: "demo", SEED_DEMO: "0" });
+        e23e.SEED_CONTEXT = "local-demo"; // the documented local dev declaration (D81)
+        const r23e = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], { encoding: "utf8", cwd: webRoot, env: e23e });
+        check("18.23e loopback demo bootstrap (local dev flow, declared context) still works — exit 0, database ready", r23e.status === 0 && out(r23e).includes("database ready"), `status=${r23e.status}`);
+        const s23f = `citycare_e2e_ci_boot_${Date.now().toString(36)}`;
+        let u23f = 0;
+        let r23f = { status: 1 };
+        try {
+          await sql(`DROP DATABASE IF EXISTS ${s23f}`);
+          await sql(`CREATE DATABASE ${s23f}`);
+          const s23fUrl = (() => { const u = new URL(gateUrl); u.pathname = "/" + s23f; return u.toString(); })();
+          const { default: pgCI2 } = await import("pg");
+          const c23f = new pgCI2.Client({ connectionString: s23fUrl });
+          await c23f.connect();
+          for (const f of ["../schema/citycare_init.sql", "../schema/sql/constraints.sql", "../schema/sql/ledger.sql", ...readdirSync("../schema/migrations").filter((x) => x.endsWith(".sql")).sort().map((x) => `../schema/migrations/${x}`)]) await c23f.query(readFileSync(f, "utf8"));
+          await c23f.end();
+          const e23f = noContextEnv({ DATABASE_URL: s23fUrl, RETENTION_POLICY: "demo", SEED_DEMO: "1" });
+          e23f.SEED_CONTEXT = "ci";
+          e23f.SCRYPT_N = "4096";
+          r23f = spawnSync(process.execPath, ["scripts/db-bootstrap-node.mjs"], { encoding: "utf8", cwd: webRoot, env: e23f });
+          const cCount23 = new pgCI2.Client({ connectionString: s23fUrl });
+          await cCount23.connect();
+          u23f = (await cCount23.query(`SELECT count(*)::int n FROM "User"`)).rows[0].n;
+          await cCount23.end();
+        } finally {
+          try { await sql(`DROP DATABASE IF EXISTS ${s23f}`); } catch { /* best-effort */ }
+        }
+        check("18.23f isolated CI bootstrap (fresh scratch loopback + SEED_CONTEXT=ci) still works — exit 0, seeded (≥9 users)", r23f.status === 0 && u23f >= 9 && out(r23f).includes("database ready"), `status=${r23f.status} users=${u23f}`);
+
+        // 18.23g/h — least-privilege scratch role: runtime-style credentials cannot DDL or TRUNCATE (required 7)
+        await sql(`DROP ROLE IF EXISTS ${noprivRole}`);
+        await sql(`CREATE ROLE ${noprivRole} LOGIN PASSWORD 'e2enoprivpw'`);
+        await sql(`DROP DATABASE IF EXISTS ${noprivEmptyDb}`);
+        await sql(`CREATE DATABASE ${noprivEmptyDb}`); // EMPTY — no schema: the base DDL must hit 'permission denied for schema public'
+        await sql(`DROP DATABASE IF EXISTS ${noprivFullDb}`);
+        await sql(`CREATE DATABASE ${noprivFullDb}`);
+        const { default: pgNp } = await import("pg");
+        const cNp = new pgNp.Client({ connectionString: (() => { const u = new URL(gateUrl); u.pathname = "/" + noprivFullDb; return u.toString(); })() });
+        await cNp.connect();
+        for (const f of ["../schema/citycare_init.sql", "../schema/sql/constraints.sql", "../schema/sql/ledger.sql", ...readdirSync("../schema/migrations").filter((x) => x.endsWith(".sql")).sort().map((x) => `../schema/migrations/${x}`)]) await cNp.query(readFileSync(f, "utf8"));
+        await cNp.end();
+        await sql(`GRANT CONNECT ON DATABASE ${noprivEmptyDb} TO ${noprivRole}`);
+        await sql(`GRANT CONNECT ON DATABASE ${noprivFullDb} TO ${noprivRole}`);
+        const r23g = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], {
+          encoding: "utf8",
+          cwd: webRoot,
+          env: { ...process.env, MIGRATION_DATABASE_URL: noprivUrl(noprivEmptyDb), MIGRATION_TARGET: LATEST_MIG },
+        });
+        check("18.23g a least-privilege role (CONNECT only — the shape of the future runtime role) CANNOT run the migration DDL — permission denied, exit 1", r23g.status === 1 && out(r23g).toLowerCase().includes("permission denied"), `status=${r23g.status}`);
+        const e23h = noContextEnv({ DATABASE_URL: noprivUrl(noprivFullDb), RETENTION_POLICY: "demo", SEED_DEMO: "1" });
+        e23h.SEED_CONTEXT = "ci";
+        const r23h = spawnSync(process.execPath, ["scripts/seed.mjs"], { encoding: "utf8", cwd: webRoot, env: e23h });
+        const cCountNp = new pgNp.Client({ connectionString: (() => { const u = new URL(gateUrl); u.pathname = "/" + noprivFullDb; return u.toString(); })() });
+        await cCountNp.connect();
+        const u23h = (await cCountNp.query(`SELECT count(*)::int n FROM "User"`)).rows[0].n;
+        await cCountNp.end();
+        check("18.23h the same role CANNOT TRUNCATE/seed (TRUNCATE denied by the role; nothing written — 0 users)", r23h.status !== 0 && out(r23h).toLowerCase().includes("permission denied") && u23h === 0, `status=${r23h.status} users=${u23h}`);
+
+        // 18.23i — the authorized path's shape: full-privilege credential on a FRESH scratch loopback DB
+        const s23i = `citycare_e2e_mig_apply_${Date.now().toString(36)}`;
+        let i23ok = false;
+        try {
+          await sql(`DROP DATABASE IF EXISTS ${s23i}`);
+          await sql(`CREATE DATABASE ${s23i}`);
+          const s23iUrl = (() => { const u = new URL(gateUrl); u.pathname = "/" + s23i; return u.toString(); })();
+          const r23i = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], { encoding: "utf8", cwd: webRoot, env: { ...process.env, MIGRATION_DATABASE_URL: s23iUrl, MIGRATION_TARGET: LATEST_MIG } });
+          i23ok = r23i.status === 0 && out(r23i).includes("migrations applied");
+        } finally {
+          try { await sql(`DROP DATABASE IF EXISTS ${s23i}`); } catch { /* best-effort */ }
+        }
+        check("18.23i the migration-apply tool works end-to-end on a fresh scratch DB with a full-privilege credential (exit 0, DDL only)", i23ok);
+
+        // 18.23j — code-proven: the migration path CANNOT seed (its source has no TRUNCATE and no seed gate import)
+        const migSrc = readFileSync(new URL("../scripts/migration-apply-node.mjs", import.meta.url).pathname, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/\/\/[^\n]*/g, ""); // executable code only
+        const hasTruncateStatement = /\bTRUNCATE\s+["'A-Za-z0-9_$]/i.test(migSrc);
+        check("18.23j migration-apply-node.mjs source is DDL-only: no TRUNCATE statement, no demo-seed-core import (the migration path cannot seed)", !hasTruncateStatement && !migSrc.includes("demo-seed-core"));
+
+        // 18.23k — byte-for-byte preservation + no credential leakage (required 8–9)
+        const h23b = await hashMarker();
+        const all23 = [r23a, r23b, r23c, r23d].map(out).join("\n");
+        check("18.23k the refused remote-DDL attempts left the loopback DB byte-for-byte untouched and leaked no credential values", h23a === h23b && !all23.includes("sim-pw-never-logged") && !all23.includes("postgres://"), `hash=${h23a === h23b ? "identical" : "CHANGED"}`);
+      } finally {
+        try { await sql(`DROP DATABASE IF EXISTS ${noprivEmptyDb}`); } catch { /* best-effort */ }
+        try { await sql(`DROP DATABASE IF EXISTS ${noprivFullDb}`); } catch { /* best-effort */ }
+        try { await sql(`DROP ROLE IF EXISTS ${noprivRole}`); } catch { /* best-effort */ }
+      }
+
+      // ---- 18.24 FINAL defense-in-depth pass (2026-11-02): migration-apply's
+      // REQUIRED inputs (real entry point: scripts/migration-apply-node.mjs).
+      // Every case refuses BEFORE any connection — asserted by the absence of
+      // the post-connect "database:" banner (the loopback DB is never touched;
+      // the valid happy path remains e2e 18.23i, unchanged).
+      const firstMig = readdirSync(new URL("../../schema/migrations", import.meta.url).pathname).filter((x) => x.endsWith(".sql")).sort()[0];
+      const r24a = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.24a missing MIGRATION_DATABASE_URL while a fully valid DATABASE_URL is present → REFUSED before any connection (no fallback: the runtime credential can never reach the DDL path)", r24a.status === 1 && out(r24a).includes("does NOT fall back to DATABASE_URL") && !out(r24a).includes("database:") && !out(r24a).includes("migration applied"), `status=${r24a.status}`);
+      const r24b = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl }),
+      });
+      check("18.24b missing MIGRATION_TARGET → REFUSED before any connection (no omitted-target 'apply the whole directory' mode)", r24b.status === 1 && out(r24b).includes("No omitted-target mode") && !out(r24b).includes("database:") && !out(r24b).includes("migration applied"), `status=${r24b.status}`);
+      const r24c1 = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], { encoding: "utf8", cwd: webRoot, env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl, MIGRATION_TARGET: firstMig }) });
+      const r24c2 = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], { encoding: "utf8", cwd: webRoot, env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl, MIGRATION_TARGET: "0000_does_not_exist.sql" }) });
+      check("18.24c stale target (oldest, not newest) AND invalid target (not present) → both REFUSED before any connection", r24c1.status === 1 && out(r24c1).includes("not the NEWEST migration") && !out(r24c1).includes("database:") && r24c2.status === 1 && out(r24c2).includes("not a migration present") && !out(r24c2).includes("database:"), `stale=${r24c1.status} invalid=${r24c2.status}`);
     }
   }
 }

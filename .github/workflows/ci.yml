@@ -40,6 +40,7 @@ jobs:
       ANCHOR_OTS: "0"           # never call public calendars from CI
       TZ_POLICY: Asia/Kolkata
       RETENTION_POLICY: demo  # CI is a demo-equivalent throwaway env; the S15 e2e checks assert the armed sweep + matching notice copy
+      SEED_CONTEXT: ci  # R1 review F3: CI's seed runs are the isolated CI seeding workflow — the declared context (a direct run without this declaration can never seed)
       BACKUP_DIR: /tmp/ci-backups  # throwaway local backup store for the e2e B/S16 backup + restore-drill checks
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -57,7 +58,18 @@ jobs:
       - run: node scripts/licenses.mjs
       - name: schema + demo data
         run: sudo apt-get install -y -qq postgresql-client && FORCE_SEED=1 bash scripts/db-bootstrap.sh && mkdir -p "$BACKUP_DIR"
-      - run: npx next build
+      # R1 (2026-11-02, P0 isolation remediation): the prebuild target gate is FAIL-CLOSED
+      # — an environment that does not explicitly declare itself (VERCEL_ENV) can never run
+      # database bootstrap/migrations. CI declares itself an explicit development environment
+      # for the build step and removes DATABASE_URL from that step, so the build performs NO
+      # database work. The database for the e2e job is prepared ONLY by the explicit
+      # "schema + demo data" step above (a direct, isolated bootstrap of the throwaway
+      # CI Postgres), never by the build hook.
+      - name: build (no automatic DB work — explicit VERCEL_ENV, no DATABASE_URL on this step)
+        env:
+          VERCEL_ENV: development
+          DATABASE_URL: ""
+        run: npx next build
       - name: e2e (HTTP, against the built app)
         # Failure reporting: the e2e suite streams its own summary + full failure list to
         # this job log; on failure the last 200 app-server log lines are appended for

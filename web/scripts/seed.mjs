@@ -23,7 +23,14 @@ if (seedDecision.action === "skip") {
   process.exit(0);
 }
 
-const url = process.env.DATABASE_URL ?? "postgresql://citycare:citycare@localhost:5432/citycare";
+// R1 (2026-11-02): no implicit local fallback — a direct seed run without
+// DATABASE_URL fails loudly. (When spawned by db-bootstrap-node.mjs the URL is
+// always set explicitly; this guard covers `npm run seed` direct invocations.)
+const url = process.env.DATABASE_URL;
+if (!url) {
+  console.error("✗ DATABASE_URL is not set — refusing to seed (there is no implicit local fallback; export DATABASE_URL)");
+  process.exit(1);
+}
 const c = new Client({ connectionString: url });
 
 // Same cost knob as src/lib/auth.ts: the Cloudflare Workers FREE plan has a 10 ms CPU
