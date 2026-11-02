@@ -3,6 +3,8 @@ import { ok, err } from "@/lib/api";
 import { documentKeySource } from "@/lib/storage";
 import { emailDeliveryConfigured } from "@/lib/email";
 import { LATEST_GOOD_BACKUP_SQL, backupStaleness } from "@/lib/backup-core.mjs";
+import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
+import { DEMO_RETENTION_DAYS, DEMO_SEED_DOMAIN } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,12 @@ export async function GET() {
         db: { reachable: true, timezone: row?.tz, statementTimeout: row?.st, postgres: row?.version, ledgerBreaks: row?.breaks },
         // configuration facts a reviewer should be able to see without secrets
         config: { documentKey: documentKeySource(), anchorSigning: !!process.env.ANCHOR_SIGNING_KEY, emailDelivery: emailDeliveryConfigured() },
+        // NG-S15: the EFFECTIVE retention-sweep policy (safe subset — constrained enums, no secrets).
+        // A reviewer can see at a glance whether the sweep is armed and under which policy.
+        retention: (() => {
+          const r = evaluateRetentionPolicy(process.env);
+          return { policy: r.policy, enabled: r.enabled, reason: r.reason, days: DEMO_RETENTION_DAYS, protectedDomain: DEMO_SEED_DOMAIN };
+        })(),
         backups,
         latencyMs: Date.now() - t0,
         at: new Date().toISOString(),

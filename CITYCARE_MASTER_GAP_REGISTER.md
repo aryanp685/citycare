@@ -175,21 +175,57 @@ interviews, Hobby ToS caps non-commercial).
 #### NG-S15 — Live demo retention sweep will erase real pilot users if the pilot reuses the production instance *(NEW at consolidation)*
 - **Category**: Security & Ops → Data lifecycle / environment separation
 - **Description**: The daily cron (`/api/cron/daily`) erases **every self-registered account older than `DEMO_RETENTION_DAYS`** (default **7**, clamped 1–365; `@/lib/legal.ts` L31; sweep SQL + `erasePatientData`/`anonymiseDoctor` in the cron route, read 2026-11-01). Only seeded `@demo.in` identities are exempt. This is correct for the public demo (DPDP s.8(7) purpose-served erasure) — but it is **live on the current production instance**. A controlled pilot that reuses that instance (or an env with the same default) would silently auto-erase real pilot patients/doctors after 7 days, with ledger entries `DATA_ERASED reason=demo_retention`.
-- **Current implementation / observed behaviour**: Cron step 1 runs daily (Vercel schedule 02:30 IST), budgeted 20 s, `LIMIT 200` per run, `deferred` overflow next day. Verified in code (`src/app/api/cron/daily/route.ts` L28–L61) and in `LEGAL_COMPLIANCE.md` §5.
+- **Current implementation / observed behaviour (original, 2026-11-01)**: Cron step 1 runs daily (Vercel schedule 02:30 IST), budgeted 20 s, `LIMIT 200` per run, `deferred` overflow next day. Verified in code (`src/app/api/cron/daily/route.ts` L28–L61) and in `LEGAL_COMPLIANCE.md` §5. Re-verified against the current checkout on 2026-11-02 before changing anything: **the sweep was still unconditional** (no env gate anywhere in the route; `NEXT_PUBLIC_DEMO_MODE` gated UI copy only).
 - **Expected behaviour**: On any instance handling real (non-demo) data, the sweep is disabled or its horizon set to a policy-approved value (and the policy disclosed in the notice with a notice-version bump).
-- **Evidence**: code read 2026-11-01 (consolidation); Step-1 docs did **not** flag the pilot interaction — this is the gap the reconciliation surfaces.
-- **Evidence status**: VERIFIED (code read)
+- **Evidence (original)**: code read 2026-11-01 (consolidation); Step-1 docs did **not** flag the pilot interaction — this is the gap the reconciliation surfaces.
+- **Evidence status**: VERIFIED (code read, re-confirmed 2026-11-02)
 - **Severity**: High (for any real-data environment) · **Priority**: P0 (launch blocker — data loss of real users)
 - **Business impact**: A pilot that loses its users' data on day 8 destroys trust and is a reportable-incident candidate.
 - **Patient safety impact**: Erasure deletes the patient's clinical record (allergies/meds/encounters) after 7 days — care-continuity harm.
 - **Security/privacy impact**: Inverted erasure — deleting data whose purpose is still being served (DPDP s.8(7) requires erasure *when the purpose is no longer served*, not on a fixed demo clock).
 - **Technical impact**: Configuration-only fix; low effort.
 - **Dependencies**: none for the env-flag change; notice update if the policy text changes (L2 428 machinery already exists).
-- **Recommended solution**: Pilot env (Step-2 W11) must set the sweep OFF (or a documented, disclosed horizon) + add a boot-time warning when the sweep is active on a non-demo env; add e2e/health fact so `/api/health` reports the effective retention policy.
+- **Recommended solution (original)**: Pilot env (Step-2 W11) must set the sweep OFF (or a documented, disclosed horizon) + add a boot-time warning when the sweep is active on a non-demo env; add e2e/health fact so `/api/health` reports the effective retention policy.
 - **Required tests**: e2e: on a test DB with the sweep disabled, a 10-day-old self-registered account survives one cron run; on the demo config it is erased (existing behaviour preserved).
 - **Acceptance criteria**: pilot env demonstrably does not erase self-registered real users (test above); `/api/health` exposes the active policy; the notice reflects it.
 - **External deps / approvals**: none (code/config only); notice text change needs the L2 discipline.
-- **Complexity**: Small · **Status**: Open
+- **Complexity**: Small
+- **Status**: **RESOLVED** (2026-11-02) — implemented + demonstrated by tests; every acceptance criterion has direct evidence below. Owner-side deploy note: the production demo must set `RETENTION_POLICY=demo` (see below).
+
+**Implementation (Step 2 Batch 1, 2026-11-02).** An explicit, fail-safe policy gate between the daily cron and the erasure code — an unknown environment can never erase data.
+
+- **Decision module (new)**: `web/src/lib/retention-core.mjs` (+ `.d.mts`) — pure function `evaluateRetentionPolicy(env) → {policy, enabled, reason, warning}`. Semantics:
+  - `RETENTION_POLICY=demo` + banner on → **enabled** (the only enabling path).
+  - `RETENTION_POLICY=internal|pilot` → **disabled** (`policy_disables_sweep`) — real-data deployments never inherit the sweep.
+  - missing/empty/non-string → **disabled** (`missing_policy`) + loud warning; invalid value → **disabled** (`invalid_policy`, raw value never echoed into the safe `policy` field); `demo` + banner off → **disabled** (`contradictory_policy`) + warning.
+  - Safe-field invariant: `policy`/`enabled`/`reason` are constrained enums — no environment free-text, so they are safe to expose publicly.
+- **Files modified**
+  - `web/src/app/api/cron/daily/route.ts` — evaluates the policy once per run; **executes zero sweep SQL when disabled** (`retention.enabled ? await all(…due query…) : []`); logs a `console.warn` on any fail-safe/contradiction warning; response `retention` now carries `policy`/`enabled`/`reason` alongside the existing `days`/`protectedDomain`/counts (old shape preserved — the pre-existing L1 e2e check passes unchanged).
+  - `web/src/app/api/health/route.ts` — `retention: {policy, enabled, reason, days, protectedDomain}` fact (safe subset only).
+  - Disclosure copy made policy-aware (all server components; the signup line is client-side and now also **DEMO_MODE-gated** — it previously rendered "Public demo: … erased after a few days" on *every* deployment, a misleading disclosure on real-data instances): `src/components/demo-banner.tsx`, `src/app/legal/privacy/page.tsx` (§1 demo notice + §6 + the English i18n "How long" summary via new `howLongBody()` in `src/lib/legal-i18n.ts`), `src/app/legal/terms/page.tsx`, `src/app/signup/page.tsx`.
+- **Tests added / executed / results (2026-11-02, sandbox)**
+  - `retention-core.test.ts` — **13 unit tests**: full policy matrix (demo enabled only with banner on; internal/pilot disabled under every banner state; missing/empty/non-string/invalid ⇒ disabled; contradictory ⇒ disabled; exhaustive combo scan proving *no* other enabling path; safe-field/no-echo invariants). **13/13 pass.**
+  - E2e section 15 — **15 checks, all passing** (full e2e **272/272**, 0 failed; baseline 257 unchanged):
+    1. pilot ⇒ sweep disabled (decision level — the route executes zero sweep SQL, so a 10-day real-data account survives by construction);
+    2. internal ⇒ disabled regardless of banner;
+    3. missing ⇒ fails safe (disabled + warning);
+    4. invalid ⇒ fails safe (raw value never in safe fields);
+    5. contradictory ⇒ fails safe;
+    6–7. two fresh demo accounts created; one backdated 10 days;
+    8. **live cron (real HTTP + real DB) reports `policy:"demo", enabled:true, reason:"ok"` and swept the due account** (behavioural proof the demo sweep still works — existing behaviour preserved);
+    9. `/api/health` exposes the policy (safe fields);
+    10. **no secret (CRON/SESSION/BACKUP key) appears in the health or cron response bodies**;
+    11. the 10-day demo account **WAS erased** (User `DELETED` + anonymised email/phone, hash `!`, Patient `[REDACTED]`);
+    12. the fresh (minutes-old) demo account **SURVIVES** (only overdue ones targeted);
+    13. seeded `@demo.in` account untouched (protected domain);
+    14. ledger still verifies 0 breaks after the sweep;
+    15. privacy notice + terms state the demo erasure (notice matches the armed sweep).
+  - Vitest total **213/213** (baseline 200 + 13). tsc 0 errors, ESLint clean, `next build` OK.
+- **Security review**: the enabling path is a single explicit declaration + a consistency check; every failure mode (unset, typo, contradiction) converges on *no erasure*; the publicly exposed policy fields carry no free-text/secret (e2e-verified by secret scan); erasure semantics themselves unchanged (`src/lib/erasure.ts` untouched — patient ownership, consent model, ledger `DATA_ERASED` entries all preserved); no auth/consent/ledger-verification changes.
+- **Acceptance criteria evidence**: (1) *demonstrably does not erase real users* — decision matrix pinned by 13 unit tests + 5 e2e checks, with the route's disabled path being the single reviewed conditional `enabled ? query : []`; behavioural erasure verified only on the declared demo. (2) *health exposes the policy* — e2e check 9 + live curl (`{"policy":"demo","enabled":true,"reason":"ok","days":7,"protectedDomain":"demo.in"}`). (3) *notice reflects it* — e2e check 15 (demo branch on the live demo server); the non-demo branch renders the "does not auto-erase" wording from the same decision (code-reviewed; no deployed non-demo instance exists yet to e2e).
+- **L2 notice-versioning discipline**: `PRIVACY_NOTICE_VERSION` **not** bumped — the demo-branch notice wording is byte-identical to before (the only deployed configuration); the new non-demo wording targets a never-deployed environment, so no existing user's accepted notice changed meaning.
+- **Production verification status**: nothing to execute in production for this finding (no prod-run criterion). **Owner-side deploy note**: set `RETENTION_POLICY=demo` on the production demo project — until then the daily demo sweep is OFF (fail-safe), visible as `/api/health` → `retention.reason:"missing_policy"`. Pilot deployments: `RETENTION_POLICY=pilot` (or `internal`) + `NEXT_PUBLIC_DEMO_MODE=0`.
+- **Docs**: `LEGAL_COMPLIANCE.md` §5 + control matrix; `DEPLOY_VERCEL.md` step 4; `README.md` env list; `FEATURES.md` L1 row; `DRAWBACKS_AND_BUGFIXES.md` A83 (the defect + fix), D68 (opt-in trade-off + monitoring suggestion).
 
 #### NG-S10 — No external uptime monitoring / alerting
 - **Category**: Security & Ops → Reliability

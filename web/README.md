@@ -46,6 +46,10 @@ base64 — encrypts uploaded files; without it a key is *derived* from `SESSION_
 `/api/health` says `documentKey: "derived"`), `ANCHOR_SIGNING_KEY` (Ed25519 PKCS8 base64 — signs the
 nightly ledger head; optional) and `ANCHOR_OTS=0` locally (skip public OpenTimestamps calendars).
 Optional: `RESEND_API_KEY` + `EMAIL_FROM` turn the e-mail `Outbox` into real delivery.
+`RETENTION_POLICY=demo|internal|pilot` (NG-S15) declares the data class of this deployment:
+the daily 7-day demo-retention sweep runs **only** for an explicit `demo` declaration; a
+missing/invalid/contradictory value disables it (fail-safe) — the active policy is visible on
+`/api/health` → `retention`.
 `scripts/vercel-deploy.sh` generates and stores all keys on the Vercel project when missing.
 
 ## Demo accounts (password for all: `city1234`)

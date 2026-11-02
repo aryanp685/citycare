@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
   for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR)=(.*)$/);
+    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
   }
 } catch { /* no .env.local — fine */ }
@@ -1054,6 +1054,89 @@ console.log("\n— 14. backup / DR (NG-S09): encrypted daily backup, private sto
     );
   } else {
     skip("B: backup cron with secret", "CRON_SECRET not in env");
+  }
+}
+
+console.log("\n— 15. retention sweep policy (NG-S15): explicit policy, fail-safe, real data never swept —");
+{
+  // The cron route and /api/health consult this exact module. The real-data and fail-safe
+  // paths are pinned here at the decision level (the route executes ZERO sweep SQL when the
+  // decision is disabled — a 10-day real-data account is safe by construction); the demo path
+  // is additionally proven end-to-end below against the live instance, which declares
+  // RETENTION_POLICY=demo.
+  const { evaluateRetentionPolicy } = await import("../src/lib/retention-core.mjs");
+
+  check("S15: RETENTION_POLICY=pilot ⇒ sweep disabled (10-day real-data account survives by construction)",
+    evaluateRetentionPolicy({ RETENTION_POLICY: "pilot", NEXT_PUBLIC_DEMO_MODE: "0" }).enabled === false);
+  check("S15: RETENTION_POLICY=internal ⇒ sweep disabled (regardless of the banner)",
+    ["0", "1", undefined].every((b) => {
+      const env = { RETENTION_POLICY: "internal" };
+      if (b !== undefined) env.NEXT_PUBLIC_DEMO_MODE = b;
+      return evaluateRetentionPolicy(env).enabled === false;
+    }));
+  check("S15: MISSING policy ⇒ fails safe (sweep off + loud warning)", (() => {
+    const r = evaluateRetentionPolicy({});
+    return r.enabled === false && r.reason === "missing_policy" && /fail-safe/.test(r.warning ?? "");
+  })());
+  check("S15: INVALID policy ⇒ fails safe (raw value never reaches the safe fields)", (() => {
+    const r = evaluateRetentionPolicy({ RETENTION_POLICY: "bogus-value-XYZ" });
+    return r.enabled === false && r.reason === "invalid_policy" && r.policy === null;
+  })());
+  check("S15: CONTRADICTORY config (demo policy, banner off) ⇒ fails safe",
+    evaluateRetentionPolicy({ RETENTION_POLICY: "demo", NEXT_PUBLIC_DEMO_MODE: "0" }).enabled === false);
+
+  if (!process.env.CRON_SECRET) {
+    skip("S15: live demo-sweep behaviour", "CRON_SECRET not in env");
+  } else {
+    const emailA = `e2e.s15a.${stamp}@e2e.test`; // will be made overdue (10 days)
+    const emailB = `e2e.s15b.${stamp}@e2e.test`; // stays fresh → must survive
+    const sA = await new Session("s15a").post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S15A ${stamp}`, email: emailA, phone: uniqPhone("8"), password: "e2epassword1" });
+    const sB = await new Session("s15b").post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S15B ${stamp}`, email: emailB, phone: uniqPhone("8"), password: "e2epassword1" });
+    check("S15: two fresh demo accounts created via normal signup", sA.status === 201 && sB.status === 201, `${sA.status}/${sB.status}`);
+
+    const pre = await sql(`SELECT u.id AS uid, p.id AS pid FROM "User" u JOIN "Patient" p ON p."userId" = u.id WHERE u.email = $1`, [emailA]);
+    const back = await sql(`UPDATE "User" SET "createdAt" = now() - interval '10 days' WHERE email = $1`, [emailA]);
+    check("S15: account A backdated 10 days (past the 7-day demo horizon)", back?.rowCount === 1 && pre?.rowCount === 1, `back=${back?.rowCount ?? "n/a"}`);
+
+    const cron15 = await fetch(BASE + "/api/cron/daily", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const c15 = await cron15.json().catch(() => ({}));
+
+    check("S15: live cron reports the ACTIVE policy (demo/enabled/ok) and swept the due account",
+      cron15.status === 200 && c15.retention?.policy === "demo" && c15.retention?.enabled === true && c15.retention?.reason === "ok"
+        && c15.retention?.protectedDomain === "demo.in" && c15.retention?.patients >= 1,
+      JSON.stringify(c15.retention ?? null));
+
+    const h15 = await fetch(BASE + "/api/health");
+    const h15j = await h15.json().catch(() => ({}));
+    check("S15: /api/health exposes the policy (safe fields only, no PHI)",
+      h15.status === 200 && h15j.retention?.policy === "demo" && h15j.retention?.enabled === true && h15j.retention?.reason === "ok"
+        && Number.isInteger(h15j.retention?.days) && h15j.retention?.protectedDomain === "demo.in",
+      JSON.stringify(h15j.retention ?? null));
+    const secrets = [process.env.CRON_SECRET, process.env.SESSION_SECRET, process.env.BACKUP_KEY].filter(Boolean);
+    const leaked = [JSON.stringify(h15j), JSON.stringify(c15)].some((body) => secrets.some((s) => body.includes(s)));
+    check("S15: health + cron responses leak no secrets", !leaked, "a secret value appeared in a public response body");
+
+    const postA = await sql(`SELECT status, email, "passwordHash" FROM "User" WHERE id = $1`, [pre?.rows?.[0]?.uid]);
+    const patA = await sql(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pre?.rows?.[0]?.pid]);
+    check("S15: the 10-day demo account WAS erased (User DELETED + anonymised, hash '!', Patient [REDACTED])",
+      postA?.rows?.[0]?.status === "DELETED" && /^erased-.*@deleted\.invalid$/.test(postA?.rows?.[0]?.email ?? "")
+        && postA?.rows?.[0]?.passwordHash === "!" && patA?.rows?.[0]?.fullName === "[REDACTED]",
+      JSON.stringify({ u: postA?.rows ?? null, p: patA?.rows ?? null }));
+
+    const postB = await sql(`SELECT status FROM "User" WHERE email = $1`, [emailB]);
+    const seed = await sql(`SELECT status FROM "User" WHERE email = 'ramesh@demo.in'`);
+    check("S15: fresh demo account SURVIVES the sweep (only overdue ones are targeted)", postB?.rows?.[0]?.status !== undefined && postB.rows[0].status !== "DELETED", JSON.stringify(postB?.rows ?? null));
+    check("S15: seeded @demo.in account is never touched (protected domain)", seed?.rows?.[0]?.status !== undefined && seed.rows[0].status !== "DELETED", JSON.stringify(seed?.rows ?? null));
+    check("S15: ledger still verifies clean after the sweep (cron report)", c15.ledger?.breaks === 0, JSON.stringify(c15.ledger ?? null));
+
+    const days = c15.retention?.days ?? 7;
+    // Strip React's text-node comment markers + tags so the check is on rendered CONTENT, not markup.
+    const plain = (html) => html.replace(/<!--.*?-->/gs, "").replace(/<[^>]+>/g, "");
+    const notice = plain(await (await fetch(BASE + "/legal/privacy")).text());
+    const terms = plain(await (await fetch(BASE + "/legal/terms")).text());
+    check("S15: privacy notice + terms state the demo erasure (notice matches the armed sweep)",
+      notice.includes(`erased automatically ${days} days after creation`) && terms.includes(`erased after ${days} days`),
+      "demo erasure clause missing from the notice copy");
   }
 }
 

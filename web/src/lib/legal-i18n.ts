@@ -23,6 +23,21 @@ export function pickLang(raw: string | null | undefined): LegalLang {
   return (LEGAL_LANGS as readonly string[]).includes(raw ?? "") ? (raw as LegalLang) : "en";
 }
 
+/**
+ * NG-S15 — the operative English "How long" sentence for the summary box. The static
+ * `LEGAL_SUMMARY.en.points` entry is overridden at render time with this so the summary
+ * states what THIS deployment actually does (sweep armed ⇔ RETENTION_POLICY=demo + banner on).
+ * The Hindi/Marathi summaries stay static: they are marked "pending legal-cell review" and
+ * subordinate to the English operative text (see `operativeNote`).
+ */
+export function howLongBody(sweepEnabled: boolean, demoRetentionDays: number): string {
+  return `While your account is active. ${
+    sweepEnabled
+      ? `Demo accounts are erased ${demoRetentionDays} days after creation.`
+      : "This deployment does not auto-erase accounts."
+  } Access logs are kept at least one year.`;
+}
+
 export const LEGAL_SUMMARY: Record<LegalLang, LegalSummary> = {
   en: {
     langName: "English",
