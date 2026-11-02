@@ -17,14 +17,16 @@ import {
 } from "../demo-seed-core.mjs";
 
 const d = (env: Record<string, string | undefined>) => resolveDemoSeedAction(env);
+// FINAL REVIEW (2026-11-02): the identity gate requires a same-machine (loopback) destination for a seed decision.
+const LOOP_URL = "postgresql://demo:demopw@127.0.0.1:5432/citycare_local";
 
 describe("1. demo environment (RETENTION_POLICY=demo)", () => {
   it("seeds by default (SEED_DEMO unset) — backward-compatible synthetic-demo behaviour", () => {
-    expect(d({ RETENTION_POLICY: "demo", SEED_CONTEXT: "ci" })).toMatchObject({ action: "seed", exitCode: DEMO_SEED_SKIP_EXIT, warning: null });
+    expect(d({ RETENTION_POLICY: "demo", SEED_CONTEXT: "ci", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed", exitCode: DEMO_SEED_SKIP_EXIT, warning: null });
   });
 
   it("seeds with explicit SEED_DEMO=1", () => {
-    expect(d({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci" })).toMatchObject({ action: "seed" });
+    expect(d({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
   });
 
   it("SKIPS (exit 0, nothing written) when SEED_DEMO=0", () => {
@@ -127,7 +129,7 @@ describe("5. exhaustive matrix (every configuration combination is pinned)", () 
   it("asserts the exact expected action for all 25 (policy × flag) combinations", () => {
     for (const policy of policies) {
       for (const flag of flags) {
-        const env: Record<string, string | undefined> = { SEED_CONTEXT: "ci" }; // context declared; pinned separately in block 8
+        const env: Record<string, string | undefined> = { SEED_CONTEXT: "ci", DATABASE_URL: LOOP_URL }; // context declared; pinned separately in block 8; loopback destination for the seed rows
         if (policy !== undefined) env.RETENTION_POLICY = policy;
         if (flag !== undefined) env.SEED_DEMO = flag;
         const r = d(env);
@@ -271,15 +273,15 @@ describe("8. unverified execution context (missing/unknown VERCEL_ENV) — fail 
   });
 
   it("SEED_CONTEXT=ci restores the isolated CI seeding workflow (existing matrix intact)", () => {
-    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_CONTEXT: "ci" })).toMatchObject({ action: "seed" });
-    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_CONTEXT: "ci", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
     expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "0", SEED_CONTEXT: "ci" })).toMatchObject({ action: "skip" });
     expect(resolveDemoSeedAction({ RETENTION_POLICY: "pilot", SEED_DEMO: "0", SEED_CONTEXT: "ci" })).toMatchObject({ action: "skip" });
     expect(resolveDemoSeedAction({ RETENTION_POLICY: "pilot", SEED_DEMO: "1", SEED_CONTEXT: "ci" })).toMatchObject({ action: "refuse" });
   });
 
   it("SEED_CONTEXT=local-demo restores the explicit local dev seeding flow", () => {
-    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
     expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "0", SEED_CONTEXT: "local-demo" })).toMatchObject({ action: "skip" });
   });
 
@@ -291,8 +293,8 @@ describe("8. unverified execution context (missing/unknown VERCEL_ENV) — fail 
   });
 
   it("SEED_CONTEXT is trim/case-normalised like the SEED_DEMO flag (block 4 convention)", () => {
-    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci " })).toMatchObject({ action: "seed" });
-    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: " LOCAL-DEMO " })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci ", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: " LOCAL-DEMO ", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
   });
 
   it("the production target rule is UNAFFECTED by context (production refuses even with SEED_CONTEXT=ci)", () => {
@@ -302,7 +304,7 @@ describe("8. unverified execution context (missing/unknown VERCEL_ENV) — fail 
   });
 
   it("known non-production targets (preview/development) stay explicit declarations — no context needed", () => {
-    expect(resolveDemoSeedAction({ VERCEL_ENV: "preview", RETENTION_POLICY: "demo" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ VERCEL_ENV: "preview", RETENTION_POLICY: "demo", DATABASE_URL: LOOP_URL })).toMatchObject({ action: "seed" });
     expect(resolveDemoSeedAction({ VERCEL_ENV: "development", RETENTION_POLICY: "demo", SEED_DEMO: "0" })).toMatchObject({ action: "skip" });
   });
 
@@ -318,5 +320,99 @@ describe("8. unverified execution context (missing/unknown VERCEL_ENV) — fail 
     expect(wire).not.toContain("10.0.0.7");
     expect(wire).not.toContain("10.0.0.8");
     expect(wire).not.toContain("postgresql://");
+  });
+});
+
+// FINAL REVIEW (2026-11-02) — the destination IDENTITY gate. The owner's adversarial
+// scenario: VERCEL_ENV missing + SEED_CONTEXT=local-demo + RETENTION_POLICY=demo +
+// SEED_DEMO=1 + FORCE_SEED=1 + DATABASE_URL pointing at a PRODUCTION (remote) database.
+// SEED_CONTEXT is caller-controlled — it is a self-attested label, NOT proof of
+// database identity. A seed decision (the only path that reaches TRUNCATE) therefore
+// additionally requires the destination to be a same-machine (loopback) database,
+// established from the URL itself. Remote/unknown destinations fail closed.
+describe("9. destination identity gate — a declared context never overrides database identity", () => {
+  const PROD_URL = "postgresql://prod-owner:prod-pw@db-prod-1.neon-sim.tech:5432/citycare";
+
+  it("THE OWNER'S ADVERSARIAL SCENARIO: no VERCEL_ENV + SEED_CONTEXT=local-demo + demo policy + SEED_DEMO=1 + production-shaped URL → REFUSE (no TRUNCATE)", () => {
+    const r = resolveDemoSeedAction({
+      RETENTION_POLICY: "demo",
+      SEED_DEMO: "1",
+      SEED_CONTEXT: "local-demo",
+      FORCE_SEED: "1",
+      DATABASE_URL: PROD_URL,
+    });
+    expect(r).toMatchObject({ action: "refuse", exitCode: DEMO_SEED_REFUSE_EXIT });
+    expect(r.reason).toContain("NOT a same-machine (loopback) database");
+    expect(r.reason).toContain("db-prod-1.neon-sim.tech"); // host recorded — the identity that was checked
+    expect(r.reason).toContain("SEED_CONTEXT");
+    expect(r.reason).toContain("never overrides database identity");
+  });
+
+  it("a CI context (the declared isolated workflow label) CANNOT override a production-shaped destination", () => {
+    const r = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: PROD_URL });
+    expect(r.action).toBe("refuse");
+    expect(r.reason).toContain("NOT a same-machine (loopback) database");
+  });
+
+  it("FORCE_SEED=1 cannot force a seed on a non-loopback destination (the core never reads FORCE_SEED)", () => {
+    const r = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", FORCE_SEED: "1", DATABASE_URL: PROD_URL });
+    expect(r.action).toBe("refuse");
+  });
+
+  it("unknown VERCEL_ENV (prod/staging) + a DECLARED context + production-shaped URL → still REFUSE (target declaration doesn't help identity)", () => {
+    for (const v of ["prod", "staging"]) {
+      const r = resolveDemoSeedAction({ VERCEL_ENV: v, RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: PROD_URL });
+      expect(r.action, v).toBe("refuse");
+      expect(r.reason, v).toContain("NOT a same-machine (loopback) database");
+    }
+  });
+
+  it("missing VERCEL_ENV + production-shaped URL + NO context → refuses (the context rule fires first — either way refused)", () => {
+    const r = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", DATABASE_URL: PROD_URL });
+    expect(r.action).toBe("refuse");
+    expect(r.reason).toContain("unverified execution context");
+  });
+
+  it("the VERIFIED isolated flows still seed: loopback + local-demo (local dev) and loopback + ci (CI scratch)", () => {
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: "postgresql://citycare:citycare@127.0.0.1:5432/citycare" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: "postgresql://citycare:citycare@localhost:5432/citycare_e2e_ci" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ VERCEL_ENV: "development", RETENTION_POLICY: "demo", SEED_DEMO: "1", DATABASE_URL: "postgresql://citycare:citycare@localhost:5432/citycare" })).toMatchObject({ action: "seed" });
+    expect(resolveDemoSeedAction({ VERCEL_ENV: "preview", RETENTION_POLICY: "demo", SEED_DEMO: "1", DATABASE_URL: "postgresql://x:x@127.0.0.1:5432/db" })).toMatchObject({ action: "seed" });
+  });
+
+  it("all loopback spellings are same-machine (127.0.0.1 / localhost / ::1 / 0.0.0.0, case-insensitive host)", () => {
+    for (const host of ["127.0.0.1", "localhost", "[::1]", "0.0.0.0"]) { // IPv6 = bracketed per URL spec
+      expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: `postgresql://u:p@${host}:5432/db` }).action, host).toBe("seed");
+    }
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: "postgresql://u:p@LOCALHOST:5432/db" }).action).toBe("seed");
+  });
+
+  it("an identity that CANNOT be established fails closed: missing DATABASE_URL or unparseable URL → REFUSE (never seed on an unknown destination)", () => {
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci" })).toMatchObject({ action: "refuse" });
+    const missing = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci" });
+    expect(missing.reason).toContain("CANNOT be established");
+    const unparseable = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: "not a url" });
+    expect(unparseable).toMatchObject({ action: "refuse" });
+    expect(unparseable.reason).toContain("CANNOT be established");
+  });
+
+  it("a skip is unaffected by the destination identity (SEED_DEMO=0 writes nothing, so the identity gate does not block skips)", () => {
+    expect(resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "0", SEED_CONTEXT: "ci", DATABASE_URL: PROD_URL })).toMatchObject({ action: "skip" });
+  });
+
+  it("the production TARGET rule still fires first and is unchanged (refuses even a loopback demo config on production)", () => {
+    const r = resolveDemoSeedAction({ VERCEL_ENV: "production", RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "ci", DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db" });
+    expect(r.action).toBe("refuse");
+    expect(r.reason).toContain("VERCEL_ENV=production");
+  });
+
+  it("no credentials leak: the identity refusal carries the host, never the username/password/URL", () => {
+    const r = resolveDemoSeedAction({ RETENTION_POLICY: "demo", SEED_DEMO: "1", SEED_CONTEXT: "local-demo", DATABASE_URL: PROD_URL });
+    const wire = JSON.stringify(r);
+    expect(wire).toContain("db-prod-1.neon-sim.tech");
+    expect(wire).not.toContain("prod-owner");
+    expect(wire).not.toContain("prod-pw");
+    expect(wire).not.toContain("postgresql://");
+    expect(wire).not.toContain("neon-sim.tech:5432");
   });
 });

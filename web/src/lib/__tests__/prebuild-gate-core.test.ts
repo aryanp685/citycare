@@ -5,7 +5,7 @@
 // operation, development bootstraps only on an explicit declaration + URL, and
 // anything unknown/missing refuses. Pins the full matrix below.
 import { describe, it, expect } from "vitest";
-import { resolvePrebuildAction, GATE_SKIP_EXIT, GATE_REFUSE_EXIT } from "../prebuild-gate-core.mjs";
+import { resolvePrebuildAction, GATE_SKIP_EXIT, GATE_REFUSE_EXIT, isLoopbackHost, dbUrlIdentity, isolatedContextDeclared } from "../prebuild-gate-core.mjs";
 
 const MIGS = [
   "0001_verification_emergency_inbox.sql",
@@ -360,5 +360,38 @@ describe("9. the migration destination is validated independently (review F2)", 
 
   it("production verify with a missing DATABASE_URL still refuses (dest validation covers the runtime URL too)", () => {
     expect(d({ VERCEL_ENV: "production" })).toMatchObject({ action: "refuse" });
+  });
+});
+
+// FINAL REVIEW (2026-11-02): the shared database-identity helpers used by the
+// demo-seed identity gate, the direct bootstrap DDL gate, and the bootstrap
+// scripts — one rule, one place.
+describe("10. database identity helpers (loopback = same-machine)", () => {
+  it("isLoopbackHost recognises the four same-machine spellings, incl. bracketed IPv6, and rejects remote hosts", () => {
+    for (const ok of ["127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0", "LOCALHOST", " 127.0.0.1 "]) {
+      expect(isLoopbackHost(ok), ok).toBe(true);
+    }
+    for (const bad of ["db-1.neon.tech", "db-1.eu-central-1.aws.neon.tech", "10.0.0.9", "192.168.1.5", "127.0.0.2", "127.1", "localhost.evil.com", "", undefined, null, "0.0.0.1"]) {
+      expect(isLoopbackHost(bad as string), JSON.stringify(bad)).toBe(false);
+    }
+  });
+
+  it("dbUrlIdentity reports valid + loopback, and fails closed on missing/unparseable/non-postgres/empty-host", () => {
+    expect(dbUrlIdentity("postgresql://u:p@127.0.0.1:5432/db")).toEqual({ ok: true, host: "127.0.0.1", loopback: true });
+    expect(dbUrlIdentity("postgres://u:p@localhost:5432/db")).toEqual({ ok: true, host: "localhost", loopback: true });
+    expect(dbUrlIdentity("postgresql://u:p@remote.example.com:5432/db")).toEqual({ ok: true, host: "remote.example.com", loopback: false });
+    expect(dbUrlIdentity(undefined).ok).toBe(false);
+    expect(dbUrlIdentity("   ").ok).toBe(false);
+    expect(dbUrlIdentity("not a url").ok).toBe(false);
+    expect(dbUrlIdentity("http://u:p@127.0.0.1:5432/db").ok).toBe(false); // wrong protocol is not a postgres identity
+  });
+
+  it("isolatedContextDeclared is a closed set (ci | local-demo), trim/case-normalised", () => {
+    for (const ok of ["ci", "CI", " local-demo ", "Local-Demo"]) {
+      expect(isolatedContextDeclared({ SEED_CONTEXT: ok }), ok).toBe(true);
+    }
+    for (const bad of ["", "production", "staging", "1", "on", "cidemo", undefined]) {
+      expect(isolatedContextDeclared({ SEED_CONTEXT: bad as string }), JSON.stringify(bad)).toBe(false);
+    }
   });
 });

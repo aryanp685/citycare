@@ -20,6 +20,23 @@ export SCRYPT_N="${SCRYPT_N:-16384}"
 die() { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 q()   { psql "$DATABASE_URL" -X -tAc "$1"; }
 
+# FINAL REVIEW (2026-11-02): destination identity gate, mirrored from the node
+# bootstrap and the demo-seed core (same prebuild-gate-core.mjs helpers). The
+# demo seed TRUNCATEs, and direct DDL on a remote (production-shaped) database
+# must fail closed: a non-loopback destination is only reachable by a run that
+# declares an isolated controlled context (the protected migration workflow).
+# Fires BEFORE the first psql — no connection, no probe.
+DEST_CHECK="$(DATABASE_URL="$DATABASE_URL" node --input-type=module -e '
+import { dbUrlIdentity, isolatedContextDeclared } from "./src/lib/prebuild-gate-core.mjs";
+const id = dbUrlIdentity(process.env.DATABASE_URL);
+if (!id.ok) console.log("refuse " + id.reason);
+else if (!id.loopback && !isolatedContextDeclared(process.env)) console.log("refuse non-loopback destination (host: " + id.host + ") without a declared isolated context");
+else console.log("ok " + id.host);')" || die "destination identity check crashed — refusing"
+case "$DEST_CHECK" in
+  refuse*) die "DATABASE_URL failed the destination identity check ($DEST_CHECK) — refusing before any connection (loopback = local development; non-loopback requires the protected migration workflow)" ;;
+esac
+echo "▶ destination identity: $DEST_CHECK"
+
 DBNAME="$(q 'select current_database()')" || die "cannot connect to DATABASE_URL"
 PGVER="$(q 'show server_version')"
 echo "▶ database: $DBNAME (PostgreSQL $PGVER)"

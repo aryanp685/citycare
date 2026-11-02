@@ -69,6 +69,55 @@ export function validateDbUrl(raw) {
 }
 
 /**
+ * Final security review (2026-11-02) — database IDENTITY helpers.
+ *
+ * A demo seed TRUNCATEs its destination, so the destination's identity matters —
+ * and identity must be established from the destination ITSELF, never from a
+ * caller-controlled declaration (SEED_CONTEXT is a self-attested label and must
+ * never override database identity). The one identity the scripts can verify
+ * independently is "same-machine": a loopback host (127.0.0.1 / localhost / ::1 /
+ * 0.0.0.0 — 0.0.0.0 as a destination address always routes to the local machine
+ * on every OS). The production database is remote (a managed host), so it is
+ * structurally unreachable from the demo seed scripts. Remote/identity-unknown
+ * destinations fail closed (D82 records the boundary honestly).
+ */
+export const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "::1", "0.0.0.0"];
+
+/** @param {string | undefined} hostname @returns {boolean} */
+export function isLoopbackHost(hostname) {
+  // URL-parse normalises IPv6 hosts to bracketed form ("[::1]") — strip them.
+  const h = (typeof hostname === "string" ? hostname.trim().toLowerCase() : "").replace(/^\[|\]$/g, "");
+  return LOOPBACK_HOSTS.includes(h);
+}
+
+/**
+ * Full destination identity for a URL: valid + host + is it a same-machine
+ * (loopback) database? Used by the demo-seed identity gate and the direct
+ * bootstrap DDL gate.
+ * @param {string | undefined} raw
+ * @returns {{ok: true, host: string, loopback: boolean} | {ok: false, reason: string}}
+ */
+export function dbUrlIdentity(raw) {
+  const v = validateDbUrl(raw);
+  if (!v.ok) return { ok: false, reason: v.reason };
+  return { ok: true, host: v.host, loopback: isLoopbackHost(v.host) };
+}
+
+/**
+ * True when the caller declares an isolated demo execution context (the closed
+ * set: ci | local-demo). NOTE: this is a SELF-ATTESTED label — it authorizes
+ * direct runs on same-machine databases and is required for non-loopback
+ * bootstrap DDL (where the protected migration workflow provides it), but it
+ * never grants demo seeding on a non-loopback destination.
+ * @param {Record<string, string | undefined>} env
+ * @returns {boolean}
+ */
+export function isolatedContextDeclared(env) {
+  const v = typeof env.SEED_CONTEXT === "string" ? env.SEED_CONTEXT.trim().toLowerCase() : "";
+  return v === "ci" || v === "local-demo";
+}
+
+/**
  * @param {Record<string, string | undefined>} env
  * @param {{ availableMigrations?: string[] }} [opts] sorted list of migration
  *   filenames present in schema/migrations (the script reads the directory and

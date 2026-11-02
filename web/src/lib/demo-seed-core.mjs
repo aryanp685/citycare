@@ -35,6 +35,7 @@
 //   * the decision output carries only the two config variables' names/values — never a
 //     database URL, never anything else from the environment.
 import { RETENTION_POLICIES } from "./retention-core.mjs";
+import { dbUrlIdentity } from "./prebuild-gate-core.mjs";
 
 export const DEMO_SEED_SKIP_EXIT = 0;
 export const DEMO_SEED_REFUSE_EXIT = 2;
@@ -137,7 +138,40 @@ export function resolveDemoSeedAction(env) {
     if (flag === "0") {
       return skip("SEED_DEMO=0 — demo seed disabled; nothing was written and nothing was truncated");
     }
-    return { action: "seed", reason: "ok", warning: null, exitCode: DEMO_SEED_SKIP_EXIT };
+    // FINAL REVIEW (2026-11-02): the destination identity gate — the last gate
+    // before the only TRUNCATE in the codebase. Every rule above (production
+    // target, execution context, policy, flag) can be satisfied by caller-
+    // controlled values, so a SEED decision additionally requires the
+    // DESTINATION itself to be a same-machine (loopback) database, established
+    // from the URL the caller's code will actually connect to (env.DATABASE_URL
+    // is exactly that URL on every entry path: seed.mjs reads it directly, and
+    // both bootstraps rewrite it to MIGRATION_DATABASE_URL||DATABASE_URL before
+    // reaching this gate). A self-declared SEED_CONTEXT is never treated as
+    // proof of database identity: a remote (production-shaped) database is
+    // never seedable through the demo scripts, whatever the context says, and
+    // an unparseable/missing URL fails closed (identity cannot be established).
+    const id = dbUrlIdentity(env.DATABASE_URL);
+    if (!id.ok) {
+      return refuse(
+        `demo seed destination identity CANNOT be established (DATABASE_URL ${id.reason}) — ` +
+          "a seed run truncates its destination, so it fails closed whenever the destination cannot be verified",
+      );
+    }
+    if (!id.loopback) {
+      return refuse(
+        `demo seed destination identity is NOT a same-machine (loopback) database (host: ${id.host}) — ` +
+          "a self-declared SEED_CONTEXT is caller-controlled and never overrides database identity; " +
+          "the demo seed (which TRUNCATEs every table) may only run on loopback databases " +
+          "(127.0.0.1 / localhost / ::1 / 0.0.0.0). Remote or production-shaped databases are NEVER " +
+          "seedable through the demo scripts, and FORCE_SEED cannot force this",
+      );
+    }
+    return {
+      action: "seed",
+      reason: `ok (destination identity verified: same-machine loopback database, host: ${id.host})`,
+      warning: null,
+      exitCode: DEMO_SEED_SKIP_EXIT,
+    };
   }
 
   // internal | pilot — real-data environment

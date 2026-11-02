@@ -206,11 +206,36 @@ Notes:
   `SEED_DEMO=0` on a verified `RETENTION_POLICY`), whatever the build path is.
   Review F3 adds the **execution-context** rule: a *direct* invocation
   (`npm run seed`, the bootstrap scripts, a manual run) with a missing/unknown
-  `VERCEL_ENV` may seed **only** when it declares an isolated demo context —
+  `VERCEL_ENV` may proceed **only** when it declares an isolated demo context —
   `SEED_CONTEXT=ci` (CI, e2e scratch runs) or `SEED_CONTEXT=local-demo` (local
-  development). Production environments never set `SEED_CONTEXT`, so a direct
-  run with production-shaped config can neither seed nor TRUNCATE a production
-  database (e2e 18.19 proves it byte-for-byte on a real database).
+  development). Production environments never set `SEED_CONTEXT` (e2e 18.19
+  proves it byte-for-byte on a real database).
+- **Destination identity gate (final security review, 2026-11-02):** the review
+  established that `SEED_CONTEXT` is a **caller-controlled self-attested label —
+  it is NOT proof of database identity** (scenario: no `VERCEL_ENV` +
+  `SEED_CONTEXT=local-demo` + `RETENTION_POLICY=demo` + `SEED_DEMO=1` +
+  `FORCE_SEED=1` + a production-shaped `DATABASE_URL` passed the gate at
+  `c39b2ac` and would have TRUNCATEd the destination). The fix is identity-based,
+  independent of every declaration: the seed decision (the only path in the
+  codebase that reaches `TRUNCATE`) additionally requires the **destination URL
+  itself** to be a same-machine loopback database (`127.0.0.1` / `localhost` /
+  `[::1]` / `0.0.0.0` — `dbUrlIdentity()` in `prebuild-gate-core.mjs`, one rule
+  for all three entry points: `seed.mjs`, `db-bootstrap-node.mjs`,
+  `db-bootstrap.sh`). A remote (production-shaped) database is **never seedable
+  through the demo scripts**, whatever the context says; a missing/unparseable
+  URL fails closed (identity cannot be established). The production database is
+  remote (a managed host), so it is structurally unreachable from these scripts.
+  e2e 18.20 pins the owner's exact scenario + all variants against the REAL
+  entry points (the "production" URL in tests is a guaranteed-NXDOMAIN
+  `.invalid` host — even a bug could not touch anything real).
+- **Direct bootstrap DDL gate (same review):** a direct bootstrap run may run
+  DDL on a **non-loopback** destination only with a declared isolated context —
+  exactly how the protected migration workflow runs it (it declares
+  `SEED_CONTEXT=ci` and carries production-environment approval). An undeclared
+  direct run against a remote database is refused BEFORE the first connection
+  (no DDL, no probe). Same-machine bootstraps (local dev, CI) are unchanged.
+  Both the node and the bash bootstrap carry the gate; the validator
+  (`migration-validate-node.mjs`) enforces the workflow's own preconditions.
 - `SCHEMA_SYNC_MODE` is a **build-time** knob; it changes nothing at runtime.
 - **Honest trade-off:** `verify` asserts end-state invariants, not per-file
   migration application. A *future* unapplied migration is therefore NOT detected
@@ -231,9 +256,13 @@ apply a migration is the protected workflow `.github/workflows/migration.yml`:
   → environments), so a human approves every run before a single DDL statement;
 - **Explicit inputs** — the 40-hex `commit_sha` being released AND the newest
   `migration_target` filename in that commit. The validate step
-  (`web/scripts/migration-validate-node.mjs`) fails closed unless the SHA is
-  well-formed, the target exists in the checked-out commit, is the newest
-  migration, and the destination URL is valid;
+  (`web/scripts/migration-validate-node.mjs`) fails closed unless: the SHA is
+  well-formed; the SHA is a **real commit of this repository**; the SHA is
+  **reachable from the protected production release branch (`main`)** — a commit
+  that exists only on a PR/feature branch is refused (merge it first); the
+  target exists in the checked-out commit and is its newest migration; and the
+  destination URL is valid. The workflow checks out at exactly that SHA, so the
+  target check operates on that commit's `schema/migrations/`;
 - **Separate credentials** — the destination is `MIGRATION_DATABASE_URL`, a
   GitHub secret that is NOT a Vercel build variable (owner-created; when R7
   lands it becomes a least-privilege DDL-capable role). Only its **host** is
@@ -282,3 +311,27 @@ production build's verify confirms the schema state.
   credential and not environment-specific data); splitting would create two
   sources of truth for one policy with no functional gain. Revisit only if a
   preview-specific policy experiment is ever needed.
+
+### 7.5 Evidence classification (final security review, 2026-11-02)
+
+Every control in this section, stated exactly as verified — no control is
+claimed beyond its evidence class:
+
+| Control | Class | Evidence |
+|---|---|---|
+| Preview builds never touch a database (hard skip, flag-proof) | **Code-proven + loopback-tested** | gate unit tests; e2e 18.10/18.16b (real script + real npm hook) |
+| Production builds verify-only by default; fail-closed URL validation | **Code-proven + loopback-tested** | gate unit tests; e2e 18.11–18.13, 18.16c |
+| Vercel production builds are PERMANENTLY verify-only (no DDL from build-time vars) | **Code-proven + loopback-tested** (the Vercel-side marker presence itself is a GitHub/Vercel fact, verified by Vercel's documented build env — not re-proven against a live Vercel build in this repo) | gate unit tests (marker rows); e2e 18.17a–c |
+| Migration destination validated independently; host-only logging; no credential leakage | **Code-proven + loopback-tested** | `validateDbUrl`/`dbUrlIdentity` unit tests; e2e 18.18a–c; unit leak assertions |
+| A declared context can never seed/truncate a non-loopback (production-shaped) database | **Code-proven + loopback-tested** — the production *destination* in tests is a guaranteed-NXDOMAIN `.invalid` host; the real production host is never touched | e2e 18.20a–h (real entry points, byte-for-byte preservation) |
+| Undeclared direct runs can never DDL/probe a non-loopback database | **Code-proven + loopback-tested** (same `.invalid` host discipline) | e2e 18.21a–b; bash gate smoke 2026-11-02 |
+| The migration workflow is manual-dispatch-only, no-cancel, SHA-validated | **GitHub-configuration prerequisite** — the trigger/concurrency/checkout facts are in the workflow file (reviewable), the `production` environment's **required reviewers must be configured by the owner**; the validator prints a prerequisite banner in every run log | workflow YAML; validator banner (e2e 18.22f) |
+| The workflow may only apply main-reachable commits with their newest migration | **Code-proven + loopback-tested** | validator unit-level e2e 18.22a–f (real `git` against this repo) |
+| Production credentials carry no seed/TRUNCATE privilege (a least-privilege demo-seed role) | **NOT YET VERIFIED — owner-side database action** (Neon role creation/modification is outside this repo's authority; the code-side identity gate above is the current guarantee) | documented gap (D82) |
+| The actual production database is schema-current + verify-green under the new gate | **NOT YET VERIFIED** — no production connection/probe was made (boundary); the next post-merge production build's verify step performs this | pending S2 |
+
+Loopback-tested means: executed on 2026-11-02 against a real local PostgreSQL
+16.2 (sandbox) with the same code paths as production, on 127.0.0.1 databases
+only. Code-proven means: pure decision logic pinned by unit tests. Neither
+class substitutes for a production execution, which is deliberately not
+performed (strict boundary).
