@@ -4,6 +4,24 @@
 import { Client } from "pg";
 import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
+import { resolveDemoSeedAction, DEMO_SEED_REFUSE_EXIT } from "../src/lib/demo-seed-core.mjs";
+
+// NG-S14 (Day 2) — demo-seed gate. This script TRUNCATES every table and then writes the
+// published demo accounts; it must never run against a real-data (internal/pilot)
+// database. The decision is made from EXPLICIT env config only (no hostname inference)
+// and fires before any connection or write — a refused/skipped run leaves the database
+// byte-for-byte untouched. See web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md.
+const seedDecision = resolveDemoSeedAction(process.env);
+console.log(`[seed] demo-seed gate: ${seedDecision.action} — ${seedDecision.reason}`);
+if (seedDecision.warning) console.error(`[seed] WARNING: ${seedDecision.warning}`);
+if (seedDecision.action === "refuse") {
+  console.error("[seed] REFUSING to run: the database was NOT modified (no truncate, no inserts).");
+  process.exit(DEMO_SEED_REFUSE_EXIT);
+}
+if (seedDecision.action === "skip") {
+  console.log("[seed] SKIPPED: no demo accounts, hospitals, or records were created.");
+  process.exit(0);
+}
 
 const url = process.env.DATABASE_URL ?? "postgresql://citycare:citycare@localhost:5432/citycare";
 const c = new Client({ connectionString: url });

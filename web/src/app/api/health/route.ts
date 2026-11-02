@@ -9,10 +9,22 @@ import { DEMO_RETENTION_DAYS, DEMO_SEED_DOMAIN } from "@/lib/legal";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/health — liveness for uptime monitors and the daily Vercel cron.
+ * GET /api/health — readiness probe for uptime monitors and the daily Vercel cron.
  * Deliberately public and deliberately boring: no secrets, no counts that leak usage,
  * just "can the app reach its database, is it in UTC, is the ledger intact".
  * The cron ping doubles as activity so a free Supabase project is never paused for idleness.
+ *
+ * Liveness vs readiness (Day 2 NG-S10 — monitoring contract, see
+ * web/docs/operations/MONITORING_AND_ALERTING.md):
+ *  - process DOWN (crash / bad deploy)  ⇒ the HTTP request itself fails (connection error,
+ *    DNS failure, or Vercel platform status) — the uptime monitor alerts on that;
+ *  - process UP but NOT READY           ⇒ HTTP 503 with a stable JSON body
+ *    (db_unreachable, or status:"degraded" on a ledger break / wrong timezone) —
+ *    the uptime monitor alerts on the non-2xx code;
+ *  - ready                              ⇒ HTTP 200.
+ * Backup freshness (`backups.*`) is a reported FACT, not a readiness gate: a stale backup
+ * must be caught by the backup-specific alert path (FATAL marker / JSON assertion), not by
+ * taking the whole app "down" from the monitor's point of view.
  */
 export async function GET() {
   const t0 = Date.now();
@@ -59,6 +71,15 @@ export async function GET() {
       healthy ? 200 : 503,
     );
   } catch (e) {
-    return err(503, "db_unreachable", e instanceof Error ? e.message.slice(0, 120) : "database unreachable");
+    // Public endpoint: the response must never carry driver error text — Postgres driver
+    // error messages can embed host:port / user, and we do not send DB connection details
+    // to anyone polling this URL (Day 2 NG-S10, A1). Log only a non-sensitive error class
+    // (e.g. ETIMEDOUT, ECONNREFUSED, 28P01) server-side for the operator.
+    const code =
+      e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string"
+        ? (e as NodeJS.ErrnoException).code
+        : "unknown";
+    console.error("[health] db_unreachable", { code });
+    return err(503, "db_unreachable", "database unreachable");
   }
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { homeFor } from "@/lib/roles";
+import { DEMO_MODE } from "@/lib/legal";
 import { getViewer } from "@/lib/session";
 import { Badge } from "@/components/ui";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
@@ -219,17 +220,32 @@ citycare=> SELECT * FROM ledger_verify();
         </Stagger>
       </section>
 
-      {/* CTA */}
+      {/* CTA — NG-S14 (Day 2): demo-account credentials are disclosed only on demo-presented
+          deployments (DEMO_MODE, baked from NEXT_PUBLIC_DEMO_MODE at build time). A
+          pilot/production build gets the plain sign-in/sign-up CTA instead. */}
       <section className="max-w-6xl mx-auto px-4 mb-16">
         <Reveal className="card text-center py-10 md:py-14 bg-gradient-to-b from-white to-[#eefaf8]">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Try it with the demo accounts</h2>
-          <p className="text-muted mt-2">
-            <span className="kbd">ramesh@demo.in</span> (patient) · <span className="kbd">dr.kulkarni@demo.in</span> (doctor) · password <span className="kbd">city1234</span>
-          </p>
-          <div className="mt-6 flex justify-center gap-3 flex-wrap">
-            <Link className="btn btn-primary btn-lg" href="/login">Sign in to the demo</Link>
-            <Link className="btn btn-ghost btn-lg" href="/signup">Create a fresh account</Link>
-          </div>
+          {DEMO_MODE ? (
+            <>
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Try it with the demo accounts</h2>
+              <p className="text-muted mt-2">
+                <span className="kbd">ramesh@demo.in</span> (patient) · <span className="kbd">dr.kulkarni@demo.in</span> (doctor) · password <span className="kbd">city1234</span>
+              </p>
+              <div className="mt-6 flex justify-center gap-3 flex-wrap">
+                <Link className="btn btn-primary btn-lg" href="/login">Sign in to the demo</Link>
+                <Link className="btn btn-ghost btn-lg" href="/signup">Create a fresh account</Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Your records, owned by you</h2>
+              <p className="text-muted mt-2">Create your account and keep full control over who can access your health record.</p>
+              <div className="mt-6 flex justify-center gap-3 flex-wrap">
+                <Link className="btn btn-primary btn-lg" href="/signup">Create your account</Link>
+                <Link className="btn btn-ghost btn-lg" href="/login">Sign in</Link>
+              </div>
+            </>
+          )}
         </Reveal>
       </section>
 

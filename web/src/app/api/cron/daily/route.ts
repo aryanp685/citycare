@@ -81,8 +81,13 @@ export async function GET(req: Request) {
     }
   }
 
-  // D13 — anchor the chain head (skips if today's head is already anchored)
-  const anchor = await anchorLedgerHead({ ots: process.env.ANCHOR_OTS !== "0" }).catch((e) => ({ anchored: false, seq: null, reason: e instanceof Error ? e.message : "error" }));
+  // D13 — anchor the chain head (skips if today's head is already anchored).
+  // The HTTP response carries a STATIC reason only — driver/network error text can embed
+  // connection details and the body lands in client + platform logs (Day 2 NG-S10, A1).
+  const anchor = await anchorLedgerHead({ ots: process.env.ANCHOR_OTS !== "0" }).catch((e: unknown) => {
+    console.error("[cron] anchor step failed:", e instanceof Error ? e.message : e);
+    return { anchored: false, seq: null, reason: "anchor_failed" };
+  });
 
   // D49 — handover reminders (at most one per guardian per dependent per 30 days)
   const due18 = await all<{ id: string; name: string; guardianUid: string }>(

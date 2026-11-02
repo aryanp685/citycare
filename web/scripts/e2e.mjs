@@ -28,14 +28,14 @@ function check(name, cond, detail = "") {
 }
 
 class Session {
-  constructor(label) { this.label = label; this.cookie = ""; }
+  constructor(label, base = BASE) { this.label = label; this.base = base; this.cookie = ""; }
   async req(method, path, body, form = false) {
-    const res = await fetch(BASE + path, {
+    const res = await fetch(this.base + path, {
       method,
       headers: {
         ...(body !== undefined ? { "content-type": form ? "application/x-www-form-urlencoded" : "application/json" } : {}),
         ...(this.cookie ? { cookie: this.cookie } : {}),
-        origin: BASE, // same-origin so the CSRF guard passes
+        origin: this.base, // same-origin so the CSRF guard passes
       },
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
       redirect: "manual",
@@ -52,13 +52,13 @@ class Session {
   get(path) { return this.req("GET", path); }
   /** multipart upload — the runtime sets the boundary, so no content-type header here */
   async upload(path, formData) {
-    const res = await fetch(BASE + path, { method: "POST", headers: { ...(this.cookie ? { cookie: this.cookie } : {}), origin: BASE }, body: formData, redirect: "manual" });
+    const res = await fetch(this.base + path, { method: "POST", headers: { ...(this.cookie ? { cookie: this.cookie } : {}), origin: this.base }, body: formData, redirect: "manual" });
     let data = null; try { data = await res.json(); } catch { data = null; }
     return { status: res.status, data };
   }
   /** raw GET that keeps headers + bytes (for signed download links) */
   async raw(path, extraHeaders = {}) {
-    const res = await fetch(BASE + path, { headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...extraHeaders }, redirect: "manual" });
+    const res = await fetch(this.base + path, { headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...extraHeaders }, redirect: "manual" });
     return { status: res.status, headers: res.headers, bytes: new Uint8Array(await res.arrayBuffer()) };
   }
   post(path, body, form = false) { return this.req("POST", path, body, form); }
@@ -1338,6 +1338,287 @@ console.log("\n— 16. final technical verification (2026-11-02): consistent sna
   } else {
     skip("S16d: document-level drill", "BACKUP_DIR not set (non-local store)");
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+console.log("\n— 17. NG-S14: demo/pilot environment isolation (seed gate + real-data env behaviour) —");
+if (!LOCAL || !process.env.DATABASE_URL) {
+  skip("NG-S14: demo/pilot environment isolation", "requires a local PostgreSQL + DATABASE_URL (isolated scratch databases); not available for this remote BASE");
+} else {
+{
+  // The seed gate (src/lib/demo-seed-core.mjs) is the single chokepoint that decides
+  // whether scripts/seed.mjs — the ONLY code that creates demo accounts — may run in an
+  // environment. This section proves, on ISOLATED scratch databases (dropped in `finally`):
+  //   * demo mode seeds (explicit + default), pilot/production modes refuse/skip,
+  //     contradictory and unverified configs are refused BEFORE any write (the pre-seeded
+  //     marker row survives a refused run);
+  //   * a fresh pilot DB + app: published demo credentials are DENIED, normal patient and
+  //     doctor registration/authentication work, no demo records exist, and the retention
+  //     sweep stays disabled for real data;
+  //   * the existing public demo on the synthetic demo env (BASE) still works.
+  const { execFile, spawn } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const run = promisify(execFile);
+  const pgMod = (await import("pg")).default;
+
+  const suffix = Date.now().toString(36);
+  const scratch = {
+    demo: `citycare_e2e_demo_${suffix}`,
+    pilot: `citycare_e2e_pilot_${suffix}`,
+    prod: `citycare_e2e_prod_${suffix}`,
+  };
+  const scratchClients = {};
+  let pilotProc = null;
+  const pilotPort = Number(process.env.E2E_PILOT_PORT ?? 3007);
+  const pilotBase = `http://127.0.0.1:${pilotPort}`;
+
+  const scratchUrl = (name) => {
+    const u = new URL(process.env.DATABASE_URL);
+    u.pathname = "/" + name;
+    return u.toString();
+  };
+
+  async function createScratch(name) {
+    // name is a generated identifier (citycare_e2e_* + base36 timestamp) — safe to inline.
+    await sql(`DROP DATABASE IF EXISTS ${name}`);
+    await sql(`CREATE DATABASE ${name}`);
+    const c = new pgMod.Client({ connectionString: scratchUrl(name) });
+    await c.connect();
+    await c.query(`SET client_min_messages='warning';`);
+    const files = [
+      "../schema/citycare_init.sql",
+      "../schema/sql/constraints.sql",
+      "../schema/sql/ledger.sql",
+      ...readdirSync("../schema/migrations").filter((f) => f.endsWith(".sql")).sort().map((f) => `../schema/migrations/${f}`),
+    ];
+    for (const f of files) await c.query(readFileSync(f, "utf8"));
+    scratchClients[name] = c;
+  }
+
+  /** Run the seed script against a scratch DB with a specific gate config.
+      policy/seed: undefined → the variable is REMOVED from the env (unverified case). */
+  async function runSeed(dbName, policy, seed) {
+    const env = { ...process.env };
+    env.DATABASE_URL = scratchUrl(dbName);
+    env.SCRYPT_N = "4096"; // fast hashes for the throwaway scratch DBs
+    if (policy === undefined) delete env.RETENTION_POLICY;
+    else env.RETENTION_POLICY = policy;
+    if (seed === undefined) delete env.SEED_DEMO;
+    else env.SEED_DEMO = seed;
+    return run(process.execPath, ["scripts/seed.mjs"], { env, encoding: "utf8" })
+      .then((r) => ({ code: 0, out: r.stdout + "\n" + r.stderr }))
+      .catch((e) => ({ code: e.code ?? 1, out: String(e.stdout ?? "") + "\n" + String(e.stderr ?? "") }));
+  }
+
+  const demoUserCount = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "User" WHERE email ILIKE '%@demo.in'`)).rows[0].n);
+
+  const totalRows = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "User"`)).rows[0].n);
+
+  const hospCount = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "Hospital"`)).rows[0].n);
+
+  try {
+    await createScratch(scratch.demo);
+    await createScratch(scratch.pilot);
+    await createScratch(scratch.prod);
+
+    // 1. demo mode: seed runs (explicit SEED_DEMO=1 and the default unset)
+    const s1 = await runSeed(scratch.demo, "demo", "1");
+    check(
+      "NG-S14: demo mode — seed runs (SEED_DEMO=1 + RETENTION_POLICY=demo) and creates the 11 demo identities",
+      s1.code === 0 && (await demoUserCount(scratch.demo)) === 11,
+      `exit ${s1.code} demoUsers=${await demoUserCount(scratch.demo)} ${s1.out.slice(0, 160)}`,
+    );
+    const s1b = await runSeed(scratch.demo, "demo", undefined);
+    check(
+      "NG-S14: demo mode — default (SEED_DEMO unset) still seeds (backward-compatible synthetic demo)",
+      s1b.code === 0 && (await demoUserCount(scratch.demo)) === 11,
+      `exit ${s1b.code}`,
+    );
+
+    // 2. pilot mode: refuse by default, skip on explicit SEED_DEMO=0 — DB never touched
+    const s2a = await runSeed(scratch.pilot, "pilot", undefined);
+    check(
+      "NG-S14: pilot mode — unset SEED_DEMO REFUSES (fail-safe default; exit 2, zero rows)",
+      s2a.code === 2 && /refus/i.test(s2a.out) && (await totalRows(scratch.pilot)) === 0 && (await hospCount(scratch.pilot)) === 0,
+      `exit ${s2a.code} ${s2a.out.slice(0, 160)}`,
+    );
+    const s2b = await runSeed(scratch.pilot, "pilot", "0");
+    check(
+      "NG-S14: pilot mode — SEED_DEMO=0 skips cleanly (exit 0, zero rows, nothing truncated)",
+      s2b.code === 0 && /skipped/i.test(s2b.out) && (await totalRows(scratch.pilot)) === 0 && (await hospCount(scratch.pilot)) === 0,
+      `exit ${s2b.code} ${s2b.out.slice(0, 160)}`,
+    );
+
+    // 3. production-grade mode (internal): SEED_DEMO=0 skips
+    const s3 = await runSeed(scratch.prod, "internal", "0");
+    check(
+      "NG-S14: production-grade mode (RETENTION_POLICY=internal) — SEED_DEMO=0 skips (exit 0, zero rows)",
+      s3.code === 0 && /skipped/i.test(s3.out) && (await totalRows(scratch.prod)) === 0,
+      `exit ${s3.code} ${s3.out.slice(0, 160)}`,
+    );
+
+    // 4. contradictory / unverified configs are refused BEFORE any write (marker row survives)
+    await scratchClients[scratch.prod].query(
+      `INSERT INTO "Hospital" (id,name,address,city,"isEmpanelled",rating,"createdAt") VALUES (gen_random_uuid(),'NGS14 Marker Clinic','Marker St','Pune',true,4,now())`,
+    );
+    const s4a = await runSeed(scratch.prod, "internal", "1");
+    const markerLeft = Number(
+      (await scratchClients[scratch.prod].query(`SELECT count(*)::int n FROM "Hospital" WHERE name = 'NGS14 Marker Clinic'`)).rows[0].n,
+    );
+    check(
+      "NG-S14: contradictory config (SEED_DEMO=1 on a real-data env) is REFUSED (exit 2) and the pre-existing row survives",
+      s4a.code === 2 && /contradictory/i.test(s4a.out) && markerLeft === 1 && (await totalRows(scratch.prod)) === 0,
+      `exit ${s4a.code} marker=${markerLeft} ${s4a.out.slice(0, 160)}`,
+    );
+    const s4b = await runSeed(scratch.prod, undefined, undefined);
+    check(
+      "NG-S14: unverified env (no RETENTION_POLICY, no SEED_DEMO) is REFUSED by default (exit 2)",
+      s4b.code === 2 && /missing\/invalid/i.test(s4b.out) && (await totalRows(scratch.prod)) === 0,
+      `exit ${s4b.code} ${s4b.out.slice(0, 160)}`,
+    );
+
+    // 5. a real pilot APP on the fresh pilot DB (schema-only, SEED_DEMO=0 env)
+    {
+      // Port pre-check: a FOREIGN process already listening on the pilot port (e.g. an
+      // orphan from an earlier crashed run) would silently answer our probes and make every
+      // "pilot" check hit the WRONG database. Connection refused = port free (expected);
+      // any HTTP response = port occupied (fail loudly, do not proceed).
+      let portOccupied = null;
+      let up = false;
+      try {
+        const probe = await fetch(pilotBase + "/api/health");
+        portOccupied = `HTTP ${probe.status}`;
+      } catch { /* ECONNREFUSED — port is free */ }
+      if (portOccupied) {
+        check("NG-S14: pilot app boots on a fresh pilot DB (health 200, retention policy=pilot, sweep disabled)",
+          false, `port ${pilotPort} already occupied by a foreign process (${portOccupied}) — kill it and re-run; refusing to proceed`);
+      } else {
+      const env = { ...process.env, NEXT_TELEMETRY_DISABLED: "1" };
+      env.DATABASE_URL = scratchUrl(scratch.pilot);
+      env.RETENTION_POLICY = "pilot";
+      env.SEED_DEMO = "0";
+      env.ANCHOR_OTS = "0";
+      env.TZ_POLICY = "Asia/Kolkata";
+      delete env.BACKUP_KEY;
+      delete env.BACKUP_DIR;
+      delete env.BLOB_READ_WRITE_TOKEN;
+      // detached: its own process group, so cleanup can SIGKILL the WHOLE tree
+      // (`npx next start` forks a `next-server` child that must die with it — killing
+      // only the npx pid orphans the server, which keeps the port + DB connections).
+      pilotProc = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", String(pilotPort)], { env, cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], detached: true });
+      let pilotLog = "";
+      pilotProc.stdout?.on("data", (d) => (pilotLog += d));
+      pilotProc.stderr?.on("data", (d) => (pilotLog += d));
+      for (let i = 0; i < 30; i++) {
+        try {
+          const r = await fetch(pilotBase + "/api/health");
+          if (r.status === 200) { up = true; break; }
+        } catch { /* not up yet */ }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      check("NG-S14: pilot app boots on a fresh pilot DB (health 200, retention policy=pilot, sweep disabled)",
+        up, `pilotLog tail: ${pilotLog.slice(-200)}`);
+      }
+      if (up) {
+        const ph = await (await fetch(pilotBase + "/api/health")).json();
+        check("NG-S14: pilot /api/health reports the real-data policy (policy=pilot, enabled=false, policy_disables_sweep)",
+          ph.retention?.policy === "pilot" && ph.retention?.enabled === false && ph.retention?.reason === "policy_disables_sweep",
+          JSON.stringify(ph.retention ?? null));
+
+        // 6. published demo credentials are DENIED on the pilot DB
+        const demoLogin = await fetch(pilotBase + "/api/auth/login", {
+          method: "POST", headers: { "content-type": "application/json", origin: pilotBase },
+          body: JSON.stringify({ email: "ramesh@demo.in", password: "city1234" }), redirect: "manual",
+        });
+        check("NG-S14: published demo credential (ramesh@demo.in) is DENIED on a fresh pilot DB (401)",
+          demoLogin.status === 401, `status ${demoLogin.status}`);
+        const demoDoc = await fetch(pilotBase + "/api/auth/login", {
+          method: "POST", headers: { "content-type": "application/json", origin: pilotBase },
+          body: JSON.stringify({ email: "dr.kulkarni@demo.in", password: "city1234" }), redirect: "manual",
+        });
+        check("NG-S14: published demo doctor credential (dr.kulkarni@demo.in) is DENIED on a fresh pilot DB (401)",
+          demoDoc.status === 401, `status ${demoDoc.status}`);
+
+        // 7. normal patient registration works on the pilot DB
+        const pSess = new Session("ngs14-patient", pilotBase);
+        const pEmail = `e2e.ngs14p.${stamp}@e2e.test`;
+        const ps = await pSess.post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `NGS14 Patient ${stamp}`, email: pEmail, phone: uniqPhone("7"), password: "e2epassword1" });
+        check("NG-S14: normal patient registration works on the pilot DB (signup 201 + session)",
+          ps.status === 201, `${ps.status} ${JSON.stringify(ps.data)}`);
+        const pme = await pSess.get("/api/auth/me");
+        check("NG-S14: the new pilot patient has a live session (role PATIENT)",
+          pme.status === 200 && pme.data?.viewer?.role === "PATIENT", `${pme.status} ${JSON.stringify(pme.data?.viewer ?? null)}`);
+
+        // 8. normal doctor authentication works on the pilot DB
+        const dSess = new Session("ngs14-doctor", pilotBase);
+        const dEmail = `e2e.ngs14d.${stamp}@e2e.test`;
+        const ds = await dSess.post("/api/auth/signup", { role: "DOCTOR", acceptPolicy: true, adult: true, name: `NGS14 Doctor ${stamp}`, email: dEmail, phone: uniqPhone("7"), password: "e2edocpassword1", qualification: "MBBS", consultationFee: 600, specialty: "General Medicine", registrationNo: `NGS14/${stamp.slice(-5)}` });
+        check("NG-S14: normal doctor registration works on the pilot DB (signup 201)",
+          ds.status === 201, `${ds.status} ${JSON.stringify(ds.data)}`);
+        const dLogin = await new Session("ngs14-doclogin", pilotBase).post("/api/auth/login", { email: dEmail, password: "e2edocpassword1" });
+        check("NG-S14: normal doctor authentication works on the pilot DB (fresh login 200)",
+          dLogin.status === 200, `status ${dLogin.status}`);
+
+        // 9. no demo records in the pilot DB (but the real registrations ARE there)
+        const demoInPilot = await demoUserCount(scratch.pilot);
+        const realPatient = Number(
+          (await scratchClients[scratch.pilot].query(`SELECT count(*)::int n FROM "User" WHERE email = $1`, [pEmail])).rows[0].n,
+        );
+        check(
+          "NG-S14: no demo records exist in the pilot DB (zero @demo.in users, zero seeded hospitals) while the real registration is present",
+          demoInPilot === 0 && (await hospCount(scratch.pilot)) === 0 && realPatient === 1,
+          `demoUsers=${demoInPilot} hospitals=${await hospCount(scratch.pilot)} realPatient=${realPatient}`,
+        );
+
+        // 10. retention behaviour stays safe on the pilot DB (sweep disabled, zero swept)
+        const cron = await fetch(pilotBase + "/api/cron/daily", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+        const cj = await cron.json().catch(() => ({}));
+        check(
+          "NG-S14: retention behaviour safe on the pilot DB (daily cron: sweep disabled, 0 patients/doctors swept, 200)",
+          cron.status === 200 && cj.retention?.enabled === false && cj.retention?.reason === "policy_disables_sweep" && cj.retention?.patients === 0 && cj.retention?.doctors === 0,
+          `${cron.status} ${JSON.stringify(cj.retention ?? null)}`,
+        );
+      }
+    }
+
+    // 11. the existing public demo on the synthetic demo env (BASE) still works
+    const baseDemo = new Session("ngs14-basedemo");
+    const bd = await baseDemo.post("/api/auth/login", { email: "ramesh@demo.in", password: "city1234" });
+    const bdHome = bd.status === 200 ? await baseDemo.get("/patient") : { status: 0 };
+    check(
+      "NG-S14: existing public demo is still functional on the synthetic demo env (ramesh@demo.in login 200 + patient home 200)",
+      bd.status === 200 && bdHome.status === 200,
+      `login ${bd.status} home ${bdHome.status}`,
+    );
+  } finally {
+    // Kill the WHOLE process group (npx forks a next-server child; killing only the
+    // npx pid orphans the server, which keeps the port + DB connections alive).
+    if (pilotProc?.pid) {
+      try { process.kill(-pilotProc.pid, "SIGKILL"); }
+      catch { try { pilotProc.kill("SIGKILL"); } catch { /* already gone */ } }
+    }
+    await new Promise((r) => setTimeout(r, 1000)); // let the killed app's sockets close
+    for (const [dbName, c] of Object.entries(scratchClients)) {
+      try { await c.end(); } catch { /* ignore */ }
+    }
+    const leftover = [];
+    for (const name of Object.values(scratch)) {
+      let ok = false;
+      for (let attempt = 0; attempt < 4 && !ok; attempt++) {
+        try { await sql(`DROP DATABASE IF EXISTS ${name}`); ok = true; }
+        catch (e) {
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+          else leftover.push(name + ":" + String(e?.message ?? e).slice(0, 80));
+        }
+      }
+    }
+    check("NG-S14: cleanup — all scratch databases dropped (no leftovers)", leftover.length === 0, JSON.stringify(leftover));
+  }
+}
 }
 
 if (pgClient) await pgClient.end();

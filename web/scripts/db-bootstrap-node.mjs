@@ -92,6 +92,20 @@ if (partials !== 3) die(`partial unique indexes missing (${partials}/3)`);
 console.log(`  verified: ${tables} tables · ledger_append/verify · tamper trigger · 3 partial unique indexes · timezone=UTC`);
 
 // 2) demo data ─────────────────────────────────────────────────────────────────
+// NG-S14 (Day 2) — the demo-seed gate (src/lib/demo-seed-core.mjs) decides whether the
+// demo seed may run: skip (SEED_DEMO=0, schema-only is a valid state) / refuse (real-data
+// policy or unverified env — the database must stay untouched) / seed (synthetic demo env).
+const { resolveDemoSeedAction } = await import("../src/lib/demo-seed-core.mjs");
+const seedDecision = resolveDemoSeedAction(process.env);
+console.error(`  seed gate: ${seedDecision.action} — ${seedDecision.reason}` + (seedDecision.warning ? ` (WARNING: ${seedDecision.warning})` : ""));
+if (seedDecision.action === "refuse") {
+  die(`demo-seed gate REFUSED the bootstrap (database left untouched) — see the 'seed gate' line above and web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md`);
+}
+if (seedDecision.action === "skip") {
+  console.log("  seed: SKIPPED by the demo-seed gate (SEED_DEMO=0) — no demo accounts, nothing truncated");
+  console.log("✔ database ready (schema only, no demo data — demo-seed gate: skip)");
+  process.exit(0);
+}
 let users = (await q1(`select count(*)::int as n from "User"`)).n;
 if (users !== 0 && process.env.FORCE_SEED !== "1") {
   console.log(`  seed: ${users} users already present — skipping (FORCE_SEED=1 wipes and re-seeds demo data)`);

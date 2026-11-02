@@ -49,7 +49,10 @@ export async function GET(req: Request) {
     // DB unreachable ⇒ no backup AND no failure row possible (the audit row lives in the
     // same database). The platform log is the only independent record of this failure.
     console.error(formatBackupFatalLog("db", "database connect failed: " + String(e instanceof Error ? e.message : e).slice(0, 120)));
-    return err(500, "backup_failed_connect", e instanceof Error ? e.message.slice(0, 200) : "database connect failed");
+    // HTTP wire gets static text only: pg error messages can embed host:port/user, and
+    // 500 bodies end up in client logs, CI logs and platform error trackers (Day 2 NG-S10, A1).
+    // The full detail is already in the private platform log line above.
+    return err(500, "backup_failed_connect", "database connect failed");
   }
   const client = withCopySupport(raw);
   const query = async (text: string, params?: unknown[]) => (await raw.query(text, (params ?? []) as unknown as string[])); // node-pg types values as any[]
@@ -112,7 +115,10 @@ export async function GET(req: Request) {
     }).catch((e2: unknown) => {
       console.error(formatBackupFatalLog(code, "failure-row insert failed: " + String(e2 instanceof Error ? e2.message : e2).slice(0, 120)));
     });
-    return err(500, `backup_failed_${code}`, e instanceof Error ? e.message.slice(0, 200) : "backup failed");
+    // Static wire text (the machine-readable class is already in `code`); full detail is in
+    // the private platform log (FATAL line above when the failure row itself could not be
+    // written, and the "Backup" metadata row when it could).
+    return err(500, `backup_failed_${code}`, "backup failed");
   } finally {
     await raw.end().catch(() => null);
   }
