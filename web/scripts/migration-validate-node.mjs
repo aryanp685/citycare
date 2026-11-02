@@ -38,14 +38,29 @@ if (!/^[0-9a-f]{40}$/.test(sha)) {
 // (main) — not merely a commit on an arbitrary PR/feature branch. In the
 // workflow the working tree is checked out at exactly this SHA, so the
 // migration-target check below operates on that commit's schema/migrations.
-if (git(["cat-file", "-e", `${sha}^{commit}`]).status !== 0) {
-  die(`commit ${sha} is not a commit in this repository — refusing`);
-}
+// NOTE: fetch FIRST — in shallow checkouts (GHA depth 1) the main-tip object
+// is not present locally until fetched; cat-file must run after it. If the
+// first test fails, deepen main's history once and retest (a full clone
+// passes the first test and never deepens; --deepen on a complete repo is
+// then simply never attempted).
 const fetchMain = git(["fetch", "origin", "main", "--quiet"]);
 if (fetchMain.status !== 0) {
   die(`cannot verify reachability from main (git fetch origin main failed: ${fetchMain.stderr.trim()}) — refusing`);
 }
-if (git(["merge-base", "--is-ancestor", sha, "FETCH_HEAD"]).status !== 0) {
+const exists = () => git(["cat-file", "-e", `${sha}^{commit}`]).status === 0;
+const ancestor = () => git(["merge-base", "--is-ancestor", sha, "FETCH_HEAD"]).status === 0;
+let shaExists = exists();
+let shaOnMain = shaExists && ancestor();
+if (!shaExists || !shaOnMain) {
+  if (git(["fetch", "--deepen=2000", "origin", "main", "--quiet"]).status === 0) {
+    shaExists = exists();
+    shaOnMain = shaExists && ancestor();
+  }
+}
+if (!shaExists) {
+  die(`commit ${sha} is not a commit in this repository (checked-out commit + main history) — refusing`);
+}
+if (!shaOnMain) {
   die(
     `commit ${sha} is NOT reachable from the protected production release branch (main) — ` +
       "a controlled migration may only apply commits that are already on main (merge it first) — refusing",

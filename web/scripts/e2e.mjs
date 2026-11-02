@@ -2124,19 +2124,29 @@ if (LOCAL) {
         spawnSync(process.execPath, ["scripts/migration-validate-node.mjs"], { encoding: "utf8", cwd: webRoot, env: fullEnv });
       const valEnv = (extra) => { const e = { ...process.env, ...extra }; if (!("MIGRATION_DATABASE_URL" in (extra ?? {}))) delete e.MIGRATION_DATABASE_URL; if (!("DATABASE_URL" in (extra ?? {}))) delete e.DATABASE_URL; return e };
       const branchHead = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
-      const mainHead = spawnSync("git", ["rev-parse", "origin/main"], { encoding: "utf8" }).stdout.trim();
+      // Fetch main explicitly: GHA checkouts are shallow (depth 1) — the origin/main
+      // ref and the main-tip object do not exist locally until fetched.
+      const mainFetch = spawnSync("git", ["fetch", "origin", "main:refs/remotes/origin/main", "--quiet"], { encoding: "utf8" });
+      const mainHead =
+        (mainFetch.status === 0 ? spawnSync("git", ["rev-parse", "origin/main"], { encoding: "utf8" }).stdout.trim() : "") ||
+        (mainFetch.status === 0 ? spawnSync("git", ["rev-parse", "FETCH_HEAD"], { encoding: "utf8" }).stdout.trim() : "");
       const r22a = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: "abc", MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
       check("18.22a malformed SHA (not 40-hex) → refuses", r22a.status === 1 && out(r22a).includes("40-hex"), `status=${r22a.status}`);
-      const r22b = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: "f".repeat(40), MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
-      check("18.22b a 40-hex SHA that is not a commit in this repository → refuses", r22b.status === 1 && out(r22b).includes("not a commit in this repository"), `status=${r22b.status}`);
-      const r22c = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: branchHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
-      check("18.22c a real commit NOT reachable from main (this PR's head) → refuses (only main-reachable commits may migrate production)", r22c.status === 1 && out(r22c).includes("NOT reachable from the protected production release branch"), `status=${r22c.status}`);
-      const r22d = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: "9999_nope.sql", MIGRATION_DATABASE_URL: gateUrl }));
-      check("18.22d a target that does not exist in the commit → refuses", r22d.status === 1 && out(r22d).includes("not present in schema/migrations"), `status=${r22d.status}`);
-      const r22e = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG }));
-      check("18.22e no migration destination URL → refuses before any connection", r22e.status === 1 && out(r22e).includes("failed validation"), `status=${r22e.status}`);
-      const r22f = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
-      check("18.22f a fully valid operation (main-reachable commit + newest target + valid loopback destination) → passes, logs host only + the owner-side prerequisite banner", r22f.status === 0 && out(r22f).includes("validated: commit=") && out(r22f).includes("destination host: 127.0.0.1") && out(r22f).includes("PREREQUISITE CHECK") && !out(r22f).includes("citycare:citycare"), `status=${r22f.status}`);
+      if (!mainHead) {
+        skip("18.22b–f validator git-reachability suite", "origin/main could not be fetched in this environment (no git network) — these checks enforce in GHA, where network is always available");
+      }
+      const r22b = mainHead ? runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: "f".repeat(40), MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl })) : null;
+      if (r22b) {
+        check("18.22b a 40-hex SHA that is not a commit in this repository → refuses", r22b.status === 1 && out(r22b).includes("not a commit in this repository"), `status=${r22b.status}`);
+        const r22c = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: branchHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22c a real commit NOT reachable from main (this PR's head) → refuses (only main-reachable commits may migrate production)", r22c.status === 1 && out(r22c).includes("NOT reachable from the protected production release branch"), `status=${r22c.status}`);
+        const r22d = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: "9999_nope.sql", MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22d a target that does not exist in the commit → refuses", r22d.status === 1 && out(r22d).includes("not present in schema/migrations"), `status=${r22d.status}`);
+        const r22e = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG }));
+        check("18.22e no migration destination URL → refuses before any connection", r22e.status === 1 && out(r22e).includes("failed validation"), `status=${r22e.status}`);
+        const r22f = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
+        check("18.22f a fully valid operation (main-reachable commit + newest target + valid loopback destination) → passes, logs host only + the owner-side prerequisite banner", r22f.status === 0 && out(r22f).includes("validated: commit=") && out(r22f).includes("destination host: 127.0.0.1") && out(r22f).includes("PREREQUISITE CHECK") && !out(r22f).includes("citycare:citycare"), `status=${r22f.status}`);
+      }
     }
   }
 }
