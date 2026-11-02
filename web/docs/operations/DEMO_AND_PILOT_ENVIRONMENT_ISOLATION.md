@@ -287,15 +287,30 @@ apply a migration is the protected workflow `.github/workflows/migration.yml`:
   logged; the validate → apply → verify sequence makes the run log the audit
   record (target + destination host + `migration applied:` lines + the final
   read-only verify).
-- **The apply step is DDL-only (final F1 pass)** — it runs the dedicated
-  `web/scripts/migration-apply-node.mjs` (not the general bootstrap): it
-  re-checks the destination identity (host only, before the first connection),
-  requires `MIGRATION_TARGET` to exist and be newest, applies the base schema
-  only to a fresh database, applies the ordered migrations, verifies
-  structural invariants (table/ledger/trigger/index counts, UTC), and has
-  **no seed phase and no TRUNCATE** (e2e 18.23j pins this against the file's
-  own source). The workflow passes it ONLY `MIGRATION_DATABASE_URL` +
-  `MIGRATION_TARGET`.
+- **The apply step is DDL-only with REQUIRED inputs (final F1 +
+  defense-in-depth passes)** — it runs the dedicated
+  `web/scripts/migration-apply-node.mjs` (not the general bootstrap):
+  - **`MIGRATION_DATABASE_URL` is REQUIRED — there is no fallback to
+    `DATABASE_URL`.** The tool refuses (exit 1, before any connection) unless
+    the dedicated migration credential is in its own variable, so the
+    runtime credential can never reach this DDL path (e2e 18.24a pins it with
+    a fully valid `DATABASE_URL` present).
+  - **`MIGRATION_TARGET` is REQUIRED — there is no omitted-target mode.**
+    Omitting the target does NOT mean "apply the entire migrations
+    directory"; the release operation must name its newest migration
+    explicitly. The named target must exist in `schema/migrations` of the
+    checked-out commit and be its newest file — both checked before any
+    connection (e2e 18.24b/c pin missing, stale, and invalid targets).
+  - It re-checks the destination identity (host only, before the first
+    connection; credentials are never logged), applies the base schema only
+    to a fresh database, applies the ordered migrations (which, with the
+    target required to be newest, is exactly the chain up to the named
+    target), verifies structural invariants (table/ledger/trigger/index
+    counts, UTC), and has **no seed phase and no TRUNCATE** (e2e 18.23j pins
+    this against the file's own source). The workflow passes it ONLY
+    `MIGRATION_DATABASE_URL` + `MIGRATION_TARGET` — and the happy path
+    (valid dedicated credential + newest target → exit 0 on a scratch DB)
+    remains e2e 18.23i.
 - **What actually authorizes remote DDL (honest boundary, D84)** — the code
   cannot prove that a script is running inside a protected workflow: scripts
   are ordinary executables and every environment variable they read is
@@ -367,6 +382,7 @@ claimed beyond its evidence class:
 | Direct bootstrap (node + bash) can NEVER DDL on a non-loopback database — UNCONDITIONALLY, with or without a declared context; no environment-variable combination authorizes it (final F1 pass) | **Code-proven + loopback-tested** (same `.invalid` host discipline) | e2e 18.21a–b, 18.23a–d (incl. production-shaped URL + ALL caller flags, and the build-hook path); bash gate smoke 2026-11-02 |
 | `0.0.0.0` / ambiguous destinations are NOT treated as loopback (fail closed) | **Code-proven** | `isLoopbackHost` unit tests (unspecified + malformed + bracketed IPv6 + case/whitespace rows) |
 | The workflow's apply step is a dedicated DDL-only tool — no seed phase, no TRUNCATE (verified against the file's own source) | **Code-proven + loopback-tested** | e2e 18.23i–j |
+| The apply tool's inputs are REQUIRED before any connection: `MIGRATION_DATABASE_URL` (no `DATABASE_URL` fallback — the runtime credential can never reach the DDL path) and `MIGRATION_TARGET` (no omitted-target whole-directory mode; must exist and be newest in the checkout) | **Code-proven + loopback-tested** — missing/stale/invalid target and missing-dedicated-URL all refuse pre-connection; the valid happy path (18.23i) is unchanged | e2e 18.24a–c (+ 18.23i happy path) |
 | The migration workflow is manual-dispatch-only, no-cancel, SHA-validated | **GitHub-configuration prerequisite** — the trigger/concurrency/checkout facts are in the workflow file (reviewable), the `production` environment's **required reviewers must be configured by the owner**; the validator prints a prerequisite banner in every run log | workflow YAML; validator banner (e2e 18.22f) |
 | The workflow may only apply main-reachable commits with their newest migration | **Code-proven + loopback-tested** | validator unit-level e2e 18.22a–f (real `git` against this repo) |
 | Production credentials carry no DDL/seed/TRUNCATE privilege (least-privilege split) | **Partially proven — owner-side Neon action still pending**: the DENIAL shape is locally proven with a real least-privilege (CONNECT-only) scratch role — migration DDL denied, TRUNCATE denied, nothing written; creating/altering the actual Neon roles is outside this repo's authority | e2e 18.23g/h (loopback); documented gap (D82, D84) |

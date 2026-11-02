@@ -21,10 +21,16 @@
 //        required reviewers (owner-configured), explicit main-reachable commit
 //        SHA + newest migration target validated before any connection
 //        (scripts/migration-validate-node.mjs), no-cancel concurrency.
-//   What THIS script enforces (code-proven): destination URL validated before
-//   any connection (host logged only — never credentials); MIGRATION_TARGET,
-//   when supplied, must exist in schema/migrations and be its newest file;
-//   schema invariants asserted after apply; no seed and no TRUNCATE, ever.
+//   What THIS script enforces (code-proven, ALL before any connection):
+//   MIGRATION_DATABASE_URL is REQUIRED — there is deliberately NO fallback to
+//   DATABASE_URL, so the runtime credential can never reach this DDL path
+//   (credential scope IS the authorization — D84); the URL's identity is
+//   validated and ONLY its host is logged (never credentials); MIGRATION_TARGET
+//   is REQUIRED — omitting it does NOT mean "apply the whole migrations
+//   directory", the release must name its newest migration explicitly; the
+//   target must exist in schema/migrations of THIS checkout and be its newest
+//   file; schema invariants are asserted after apply; no seed and no TRUNCATE,
+//   ever.
 //
 //   A direct local invocation of this script is possible (it is a script); the
 //   reason that is safe is 1+2 above: without the dedicated credential the
@@ -32,9 +38,11 @@
 //   role. That is the documented boundary — not a claim that the script is
 //   unforgeable.
 //
-// Env:
-//   MIGRATION_DATABASE_URL (or DATABASE_URL) — the migration credential
-//   MIGRATION_TARGET (optional) — the newest migration filename of the release
+// Env (both REQUIRED — missing either is refused before any connection):
+//   MIGRATION_DATABASE_URL — the DEDICATED migration credential (the workflow's
+//     GitHub environment secret). Never falls back to DATABASE_URL.
+//   MIGRATION_TARGET — the newest migration filename of the release commit
+//     (e.g. 0007_dedup_observation_index.sql). No omitted-target mode.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,36 +52,45 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(here, "..");
 const SCHEMA = path.resolve(WEB, "..", "schema");
 
-const rawUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
-if (!rawUrl) {
-  console.error("✗ MIGRATION_DATABASE_URL (or DATABASE_URL) is not set — refusing (no implicit local fallback; the workflow injects the secret into the apply step's env)");
+// REQUIRED — the DEDICATED migration credential. Deliberately NO fallback to
+// DATABASE_URL: this DDL path must never be reachable with the runtime
+// credential (the credential-scope boundary, D84). The workflow injects the
+// GitHub environment secret into the apply step's env.
+const rawUrl = process.env.MIGRATION_DATABASE_URL ?? "";
+if (!rawUrl.trim()) {
+  console.error("✗ MIGRATION_DATABASE_URL (the dedicated migration credential) is not set — refusing before any connection. This tool does NOT fall back to DATABASE_URL: the runtime credential must never reach the workflow's DDL path (D84). The workflow injects the GitHub environment secret into the apply step's env.");
   process.exit(1);
 }
 const { dbUrlIdentity } = await import("../src/lib/prebuild-gate-core.mjs");
 const dest = dbUrlIdentity(rawUrl);
 if (!dest.ok) {
-  console.error(`✗ ${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"} failed validation (${dest.reason}) — refusing before any connection`);
+  console.error(`✗ MIGRATION_DATABASE_URL failed validation (${dest.reason}) — refusing before any connection`);
   process.exit(1);
 }
-console.log(`[migration-apply] destination host: ${dest.host} (${process.env.MIGRATION_DATABASE_URL ? "MIGRATION_DATABASE_URL" : "DATABASE_URL"}) — credentials never logged`);
+console.log(`[migration-apply] destination host: ${dest.host} (MIGRATION_DATABASE_URL) — credentials never logged`);
 
-// MIGRATION_TARGET, when supplied, must be a real file and the NEWEST one —
-// mirrors migration-validate-node.mjs so the apply step is safe even if the
-// validate step is ever bypassed (defense in depth; no connection involved).
+// MIGRATION_TARGET is REQUIRED — omitting it does NOT mean "apply the whole
+// migrations directory". The named target must be a real file of THIS
+// checkout's schema/migrations and its NEWEST one — mirrors
+// migration-validate-node.mjs so the apply step is safe even if the validate
+// step is ever bypassed (defense in depth; all of this is before any
+// connection).
 const t = (process.env.MIGRATION_TARGET ?? "").trim();
 const migDir = path.join(SCHEMA, "migrations");
 const available = fs.existsSync(migDir) ? fs.readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort() : [];
-if (t !== "") {
-  if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(t) || !available.includes(t)) {
-    console.error(`✗ MIGRATION_TARGET ${JSON.stringify(t)} is not a migration present in schema/migrations (available: ${available.join(", ") || "none"}) — refusing`);
-    process.exit(1);
-  }
-  if (t !== available[available.length - 1]) {
-    console.error(`✗ MIGRATION_TARGET ${t} is not the NEWEST migration (newest: ${available[available.length - 1]}) — refusing`);
-    process.exit(1);
-  }
+if (t === "") {
+  console.error(`✗ MIGRATION_TARGET is not set — refusing before any connection. No omitted-target mode: applying the entire migrations directory by omission is not permitted; the release operation must name its newest migration explicitly (newest in this checkout: ${available[available.length - 1] ?? "none"})`);
+  process.exit(1);
 }
-console.log(`[migration-apply] controlled migration operation: MIGRATION_TARGET=${t || "(all idempotent, up-to-date)"} — DDL only, NO seed phase, NO TRUNCATE, ever`);
+if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(t) || !available.includes(t)) {
+  console.error(`✗ MIGRATION_TARGET ${JSON.stringify(t)} is not a migration present in schema/migrations (available: ${available.join(", ") || "none"}) — refusing`);
+  process.exit(1);
+}
+if (t !== available[available.length - 1]) {
+  console.error(`✗ MIGRATION_TARGET ${t} is not the NEWEST migration (newest: ${available[available.length - 1]}) — refusing`);
+  process.exit(1);
+}
+console.log(`[migration-apply] controlled migration operation: MIGRATION_TARGET=${t} — DDL only, NO seed phase, NO TRUNCATE, ever`);
 
 const die = (msg) => {
   console.error(`\n✗ ${msg}`);
@@ -105,6 +122,9 @@ if (hasUser) {
   }
 }
 if (fs.existsSync(migDir)) {
+  // t is required and required to be the newest file of this checkout, so
+  // applying the sorted directory in order = applying exactly the chain up to
+  // the named target (never beyond it, never an un-named "everything").
   for (const f of fs.readdirSync(migDir).filter((x) => x.endsWith(".sql")).sort()) {
     const sql = fs.readFileSync(path.join(migDir, f), "utf8");
     await c.query(sql).catch((e) => die(`migration failed: ${f} — ${e.message}`));

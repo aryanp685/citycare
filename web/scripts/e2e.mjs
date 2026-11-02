@@ -2294,6 +2294,28 @@ if (LOCAL) {
         try { await sql(`DROP DATABASE IF EXISTS ${noprivFullDb}`); } catch { /* best-effort */ }
         try { await sql(`DROP ROLE IF EXISTS ${noprivRole}`); } catch { /* best-effort */ }
       }
+
+      // ---- 18.24 FINAL defense-in-depth pass (2026-11-02): migration-apply's
+      // REQUIRED inputs (real entry point: scripts/migration-apply-node.mjs).
+      // Every case refuses BEFORE any connection — asserted by the absence of
+      // the post-connect "database:" banner (the loopback DB is never touched;
+      // the valid happy path remains e2e 18.23i, unchanged).
+      const firstMig = readdirSync(new URL("../../schema/migrations", import.meta.url).pathname).filter((x) => x.endsWith(".sql")).sort()[0];
+      const r24a = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ DATABASE_URL: gateUrl, MIGRATION_TARGET: LATEST_MIG }),
+      });
+      check("18.24a missing MIGRATION_DATABASE_URL while a fully valid DATABASE_URL is present → REFUSED before any connection (no fallback: the runtime credential can never reach the DDL path)", r24a.status === 1 && out(r24a).includes("does NOT fall back to DATABASE_URL") && !out(r24a).includes("database:") && !out(r24a).includes("migration applied"), `status=${r24a.status}`);
+      const r24b = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], {
+        encoding: "utf8",
+        cwd: webRoot,
+        env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl }),
+      });
+      check("18.24b missing MIGRATION_TARGET → REFUSED before any connection (no omitted-target 'apply the whole directory' mode)", r24b.status === 1 && out(r24b).includes("No omitted-target mode") && !out(r24b).includes("database:") && !out(r24b).includes("migration applied"), `status=${r24b.status}`);
+      const r24c1 = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], { encoding: "utf8", cwd: webRoot, env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl, MIGRATION_TARGET: firstMig }) });
+      const r24c2 = spawnSync(process.execPath, ["scripts/migration-apply-node.mjs"], { encoding: "utf8", cwd: webRoot, env: noContextEnv({ MIGRATION_DATABASE_URL: gateUrl, MIGRATION_TARGET: "0000_does_not_exist.sql" }) });
+      check("18.24c stale target (oldest, not newest) AND invalid target (not present) → both REFUSED before any connection", r24c1.status === 1 && out(r24c1).includes("not the NEWEST migration") && !out(r24c1).includes("database:") && r24c2.status === 1 && out(r24c2).includes("not a migration present") && !out(r24c2).includes("database:"), `stale=${r24c1.status} invalid=${r24c2.status}`);
     }
   }
 }
