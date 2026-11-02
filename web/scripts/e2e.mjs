@@ -2,7 +2,7 @@
 // Run:  node scripts/e2e.mjs
 const BASE = process.env.BASE ?? "http://127.0.0.1:3000";
 import crypto from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 // Local convenience: pick CRON_SECRET / DATABASE_URL up from .env.local so the cron and the
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
@@ -1631,6 +1631,162 @@ if (!LOCAL || !process.env.DATABASE_URL) {
     check("NG-S14: cleanup — all scratch databases dropped (no leftovers)", leftover.length === 0, JSON.stringify(leftover));
   }
 }
+}
+
+console.log("\n— 18. Day 3 data-integrity (2026-11-02): audit atomicity · ownership · revocation · concurrency · FK guards · migration 0007 —");
+if (LOCAL) {
+  // Re-login in case an earlier section rotated the sessions (same pattern as §11).
+  const patEmail = `e2e.p.${stamp}@e2e.test`;
+  if (!pat.cookie) await pat.post("/api/auth/login", { email: patEmail, password: "e2epassword1" });
+  await doc.post("/api/auth/login", { email: `e2e.d.${stamp}@e2e.test`, password: "e2edocpassword1" });
+  const patProf = await pat.get("/api/patient/profile");
+  const e2ePid = patProf.data?.id;
+  const e2eUid = (await sql(`SELECT "userId" FROM "Patient" WHERE id = $1`, [e2ePid])).rows[0]?.userId;
+
+  // ---- 18.1 ledger atomicity: success path — the GRANT_CONSENT row commits WITH the consent ----
+  {
+    const grant = await pat.post("/api/patient/consents", { doctorId: e2eDoctorId, scope: "FULL_RECORD", expiryDays: 7 });
+    check("18.1a re-grant after §4 revoke succeeds", [200, 201].includes(grant.status), JSON.stringify(grant.data));
+    const consentId = grant.data?.consentId;
+    const rows = await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'GRANT_CONSENT' AND "entityId" = $1`, [consentId ?? ""]);
+    check("18.1b exactly one GRANT_CONSENT ledger row for the new consent id", rows?.rows[0]?.n === 1, `n=${rows?.rows[0]?.n}`);
+    // keep the consent id for 18.4 (revoke immediacy)
+    globalThis.__d3ConsentId = consentId;
+  }
+
+  // ---- 18.2 ledger atomicity: failure path — a refused operation leaves NO partial evidence ----
+  {
+    const before = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'BOOK_APPOINTMENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? 0;
+    // find an offered instant with zero live bookings (e2e doctor: 15-min slots, capacity 1)
+    let T2 = null;
+    for (const [h, m] of [[10, 15], [10, 30], [10, 45], [11, 15], [11, 30], [11, 45], [12, 15], [12, 30], [12, 45]]) {
+      const t = istSlot(h, m);
+      const c = (await sql(
+        `SELECT count(*)::int AS n FROM "Appointment" WHERE "doctorId" = $1 AND "scheduledAt" = $2 AND status IN ('PENDING','CONFIRMED','CHECKED_IN','RESCHEDULED')`,
+        [e2eDoctorId, t],
+      )).rows[0]?.n;
+      if (c === 0) { T2 = t; break; }
+    }
+    const bookA = T2 ? await pat.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: T2, reason: "day3 integrity" }) : { status: 0 };
+    check("18.2a booking for a free single-seat slot → 201", bookA.status === 201, JSON.stringify(bookA.data));
+    const after = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'BOOK_APPOINTMENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? 0;
+    check("18.2b the booking's ledger row committed (count +1)", after === before + 1, `before=${before} after=${after}`);
+    const apptId = bookA.data?.appointmentId;
+    const cancel1 = await pat.patch("/api/patient/appointments", { appointmentId: apptId, reason: "day3 cancel" });
+    check("18.2c first cancel → 200", cancel1.status === 200, JSON.stringify(cancel1.data));
+    const cancel2 = await pat.patch("/api/patient/appointments", { appointmentId: apptId, reason: "day3 cancel again" });
+    check("18.2d cancelling an already-cancelled appointment → 400", cancel2.status === 400, `got ${cancel2.status}`);
+    const nCancel = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'CANCEL_APPOINTMENT' AND metadata->>'appointmentId' = $1`, [apptId ?? ""])).rows[0]?.n;
+    check("18.2e exactly ONE CANCEL_APPOINTMENT ledger row (the failed retry wrote nothing)", nCancel === 1, `n=${nCancel}`);
+  }
+
+  // ---- 18.3 ownership: a doctor cannot read a patient he has no consent for ----
+  {
+    const anita = (await sql(`SELECT p.id FROM "Patient" p JOIN "User" u ON u.id = p."userId" WHERE u.email = 'anita@demo.in'`)).rows[0]?.id;
+    check("18.3a demo patient (anita) profile resolvable", !!anita, "seed row missing");
+    const r403 = await doc.get(`/api/doctor/patients/${anita}/record`);
+    check("18.3b doctor reads a consent-less other patient → 403", r403.status === 403, `got ${r403.status}`);
+    const r404 = await doc.get(`/api/doctor/patients/${"f".repeat(32).replace(/f/g, "0")}/record`);
+    check("18.3c doctor reads a forged patient id → 404", r404.status === 404, `got ${r404.status}`);
+  }
+
+  // ---- 18.4 revocation immediacy: the very next doctor request re-checks the DB ----
+  {
+    const read1 = await doc.get(`/api/doctor/patients/${e2ePid}/record`);
+    check("18.4a doctor read with live consent → 200", read1.status === 200, `got ${read1.status}`);
+    const rev = await pat.patch(`/api/patient/consents?id=${globalThis.__d3ConsentId}`, { reason: "day3 revoke" });
+    check("18.4b patient revokes → 200", rev.status === 200, JSON.stringify(rev.data));
+    const read2 = await doc.get(`/api/doctor/patients/${e2ePid}/record`);
+    check("18.4c doctor read AFTER revoke → instant 403", read2.status === 403, `got ${read2.status}`);
+  }
+
+  // ---- 18.5 concurrency: two parallel bookings for the same last seat — the DB decides ----
+  {
+    let T3 = null;
+    for (const [h, m] of [[10, 30], [10, 45], [11, 15], [11, 30], [11, 45], [12, 15], [12, 30], [12, 45]]) {
+      const t = istSlot(h, m);
+      const c = (await sql(
+        `SELECT count(*)::int AS n FROM "Appointment" WHERE "doctorId" = $1 AND "scheduledAt" = $2 AND status IN ('PENDING','CONFIRMED','CHECKED_IN','RESCHEDULED')`,
+        [e2eDoctorId, t],
+      )).rows[0]?.n;
+      if (c === 0) { T3 = t; break; }
+    }
+    const p2 = new Session("p2-day3");
+    const su2 = await p2.post("/api/auth/signup", {
+      role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E P2 ${stamp}`, email: `e2e.p2.${stamp}@e2e.test`, phone: uniqPhone("7"), password: "e2epassword2",
+    });
+    check("18.5a second patient can sign up for the race", su2.status === 201 || su2.status === 200, JSON.stringify(su2.data));
+    const [r1, r2] = T3
+      ? await Promise.all([
+          pat.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: T3, reason: "day3 race A" }),
+          p2.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: T3, reason: "day3 race B" }),
+        ])
+      : [{ status: 0 }, { status: 0 }];
+    const codes = [r1.status, r2.status].sort((a, b) => a - b);
+    check("18.5b parallel last-seat race → exactly one 201 and one 409", codes[0] === 201 && codes[1] === 409, `got [${codes}]`);
+    const live = (await sql(
+      `SELECT count(*)::int AS n FROM "Appointment" WHERE "doctorId" = $1 AND "scheduledAt" = $2 AND status IN ('PENDING','CONFIRMED','CHECKED_IN','RESCHEDULED')`,
+      [e2eDoctorId, T3 ?? ""],
+    )).rows[0]?.n;
+    check("18.5c database holds exactly ONE live appointment for that instant", live === 1, `n=${live}`);
+  }
+
+  // ---- 18.6 FK RESTRICT probes: clinical data cannot be bypassed by raw DELETEs ----
+  {
+    // guard: a 0-row DELETE would not error and could fake a pass — only probe against a
+    // row we have verified exists (and has references to be protected by).
+    const targetUser = e2eUid && (await sql(`SELECT count(*)::int AS n FROM "User" WHERE id = $1`, [e2eUid])).rows[0]?.n === 1;
+    const targetPatient = e2ePid && (await sql(`SELECT count(*)::int AS n FROM "Patient" WHERE id = $1`, [e2ePid])).rows[0]?.n === 1;
+    if (!targetUser || !targetPatient) {
+      skip("18.6 FK RESTRICT probes", "e2e patient/user not present (earlier section failed — rate limit?)");
+    } else {
+      let userDel = null;
+      try { await sql(`DELETE FROM "User" WHERE id = $1`, [e2eUid]); } catch (e) { userDel = e; }
+      check("18.6a DELETE FROM User (owns a patient profile) refused with 23503", userDel?.code === "23503", userDel?.code ?? "delete SUCCEEDED");
+      let patDel = null;
+      try { await sql(`DELETE FROM "Patient" WHERE id = $1`, [e2ePid]); } catch (e) { patDel = e; }
+      check("18.6b DELETE FROM Patient (referenced by consents/appointments) refused with 23503", patDel?.code === "23503", patDel?.code ?? "delete SUCCEEDED");
+    }
+  }
+
+  // ---- 18.7 migration 0007 invariants + migration-folder idempotency ----
+  {
+    const dup = (await sql(`SELECT count(*)::int AS n FROM pg_indexes WHERE indexname = 'Observation_patient_name_taken_idx'`)).rows[0]?.n;
+    check("18.7a duplicate Observation index (0005 copy) is gone", dup === 0, `n=${dup}`);
+    const base = (await sql(`SELECT count(*)::int AS n FROM pg_indexes WHERE indexname = 'Observation_patientId_name_takenOn_idx'`)).rows[0]?.n;
+    check("18.7b base Observation index (citycare_init) still present", base === 1, `n=${base}`);
+    // re-run the ENTIRE migrations folder against this existing DB (the bootstrap does this on every deploy)
+    let migError = null;
+    try {
+      const dir = new URL("../../schema/migrations/", import.meta.url); // trailing slash: it is a directory
+      const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+      for (const f of files) {
+        await pgClient.query(readFileSync(new URL(f, dir), "utf8"));
+      }
+    } catch (e) { migError = e; }
+    check("18.7c full migrations/ folder re-run on an existing DB exits clean", migError === null, String(migError?.message ?? "").slice(0, 120));
+    const tables = (await sql(`SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`)).rows[0]?.n;
+    const obsIdx = (await sql(`SELECT count(*)::int AS n FROM pg_indexes WHERE tablename = 'Observation'`)).rows[0]?.n;
+    check("18.7d re-run changed nothing observable (36 tables, 2 Observation indexes)", tables === 36 && obsIdx === 2, `tables=${tables} obsIdx=${obsIdx}`);
+  }
+
+  // ---- 18.8 document delete: the flag and the encrypted bytes die in one transaction ----
+  {
+    const pdfBytes = new TextEncoder().encode("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
+    const fd = new FormData();
+    fd.append("file", new Blob([pdfBytes], { type: "application/pdf" }), "day3.pdf");
+    fd.append("title", "Day3 audit"); fd.append("type", "OTHER"); fd.append("issuedOn", "2026-11-02");
+    const up = await pat.upload("/api/patient/documents", fd);
+    check("18.8a upload → 201", up.status === 201, JSON.stringify(up.data).slice(0, 120));
+    const docId = up.data?.id;
+    const del = await pat.del(`/api/documents/${docId}`);
+    check("18.8b patient deletes their document → 200", del.status === 200, JSON.stringify(del.data));
+    const state = (await sql(
+      `SELECT d."isDeleted" AS gone, count(b."documentId")::int AS blobs FROM "Document" d LEFT JOIN "DocumentBlob" b ON b."documentId" = d.id WHERE d.id = $1 GROUP BY d."isDeleted"`,
+      [docId ?? ""],
+    )).rows[0];
+    check("18.8c isDeleted=true AND zero blob rows (no orphaned ciphertext)", state?.gone === true && state?.blobs === 0, JSON.stringify(state));
+  }
 }
 
 if (pgClient) await pgClient.end();

@@ -30,15 +30,23 @@ export const POST = handler(async (req, { params }) => {
 
   const suspended = await tx(async (t) => {
     await run(`UPDATE "Consent" SET "reviewedAt"=now(), "reviewVerdict"=$2, "reviewNote"=$3, "reviewedBy"=$4 WHERE id=$1`, [id, b.verdict, b.note ?? null, admin.uid], t);
-    if (b.verdict !== "UNJUSTIFIED") return false;
-    const n = await one<{ n: number }>(`SELECT count(*)::int AS n FROM "Consent" WHERE "doctorId"=$1 AND "reviewVerdict"='UNJUSTIFIED'`, [c.doctorId], t);
-    if ((n?.n ?? 0) < UNJUSTIFIED_SUSPEND_AT) return false;
-    await run(`UPDATE "Doctor" SET "isVerified"=false, "verificationNote"=$2 WHERE id=$1`, [c.doctorId, `auto-suspended: ${n!.n} unjustified emergency accesses`], t);
-    return true;
+    let susp = false;
+    if (b.verdict === "UNJUSTIFIED") {
+      const n = await one<{ n: number }>(`SELECT count(*)::int AS n FROM "Consent" WHERE "doctorId"=$1 AND "reviewVerdict"='UNJUSTIFIED'`, [c.doctorId], t);
+      if ((n?.n ?? 0) >= UNJUSTIFIED_SUSPEND_AT) {
+        await run(`UPDATE "Doctor" SET "isVerified"=false, "verificationNote"=$2 WHERE id=$1`, [c.doctorId, `auto-suspended: ${n!.n} unjustified emergency accesses`], t);
+        susp = true;
+      }
+    }
+    // NG-D05-1: the admin verdict (and any auto-suspension) must land in the ledger
+    // atomically with the state change — the break-glass trail is the trust evidence.
+    await appendAudit(admin.uid, "EMERGENCY_REVIEWED", "Consent", id, { consentId: id, meta: { verdict: b.verdict, suspended: susp }, q: t });
+    if (susp) {
+      await appendAudit(admin.uid, "DOCTOR_SUSPENDED", "Doctor", c.doctorId, { meta: { reason: "repeated unjustified emergency access" }, q: t });
+    }
+    return susp;
   });
 
-  await appendAudit(admin.uid, "EMERGENCY_REVIEWED", "Consent", id, { consentId: id, meta: { verdict: b.verdict, suspended } }).catch(() => null);
-  if (suspended) await appendAudit(admin.uid, "DOCTOR_SUSPENDED", "Doctor", c.doctorId, { meta: { reason: "repeated unjustified emergency access" } }).catch(() => null);
   await notify(c.doctorUid, {
     title: b.verdict === "JUSTIFIED" ? "Emergency access reviewed: justified" : suspended ? "Emergency access unjustified — clinical access suspended" : "Emergency access reviewed: unjustified",
     body: b.note ?? "An administrator reviewed your break-glass access.",

@@ -1,4 +1,4 @@
-import { one, run, fail } from "@/lib/db";
+import { one, run, tx, fail } from "@/lib/db";
 import { handler, ok, err } from "@/lib/api";
 import { getViewer, requireRole, guardSameOrigin } from "@/lib/session";
 import { liveConsent } from "@/lib/consent";
@@ -54,9 +54,15 @@ export const DELETE = handler(async (req, { params }) => {
   await guardSameOrigin(req);
   const v = await requireRole("PATIENT");
   const { id } = await params;
-  const d = await one<{ id: string }>(`UPDATE "Document" SET "isDeleted" = true WHERE id = $1 AND "patientId" = $2 AND NOT "isDeleted" RETURNING id`, [id, v.profileId]);
-  if (!d) fail(404, "not_found", "no such document");
-  await run(`DELETE FROM "DocumentBlob" WHERE "documentId" = $1`, [id]);
-  await appendAudit(v.uid, "DELETE_DOC", "Patient", v.profileId, { meta: { documentId: id } }).catch(() => null);
+  // NG-D04-1: the soft-delete flag and the encrypted bytes must die together —
+  // two separate autocommits left a crash window in which the patient's data was
+  // "deleted" (flag) but the blob row still held the ciphertext.
+  // NG-D05-1: the audit row joins the same transaction.
+  await tx(async (c) => {
+    const d = await one<{ id: string }>(`UPDATE "Document" SET "isDeleted" = true WHERE id = $1 AND "patientId" = $2 AND NOT "isDeleted" RETURNING id`, [id, v.profileId], c);
+    if (!d) fail(404, "not_found", "no such document");
+    await run(`DELETE FROM "DocumentBlob" WHERE "documentId" = $1`, [id], c);
+    await appendAudit(v.uid, "DELETE_DOC", "Patient", v.profileId, { meta: { documentId: id }, q: c });
+  });
   return ok({ id, deleted: true });
 });
