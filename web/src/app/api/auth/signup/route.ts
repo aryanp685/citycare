@@ -101,12 +101,12 @@ export const POST = handler(async (req) => {
         [uid, PRIVACY_NOTICE_VERSION, TERMS_VERSION],
         c,
       );
+      // NG-D05-1: the account-creation audit row commits atomically with the account.
+      await appendAudit(uid, body.role === "PATIENT" ? "ACCOUNT_CREATED" : "DOCTOR_ONBOARDED", body.role === "PATIENT" ? "Patient" : "Doctor", pid, {
+        meta: { privacyNotice: PRIVACY_NOTICE_VERSION, terms: TERMS_VERSION }, q: c,
+      });
       return { userId: uid, profileId: pid };
     });
-
-    await appendAudit(userId, body.role === "PATIENT" ? "ACCOUNT_CREATED" : "DOCTOR_ONBOARDED", body.role === "PATIENT" ? "Patient" : "Doctor", profileId, {
-      meta: { privacyNotice: PRIVACY_NOTICE_VERSION, terms: TERMS_VERSION },
-    }).catch(() => null);
 
     const { token } = await createSession({ uid: userId, role: body.role, profileId, userAgent: req.headers.get("user-agent") });
     const jar = await cookies();

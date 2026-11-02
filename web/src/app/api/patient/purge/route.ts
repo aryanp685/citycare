@@ -45,8 +45,13 @@ export const POST = handler(async (req) => {
   });
 
   // AFTER anonymisation: the ledger entry is the patient's receipt.
+  // Deliberately outside the erasure transaction: erasure is a right that must never be
+  // blocked by a ledger hiccup (a failed append rolls the whole erasure back). The price —
+  // a missing receipt row on failure — is made visible (logged) instead of silent (NG-D05-2).
   const doneAt = new Date();
-  await appendAudit(v.uid, "DATA_ERASED", "Patient", pid, { meta: { at: doneAt.toISOString() } }).catch(() => null);
+  await appendAudit(v.uid, "DATA_ERASED", "Patient", pid, { meta: { at: doneAt.toISOString() } }).catch((e: unknown) => {
+    console.error("[purge] DATA_ERASED ledger receipt failed (erasure itself committed):", e instanceof Error ? e.message : e);
+  });
 
   const res = ok({
     erased: true,
@@ -64,7 +69,9 @@ export const POST = handler(async (req) => {
     if (own) {
       const { token } = await createSession({ uid: v.uid, role: "PATIENT", profileId: own.id, userAgent: req.headers.get("user-agent") });
       (await cookies()).set(SESSION_COOKIE, token, sessionCookieOpts(req));
-      await appendAudit(v.uid, "DEPENDENT_ERASED", "Patient", pid).catch(() => null);
+      await appendAudit(v.uid, "DEPENDENT_ERASED", "Patient", pid).catch((e: unknown) => {
+        console.error("[purge] DEPENDENT_ERASED ledger receipt failed (erasure itself committed):", e instanceof Error ? e.message : e);
+      });
       return res;
     }
   }

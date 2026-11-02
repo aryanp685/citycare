@@ -134,15 +134,17 @@ export const POST = handler(async (req) => {
       await run(`UPDATE "Appointment" SET "consentId" = $2 WHERE id = $1`, [appt!.id, consentId], c);
     }
 
+    // NG-D05-1: the booking's ledger row commits atomically with the appointment —
+    // otherwise a crash after COMMIT would leave a live booking with no audit trail.
+    await appendAudit(v.uid, "BOOK_APPOINTMENT", "Patient", p!.id, {
+      consentId,
+      meta: { doctor: doctor!.fullName, at: when.toISOString() }, q: c,
+    });
+
     return { apptId: appt!.id, consentId };
   }).catch((e) => {
     if (pgErrorCode(e) === "23505") fail(409, "slot_full", "Someone took the last seat in this slot a moment ago — pick another.");
     throw e;
-  });
-
-  await appendAudit(v.uid, "BOOK_APPOINTMENT", "Patient", p!.id, {
-    consentId: result.consentId,
-    meta: { doctor: doctor!.fullName, at: when.toISOString() },
   });
 
   return ok({ appointmentId: result.apptId, consentRequested: result.consentId !== null }, 201);

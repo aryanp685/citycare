@@ -66,9 +66,14 @@ export const POST = handler(async (req) => {
                 purpose='TREATMENT', "lastNEncounters"=$3, "conditionName"=$4,
                 "expiresAt" = now() + ($5 || ' days')::interval
           WHERE id=$1`,
-        [pending.id, body.scope, body.lastNEncounters ?? (body.scope === "LAST_N_ENCOUNTERS" ? 3 : null),
+         [pending.id, body.scope, body.lastNEncounters ?? (body.scope === "LAST_N_ENCOUNTERS" ? 3 : null),
          body.conditionName ?? null, String(Math.max(1, Math.min(90, body.expiryDays)))], c,
       );
+      // NG-D05-1: the ledger row commits atomically with the state change — a crash between
+      // the two would leave the grant live with no audit evidence of it.
+      await appendAudit(v.uid, "GRANT_CONSENT", "Consent", pending.id, {
+        consentId: pending.id, meta: { scope: body.scope, doctor: doctor!.fullName }, q: c,
+      });
       return pending.id;
     }
 
@@ -88,12 +93,13 @@ export const POST = handler(async (req) => {
        body.conditionName ?? null,
        String(Math.max(1, Math.min(90, body.expiryDays)))], c,
     );
+    // NG-D05-1: audit commits atomically with the new consent row (see the pending-path above).
+    await appendAudit(v.uid, "GRANT_CONSENT", "Consent", ins!.id, {
+      consentId: ins!.id, meta: { scope: body.scope, doctor: doctor!.fullName }, q: c,
+    });
     return ins!.id;
   });
 
-  await appendAudit(v.uid, "GRANT_CONSENT", "Consent", consentId, {
-    consentId, meta: { scope: body.scope, doctor: doctor!.fullName },
-  });
   await run(
     `INSERT INTO "Notification" (id, "userId", channel, title, body, "isRead", "createdAt")
      SELECT gen_random_uuid(), u.id, 'IN_APP', 'Access granted',
@@ -112,17 +118,17 @@ export const PATCH = handler(async (req) => {
   const consentId = new URL(req.url).searchParams.get("id") ?? "";
   if (!consentId) fail(400, "missing_id", "pass ?id=<consentId>");
 
-  const n = await tx(async (c) => {
-    return run(
+  await tx(async (c) => {
+    const n = await run(
       `UPDATE "Consent" SET status='REVOKED', "revokedAt"=now(), "revocationReason"=$2
         WHERE id=$1 AND "patientId"=$3 AND status IN ('REQUESTED','APPROVED')`,
       [consentId, body.reason ?? "revoked by patient", v.profileId], c,
     );
-  });
-  if (n === 0) fail(409, "nothing_to_revoke", "This consent is already closed (revoked, denied or expired).");
-
-  await appendAudit(v.uid, "REVOKE_CONSENT", "Consent", consentId, {
-    consentId, meta: { reason: body.reason ?? "revoked by patient" },
+    if (n === 0) fail(409, "nothing_to_revoke", "This consent is already closed (revoked, denied or expired).");
+    // NG-D05-1: the revocation receipt commits atomically with the state change.
+    await appendAudit(v.uid, "REVOKE_CONSENT", "Consent", consentId, {
+      consentId, meta: { reason: body.reason ?? "revoked by patient" }, q: c,
+    });
   });
   return ok({ revoked: true });
 });

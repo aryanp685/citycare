@@ -91,19 +91,23 @@ export const POST = handler(async (req, { params }) => {
       [patient!.id],
       c,
     );
+    // NG-D05-1: the clinical write and its ledger evidence commit as one unit —
+    // the encounter is the most sensitive data in the system; it must never exist
+    // without its audit row (and a failed write must leave neither).
+    await appendAudit(v.uid, "CREATE_ENCOUNTER", "Patient", patient!.id, {
+      consentId: verdict.consent.id,
+      meta: { encounterId: enc!.id, drugs: body.items.map((i) => i.name), ...(critical.length ? { override: body.overrideReason } : {}) },
+      q: c,
+    });
+    if (critical.length > 0) {
+      await appendAudit(v.uid, "PRESCRIBE_OVERRIDE", "Patient", patient!.id, {
+        consentId: verdict.consent.id,
+        meta: { reason: body.overrideReason, conflicts: critical.map((a) => a.title) },
+        q: c,
+      });
+    }
     return enc!.id;
   });
-
-  await appendAudit(v.uid, "CREATE_ENCOUNTER", "Patient", patient!.id, {
-    consentId: verdict.consent.id,
-    meta: { encounterId: written, drugs: body.items.map((i) => i.name), ...(critical.length ? { override: body.overrideReason } : {}) },
-  });
-  if (critical.length > 0) {
-    await appendAudit(v.uid, "PRESCRIBE_OVERRIDE", "Patient", patient!.id, {
-      consentId: verdict.consent.id,
-      meta: { reason: body.overrideReason, conflicts: critical.map((a) => a.title) },
-    });
-  }
 
   return ok({ encounterId: written, alertsRaised: alerts.length, criticalOverridden: critical.length }, 201);
 });
