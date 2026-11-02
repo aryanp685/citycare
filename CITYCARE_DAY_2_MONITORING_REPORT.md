@@ -114,3 +114,25 @@ Verified in code (Day 1 F1–F4 + Day 2 sweep):
   `src/lib/__tests__/health-route.test.ts` (new, 6 tests).
 - Register: NG-S10 → **PARTIALLY IMPLEMENTED** (code + local evidence done; external monitor
   BLOCKED on owner account — never RESOLVED without the §5 checklist being ticked by the owner).
+
+---
+
+## 4. Final security correction note (2026-11-02, post-merge)
+
+- **F2 (JSON consistency):** all monitoring JSON assertions were re-verified against the
+  actual `/api/health` schema (`web/src/app/api/health/route.ts` + `web/src/lib/api.ts`).
+  The three documents now agree, and only fields that exist are used: readiness =
+  HTTP 200 + `status:"ok"` + `db.reachable == true`; DB-down = 503 `{"error":"database
+  unreachable","code":"db_unreachable"}`; degraded (ledger break / non-UTC) = 503
+  `status:"degraded"`; backup freshness = `backups.stale` (never flips the status code);
+  ledger integrity = `db.ledgerBreaks`. The one incorrect reference found —
+  `$.database === "ok"` in the DAY-2 report — was corrected. The four monitored classes
+  (HTTP availability, database readiness, backup freshness, ledger integrity) are now
+  explicitly separated in the ops doc §1.
+- **F3 (safe outage drill):** the ops doc §6 procedure is now **staging-only** — a
+  dedicated staging deployment + an isolated throwaway database, with setup, 5-minute
+  duration, expected alert + recovery alert, and evidence collection documented; it must
+  not be simulated by breaking production credentials or pausing production traffic.
+  **BLOCKED until staging exists** (criterion A4-5 remains "NOT DONE — owner action").
+- **No change to claims:** no external monitor is configured or active; no alert was
+  simulated; nothing here claims UptimeRobot or Better Stack is set up.

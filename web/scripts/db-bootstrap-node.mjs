@@ -92,9 +92,14 @@ if (partials !== 3) die(`partial unique indexes missing (${partials}/3)`);
 console.log(`  verified: ${tables} tables · ledger_append/verify · tamper trigger · 3 partial unique indexes · timezone=UTC`);
 
 // 2) demo data ─────────────────────────────────────────────────────────────────
-// NG-S14 (Day 2) — the demo-seed gate (src/lib/demo-seed-core.mjs) decides whether the
-// demo seed may run: skip (SEED_DEMO=0, schema-only is a valid state) / refuse (real-data
-// policy or unverified env — the database must stay untouched) / seed (synthetic demo env).
+// NG-S14 (Day 2, strictly fail-closed) — the demo-seed gate (src/lib/demo-seed-core.mjs)
+// decides whether the demo seed may run:
+//   seed   → ONLY RETENTION_POLICY=demo with SEED_DEMO unset or 1 (synthetic demo env)
+//   skip   → SEED_DEMO=0 on a VERIFIED policy (schema-only is a valid state)
+//   refuse → real-data policy (internal/pilot) without SEED_DEMO=0; missing/invalid
+//            RETENTION_POLICY (regardless of SEED_DEMO); or an invalid SEED_DEMO value.
+// A refused/skipped run leaves the database byte-for-byte untouched (the gate fires before
+// any connection or write).
 const { resolveDemoSeedAction } = await import("../src/lib/demo-seed-core.mjs");
 const seedDecision = resolveDemoSeedAction(process.env);
 console.error(`  seed gate: ${seedDecision.action} — ${seedDecision.reason}` + (seedDecision.warning ? ` (WARNING: ${seedDecision.warning})` : ""));

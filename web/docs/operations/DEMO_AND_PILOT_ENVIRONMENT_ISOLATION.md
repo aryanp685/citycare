@@ -1,7 +1,7 @@
 # CityCare — Demo & Pilot Environment Isolation (NG-S14)
 
 **Status: code + tests complete (local + CI evidence); existing pilot-DB cleanup and production env vars are owner-side actions.**
-Last updated: 2026-11-02 (Day 2).
+Last updated: 2026-11-02 (Day 2 + final security correction — the seed gate is now **strictly fail-closed**, see §2).
 
 The risk (NG-S14): published demo credentials (`ramesh@demo.in` / `city1234`, and the other
 `@demo.in` identities — they are in the README, the runbook, and the UI on demo deployments)
@@ -19,18 +19,22 @@ exact owner-side actions.
 | 2 | **Local development** (this sandbox / a dev laptop) | `demo` | unset or `1` | unset (banner ON) | YES (same as #1) | armed |
 | 3 | **Internal testing / CI** (throwaway DBs) | `demo` | unset or `1` | unset (banner ON) | YES — CI bootstraps `FORCE_SEED=1` with `RETENTION_POLICY=demo` | armed (the S15 e2e checks assert it) |
 | 4 | **Internal testing without demo data** (pure schema) | `demo` | `0` | either | NO — `seed.mjs` skips (nothing written) | armed but nothing to sweep |
-| 5 | **Real-data pilot / production** | `internal` or `pilot` | **`0` (required, explicit)** | `0` (banner OFF) | **REFUSED** — the seed gate refuses to run (exit 2); demo identities cannot exist; published demo credentials get 401 | permanently OFF (real data is never auto-erased) |
+| 5 | **Real-data pilot / production** | `internal` or `pilot` | **`0` (required, explicit)** | `0` (banner OFF) | **No** — with `SEED_DEMO=0` the gate skips (nothing written); with `SEED_DEMO` unset or `1` the gate **refuses** (exit 2). Demo identities cannot exist; published demo credentials get 401 | permanently OFF (real data is never auto-erased) |
+| — | **Unverified environment** (missing/invalid `RETENTION_POLICY`) | missing/invalid | anything | — | **No — REFUSED regardless of `SEED_DEMO`** (strictly fail-closed; an unverified DB is never seeded, and the run does not silently "skip" either) | — |
 
 Rules encoded in code (not convention):
 
 - **No hostname inference** — the decision is made only from explicit env vars
   (`RETENTION_POLICY` + `SEED_DEMO`). Nothing inspects the domain/hostname.
-- **No contradictory setting silently enables demo accounts** — the only paths that create
-  demo accounts are `RETENTION_POLICY=demo` (with `SEED_DEMO != 0`) or an explicit
-  `SEED_DEMO=1` on an *unverified* environment (which prints a loud warning). Any
-  real-data policy with `SEED_DEMO=1` or unset `SEED_DEMO` is **refused (exit 2)**.
+- **Strictly fail-closed (final security correction, 2026-11-02)** — the **only** path that
+  creates demo accounts is `RETENTION_POLICY=demo` with `SEED_DEMO` unset or exactly `1`.
+  A missing/invalid `RETENTION_POLICY` **refuses regardless of `SEED_DEMO`** (an unverified
+  environment is never seeded, and does not silently "skip" either); an invalid `SEED_DEMO`
+  value (anything not exactly `0`/`1`) **refuses** instead of being guessed as unset. The
+  earlier "explicit `SEED_DEMO=1` on an unverified environment seeds with a loud warning"
+  path was **removed** in that correction.
 - **The public demo keeps working in its synthetic environments** — nothing was removed
-  from envs 1–3; e2e check "existing public demo is still functional" pins this.
+  from envs 1–4; e2e check "existing public demo is still functional" pins this.
 - **Demo cleanup stays compatible with Day 1 retention safeguards** — the demo sweep
   (NG-S15) is unchanged; in real-data envs the sweep is off by the pre-existing policy
   rule, and `@demo.in` remains the protected domain + reserved signup domain regardless.
@@ -45,16 +49,21 @@ Rules encoded in code (not convention):
 resolveDemoSeedAction(env) → { action: "seed" | "skip" | "refuse", reason, warning, exitCode }
 ```
 
+**Strictly fail-closed matrix** (final security correction, 2026-11-02 — an invalid
+`SEED_DEMO` value = present, non-empty, and not exactly `0`/`1`; an empty/unset value = unset):
+
 | `RETENTION_POLICY` | `SEED_DEMO` | action |
 |---|---|---|
-| `demo` | unset / `1` | **seed** (synthetic-demo default; backward-compatible) |
+| `demo` | unset / `1` | **seed** (synthetic-demo default; backward-compatible — the ONLY seed path) |
 | `demo` | `0` | **skip** (exit 0, nothing written, nothing truncated) |
+| `demo` | invalid value | **REFUSE** (exit 2 — never guessed as unset) |
 | `internal` / `pilot` | `0` | **skip** (exit 0 — operator explicitly opted out) |
 | `internal` / `pilot` | `1` | **REFUSE** (exit 2 — contradictory) |
 | `internal` / `pilot` | unset | **REFUSE** (exit 2 — fail-safe default) |
-| missing / invalid | `0` | **skip** |
-| missing / invalid | `1` | **seed + LOUD warning** (explicit operator decision on an unverified env) |
-| missing / invalid | unset | **REFUSE** (exit 2 — fail-safe default) |
+| `internal` / `pilot` | invalid value | **REFUSE** (exit 2) |
+| missing / invalid | `0` | **REFUSE** (exit 2 — the environment itself is unverified) |
+| missing / invalid | `1` | **REFUSE** (exit 2 — unverified envs never seed, even when explicitly requested) |
+| missing / invalid | unset / invalid | **REFUSE** (exit 2) |
 
 The gate fires **before any database connection or write**: a refused or skipped run leaves
 the target database byte-for-byte untouched (no TRUNCATE, no inserts). `seed.mjs` exits `0`
@@ -79,20 +88,32 @@ as *unset* (never a silent enable). Added to `web/.env.example` with the full ma
 - A pilot/production build therefore presents **no** demo credentials anywhere in the UI,
   and `@demo.in` signups are refused even if someone tries (reserved domain, unconditional).
 
-## 4. Test evidence (2026-11-02, commit `arena/f1f3a0ac-citycare` Day 2)
+## 4. Test evidence (2026-11-02, Day 2 + final security correction)
 
-**Unit — `web/src/lib/__tests__/demo-seed-core.test.ts`: 14/14 passed** (full config matrix,
-fail-safe defaults, contradiction refusal, flag normalisation, no secrets in decision output).
+> **Isolated test deployment — not a production pilot (F4).** Every "pilot mode" result in
+> this document was produced against an **isolated throwaway test deployment and database**:
+> e2e section 17 creates fresh scratch PostgreSQL databases (`citycare_e2e_pilot_*`) and a
+> **local** `next start` instance bound to `127.0.0.1` (port 3007) pointed at one of those
+> scratch DBs, then drops all of them. It is NOT the live `citycare-z95n.vercel.app`
+> deployment and NOT any real pilot database. No claim in this section is a claim about a
+> production pilot.
 
-**E2E — `scripts/e2e.mjs` section 17 "NG-S14" (19 checks), executed on isolated scratch
-databases + a real pilot app instance; 305/305 suite green, exit 0:**
+**Unit — `web/src/lib/__tests__/demo-seed-core.test.ts`: 20/20 passed** (the full 25-way
+`RETENTION_POLICY × SEED_DEMO` matrix asserted exactly, strictly fail-closed defaults,
+contradiction refusal, invalid-flag refusal, missing-policy + `SEED_DEMO=1` refusal, flag
+normalisation, and no-secrets-in-decision-output for every combination).
+
+**E2E — `scripts/e2e.mjs` section 17 "NG-S14" (20 checks), executed on isolated scratch
+databases + a local pilot app instance; 306/306 suite green, exit 0:**
 
 1. demo mode: seed runs (SEED_DEMO=1) → 11 demo identities; default (unset) also seeds
 2. pilot mode: unset SEED_DEMO REFUSES (exit 2, zero rows); SEED_DEMO=0 skips cleanly
 3. production-grade mode (internal): SEED_DEMO=0 skips (zero rows)
 4. contradictory (SEED_DEMO=1 on real data) REFUSED — **and a pre-seeded marker row
    survives**, proving the gate fires before any write
-5. unverified env (no RETENTION_POLICY, no SEED_DEMO) REFUSED by default
+5. unverified env (no RETENTION_POLICY, no SEED_DEMO) REFUSED by default — **and**
+   unverified env + `SEED_DEMO=1` REFUSED as well (strictly fail-closed; the pre-seeded
+   marker row survives, zero users) — the final-security-correction headline case
 6. pilot app boots on a fresh pilot DB; `/api/health` reports `policy=pilot,
    enabled=false, policy_disables_sweep`
 7. published demo credentials (`ramesh@demo.in`, `dr.kulkarni@demo.in`) → **401** on the

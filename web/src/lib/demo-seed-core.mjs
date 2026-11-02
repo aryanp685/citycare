@@ -1,41 +1,60 @@
-// NG-S14 — demo-seed gate (Day 2). Framework-agnostic pure JS so the EXACT same file
-// runs under plain node (scripts/seed.mjs), vitest, and e2e (scripts/e2e.mjs).
+// NG-S14 — demo-seed gate (Day 2, strictly fail-closed revision 2026-11-02).
+// Framework-agnostic pure JS so the EXACT same file runs under plain node
+// (scripts/seed.mjs), vitest, and e2e (scripts/e2e.mjs).
 //
 // This is the single decision point for whether the demo seed script (the only code that
 // creates demo accounts — signup itself refuses @demo.in, `reserved_domain`) may run in a
-// given environment:
+// given environment. The matrix is STRICTLY FAIL-CLOSED: the ONLY path that creates demo
+// accounts is RETENTION_POLICY=demo with SEED_DEMO unset or exactly "1".
 //
-//   RETENTION_POLICY   SEED_DEMO      action
-//   ----------------   -----------    ---------------------------------------------
-//   demo               0              skip  (exit 0, nothing written, nothing truncated)
-//   demo               1 / unset      seed  (the synthetic-demo default)
-//   internal | pilot   0              skip  (real-data env, operator explicitly opts out)
-//   internal | pilot   1              refuse (exit 2 — contradictory: demo accounts
-//                                       requested on a real-data environment)
-//   internal | pilot   unset          refuse (exit 2 — fail-safe default: a real-data
-//                                       env must explicitly set SEED_DEMO=0)
-//   missing | invalid  0              skip
-//   missing | invalid  1              seed  (LOUD warning — explicit operator decision on
-//   ----------------   --------------- an UNVERIFIED environment)
-//   missing | invalid  unset          refuse (exit 2 — fail-safe default: the environment
-//                                       was not verified as a synthetic demo env)
+//   RETENTION_POLICY      SEED_DEMO        action
+//   --------------------  ---------------  -------------------------------------------------
+//   demo                  0                skip  (exit 0, nothing written, nothing truncated)
+//   demo                  1 / unset        seed  (the synthetic-demo default)
+//   demo                  invalid value    refuse (exit 2 — invalid flags are never guessed as unset)
+//   internal | pilot      0                skip  (real-data env, operator explicitly opts out)
+//   internal | pilot      1                refuse (exit 2 — contradictory: demo accounts
+//                                           requested on a real-data environment)
+//   internal | pilot      unset            refuse (exit 2 — fail-safe default: a real-data
+//                                           env must explicitly set SEED_DEMO=0)
+//   internal | pilot      invalid value    refuse (exit 2)
+//   missing | invalid     anything         refuse (exit 2 — an UNVERIFIED environment never
+//   --------------------  ---------------  seeds, regardless of SEED_DEMO; not even
+//                                           SEED_DEMO=0 "skips": the environment itself is
+//                                           unverified, so the run refuses loudly instead
+//                                           of proceeding with any assumption)
+//
+// "Invalid value" = the variable is present and non-empty after trimming but is not
+// exactly "0" or "1" (e.g. "2", "true", "yes", "01"). Empty/unset = "unset".
 //
 // Properties the e2e suite (section 17) and unit tests pin:
-//   * on a real-data environment the gate fires BEFORE any database write — a contradicting
-//     or default run cannot even TRUNCATE the database;
-//   * the only paths that create demo accounts are: RETENTION_POLICY=demo (with
-//     SEED_DEMO != 0) or an explicit SEED_DEMO=1 on an unverified environment (warned);
-//   * no hostname inference — the decision is made only from explicit env config.
+//   * on a refused run NOTHING touches the database — the gate fires BEFORE any database
+//     connection or write, so a contradicting/unverified run cannot even TRUNCATE the
+//     database (e2e proves it: a pre-seeded marker row survives every refused run);
+//   * no hostname inference — the decision is made only from explicit env config;
+//   * the decision output carries only the two config variables' names/values — never a
+//     database URL, never anything else from the environment.
 import { RETENTION_POLICIES } from "./retention-core.mjs";
 
 export const DEMO_SEED_SKIP_EXIT = 0;
 export const DEMO_SEED_REFUSE_EXIT = 2;
 
-/** "0"/"1" (trimmed); anything else is treated as unset (null) — never a silent enable. */
+/**
+ * @param {string | undefined} raw
+ * @returns {"0"|"1"|"invalid"|null} "0"/"1" when the value is exactly that (trimmed);
+ *   "invalid" when the value is present, non-empty, and not 0/1; null when unset (absent
+ *   or empty/whitespace-only).
+ */
 export function normalizeSeedFlag(raw) {
+  if (raw === undefined || raw === null) return null;
   const v = typeof raw === "string" ? raw.trim() : "";
-  return v === "0" || v === "1" ? v : null;
+  if (v === "") return null;
+  if (v === "0" || v === "1") return v;
+  return "invalid";
 }
+
+const refuse = (reason) => ({ action: "refuse", reason, warning: null, exitCode: DEMO_SEED_REFUSE_EXIT });
+const skip = (reason) => ({ action: "skip", reason, warning: null, exitCode: DEMO_SEED_SKIP_EXIT });
 
 /**
  * @param {Record<string, string | undefined>} env
@@ -45,56 +64,50 @@ export function resolveDemoSeedAction(env) {
   const policy = typeof env.RETENTION_POLICY === "string" ? env.RETENTION_POLICY.trim().toLowerCase() : "";
   const flag = normalizeSeedFlag(env.SEED_DEMO);
 
-  if (flag === "0") {
-    return {
-      action: "skip",
-      reason:
-        "SEED_DEMO=0 — demo seed disabled; nothing was written and nothing was truncated",
-      warning: null,
-      exitCode: DEMO_SEED_SKIP_EXIT,
-    };
+  // Strictly fail-closed (F1 rule 5): a missing/invalid RETENTION_POLICY identifies an
+  // UNVERIFIED environment. It never seeds — and it never "skips" either: any assumption
+  // about what an unverified database contains is unsafe, so the run refuses loudly
+  // regardless of SEED_DEMO.
+  if (!RETENTION_POLICIES.includes(policy)) {
+    return refuse(
+      `RETENTION_POLICY is missing/invalid (got: ${JSON.stringify(env.RETENTION_POLICY ?? null)}) — an unverified ` +
+        "environment is strictly fail-closed: demo seeding is refused regardless of SEED_DEMO " +
+        "(set RETENTION_POLICY=demo for a synthetic demo environment, or RETENTION_POLICY=internal|pilot with " +
+        "SEED_DEMO=0 for a real-data environment)",
+    );
   }
 
-  const realData = RETENTION_POLICIES.includes(policy) && policy !== "demo";
-  if (realData) {
-    if (flag === "1") {
-      return {
-        action: "refuse",
-        reason: `contradictory: SEED_DEMO=1 requests demo accounts, but RETENTION_POLICY=${policy} declares a real-data environment — demo seeding is refused and the database is left untouched`,
-        warning: null,
-        exitCode: DEMO_SEED_REFUSE_EXIT,
-      };
-    }
-    return {
-      action: "refuse",
-      reason: `RETENTION_POLICY=${policy} declares a real-data environment and SEED_DEMO is not explicitly 0 — refusing by default (set SEED_DEMO=0 to skip the demo seed)`,
-      warning: null,
-      exitCode: DEMO_SEED_REFUSE_EXIT,
-    };
+  // F1 rule 6: an invalid SEED_DEMO value is refused, never guessed (not treated as unset,
+  // not treated as 0, not treated as 1).
+  if (flag === "invalid") {
+    return refuse(
+      `SEED_DEMO has an invalid value (got: ${JSON.stringify(env.SEED_DEMO)}; expected exactly "0" or "1") — ` +
+        "refusing instead of guessing what was intended",
+    );
   }
 
   if (policy === "demo") {
+    if (flag === "0") {
+      return skip("SEED_DEMO=0 — demo seed disabled; nothing was written and nothing was truncated");
+    }
     return { action: "seed", reason: "ok", warning: null, exitCode: DEMO_SEED_SKIP_EXIT };
   }
 
-  // policy missing or invalid → unverified environment
-  if (flag === "1") {
-    return {
-      action: "seed",
-      reason: "ok_with_warning",
-      warning:
-        `RETENTION_POLICY is missing/invalid (got: ${JSON.stringify(env.RETENTION_POLICY ?? null)}) but SEED_DEMO=1 was ` +
-        "explicitly set — seeding demo data on an UNVERIFIED environment. If this database holds real data, that is a severe incident " +
-        "(see web/docs/operations/DEMO_AND_PILOT_ENVIRONMENT_ISOLATION.md).",
-      exitCode: DEMO_SEED_SKIP_EXIT,
-    };
+  // internal | pilot — real-data environment
+  if (flag === "0") {
+    return skip(
+      `RETENTION_POLICY=${policy} is a real-data environment and SEED_DEMO=0 — demo seed skipped; ` +
+        "nothing was written and nothing was truncated",
+    );
   }
-  return {
-    action: "refuse",
-    reason:
-      "RETENTION_POLICY is missing/invalid and SEED_DEMO is not explicitly 1 — refusing by default " +
-      "(set RETENTION_POLICY=demo for a synthetic demo environment, SEED_DEMO=0 to skip, or SEED_DEMO=1 to explicitly accept on an unverified environment)",
-    warning: null,
-    exitCode: DEMO_SEED_REFUSE_EXIT,
-  };
+  if (flag === "1") {
+    return refuse(
+      `contradictory: SEED_DEMO=1 requests demo accounts, but RETENTION_POLICY=${policy} declares a real-data ` +
+        "environment — demo seeding is refused and the database is left untouched",
+    );
+  }
+  return refuse(
+    `RETENTION_POLICY=${policy} declares a real-data environment and SEED_DEMO is not explicitly 0 — ` +
+      "refusing by default (set SEED_DEMO=0 to skip the demo seed)",
+  );
 }

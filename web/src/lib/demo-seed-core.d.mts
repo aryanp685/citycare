@@ -11,5 +11,6 @@ export interface DemoSeedDecision {
   exitCode: 0 | 2;
 }
 
-export function normalizeSeedFlag(raw: string | undefined): "0" | "1" | null;
+/** "0"/"1" (exactly, trimmed); "invalid" when present, non-empty, and not 0/1; null when unset (absent or empty). */
+export function normalizeSeedFlag(raw: string | undefined): "0" | "1" | "invalid" | null;
 export function resolveDemoSeedAction(env: Record<string, string | undefined>): DemoSeedDecision;
