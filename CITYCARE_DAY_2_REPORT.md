@@ -225,4 +225,16 @@ Environment: local sandbox (Node v22.22.3, PostgreSQL 16.2 via `pgserver` + comp
 | 6 | Prod build pilot | `NODE_OPTIONS=--max-old-space-size=1150 NEXT_PUBLIC_DEMO_MODE=0 RETENTION_POLICY=pilot npx next build` | exit 0 |
 | 7 | GitHub Actions CI | push to `arena/9f15ad3b-citycare` | green (run link + SHA below) |
 
-**11.6 Commit + CI (correction).** [FILL_AFTER_CI]
+**11.6 Commit + CI (correction).**
+
+- **Commit:** `93d5c5d` on `arena/9f15ad3b-citycare` (the correction; pushed to the session
+  branch only — **not merged, no deploy**, per the brief).
+- **GitHub Actions CI on the correction commit: SUCCESS** — run
+  [41448969087](https://github.com/aryanp685/citycare/actions/runs/41448969087) (push, sha
+  `93d5c5d`, started 12:58:04 UTC 2026-11-02, completed SUCCESS). This run executed the
+  full gate on the corrected code — lint, tsc, vitest (249), licence manifest, DB
+  bootstrap + seed (now through the fail-closed gate), production build, and the full e2e
+  suite **including the 20th §17 fail-closed check** (306 checks).
+- Environment labels: rows 1–6 above = LOCAL SANDBOX; row 7 = GITHUB ACTIONS / CI
+  (ubuntu-latest, PostgreSQL 17). CI ≠ production verification — the live Vercel site is
+  untouched and unverified by this correction (NG-G04 remains owner-side).
