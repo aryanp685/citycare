@@ -18,7 +18,7 @@
 | Severity | Count | One-liner |
 |---|---|---|
 | CRITICAL | 0 | — (append-only trigger, RESTRICT clinical FKs, hash chain, consent gate all verified present and live) |
-| HIGH | 1 | **NG-D05-1** audit appends run outside the business transaction at ~38 of 41 call sites (crash window ⇒ committed business state with no ledger row; no detection) |
+| HIGH | 1 | **NG-D05-1** audit appends ran outside the business transaction at **43 of 48** call-sites before the fix (only 5 in-tx); 10 core sites fixed → **33 post-commit remain, of which 21 are state-mutating (D74 follow-up) and 12 are by-design/read-only** (exact inventory in §D) |
 | MEDIUM | 3 | **NG-D04-1** document-delete leaves an orphaned encrypted blob window · **NG-D05-2** purge receipt audit swallows failures silently · **NG-D01-1** exact-duplicate index on `Observation` (0005 vs base) |
 | LOW | 5 | ledger_verify O(n) per health check · 28-query slot grid (bounded) · soft text user-refs by design · PolicyAcceptance history (by design) · `lower() LIKE` search (small table) |
 | INFO | 7 | FK-rule map verified good · 6 partial unique invariants · zero real orphans · atomic upserts · drift check clean · PK style drift · base+two-source schema rule |
@@ -34,7 +34,7 @@
 - Timestamp discipline: naive-vs-timestamptz mix (41 vs 28 columns) is *pinned at three layers* — process TZ=UTC before first parse (`db.ts`), `options="-c timezone=UTC"` on every pooled session, `ALTER DATABASE/ROLE SET timezone='UTC'` in bootstrap with a hard `die` if `show timezone` ≠ UTC; live fresh session confirmed `statement_timeout=8s`, `timezone=UTC`.
 
 **What the audit found wrong (details in D):**
-1. **NG-D05-1 (HIGH)** — `appendAudit` after the business `COMMIT` at ~38 of 41 call sites. A crash/failure between commit and append leaves business state with no ledger row; the chain stays "intact" (a missing row is not a break), so nothing detects it. The emergency break-glass route (the most sensitive path) is done *inside* the tx (`q: c`) — the inconsistency itself is the smell.
+1. **NG-D05-1 (HIGH)** — `appendAudit` after the business `COMMIT` at **43 of 48** call-sites before the fix. A crash/failure between commit and append leaves business state with no ledger row; the chain stays "intact" (a missing row is not a break), so nothing detects it. The emergency break-glass route (the most sensitive path) was already done *inside* the tx (`q: c`) — the inconsistency itself was the smell. (Reconciled inventory with before/after counts and the four risk categories: §D. Fault-injection proof that a failing append rolls back the whole operation: §H/§18.9.)
 2. **NG-D04-1 (MEDIUM)** — `DELETE /api/documents/[id]` runs `UPDATE … isDeleted=true` and `DELETE FROM DocumentBlob` as two separate autocommits; a crash between them leaves the encrypted bytes behind after the patient asked for erasure.
 3. **NG-D01-1 (MEDIUM)** — exact-duplicate index pair on `Observation(patientId, name, takenOn)`: base `citycare_init.sql:545` (`…_patientId_name_takenOn_idx`) and migration 0005 (`…_patient_name_taken_idx`, different name so `IF NOT EXISTS` doesn't help). Present in every fresh and existing DB (proven by the drift check). Pure write amplification.
 4. **NG-D05-2 (MEDIUM)** — purge route appends the `DATA_ERASED` receipt *after* the erasure tx with `.catch(() => null)`: the "erasure must never be blocked" priority is right, but the failure is invisible (no log, no response hint).
@@ -69,10 +69,19 @@ Evidence (LOCAL-DEMO catalog, 2026-11-02):
 ## D. NG-D05 — Transactions, concurrency, audit atomicity
 
 **NG-D05-1 (HIGH, fixed for the core set; remainder registered):**
-- Scan of every `appendAudit` call site: 41 sites in `web/src/app/api` + `lib`; **only 3 pass the tx client (`q: c`)** — all in the break-glass emergency route and doctor appointment-status route. The other ~38 run after the business `COMMIT` as an independent autocommit.
-- Failure mode (concrete): consent `POST` commits `status='APPROVED'`; process is killed (or the append hits the 8 s statement timeout under load) before `appendAudit(GRANT_CONSENT)` → the doctor has live access, the patient's transparency log has no grant row, `ledger_verify()` still reports intact. Same shape for REVOKE, BOOK, CREATE_ENCOUNTER, VERIFY_DOCTOR, EMERGENCY verdicts, etc.
+- **Reconciled inventory** (scripted against the `e950f26` code, by action name): **48 `appendAudit` call-sites total = 15 in-transaction + 33 post-commit** *after* the fix.
+  - **Before the fix (`ad6f71a`): 48 total = 5 in-tx + 43 post-commit.** The 5 pre-existing in-tx: `EMERGENCY_ACCESS` (break-glass), `CHECKED_IN/COMPLETED` + `AUTO_REVOKE_CONSENT` (doctor appointment status), `DOCTOR_VERIFIED/REJECTED` (doctor verify), `CANCEL_APPOINTMENT` (booking cancel).
+  - **Fixed this pass (10 call-sites moved into their existing tx, passing the tx client as `q:`):** `GRANT_CONSENT` ×2 (pending-path + fresh-insert-path), `REVOKE_CONSENT`, `BOOK_APPOINTMENT`, `CREATE_ENCOUNTER`, `PRESCRIBE_OVERRIDE`, `DELETE_DOC`, `EMERGENCY_REVIEWED`, `DOCTOR_SUSPENDED`, `ACCOUNT_CREATED/DOCTOR_ONBOARDED`.
+  - **Remaining 33 post-commit — NOT identical risks, four categories:**
+    | Category | Count | Actions | Risk |
+    |---|---|---|---|
+    | **State-mutating workflows — D74 follow-up** | **21** | `GRIEVANCE_UPDATED`, `INCIDENT_NOTIFIED`, `INCIDENT_UPDATED`, `INCIDENT_OPENED`, `ACCOUNT_UNLOCKED` (admin) · `RECOVERY_CODES_GENERATED`, `EMAIL_VERIFIED`, `PASSWORD_RESET` (auth) · `GRIEVANCE_OPENED`, `POLICY_ACCEPTED` (patient/legal) · `DEPENDENT_ADDED/SWITCH/HANDOVER`, `UPLOAD_DOC`, `CONFIRM_MED_DRAFT`, `NOMINEE_SET/CLEARED`, `OBSERVATION_ADDED/DELETED`, `MEDS_DRAFTED_FROM_PHOTO`, `PROFILE_UPDATED` (patient data) | Same as the fixed ones: committed state + missing receipt in the crash window. Mechanical fix (move into the existing tx + §18 mechanism check per site). |
+    | **Read/export events — no state change** | 4 | `VIEW_RECORD`, `DOWNLOAD_DOC` (stateless signed link), `EXPORT_FHIR`, `EXPORT_PRINT_SUMMARY` | The audit row *is* the effect; there is no business mutation to make atomic with. Listed for completeness; no D74 action applies. |
+    | **Denied-operation events — by design** | 4 | `WRITE_DENIED`, `VIEW_DENIED` ×2, `OBSERVATION_DELETE_DENIED` | They record *refusals*; no business tx exists. Post-commit is the correct placement. |
+    | **Erasure receipts — by design, outside the erasure tx** | 4 | `DATA_ERASED` + `DEPENDENT_ERASED` (purge — **now logging** on failure per A97) · `DATA_ERASED` ×2 (cron/daily demo sweep — **still silently swallowing** `.catch(() => null)`; not touched in this pass, included in D74 follow-up) | Erasure is a right that must never roll back because a ledger insert hiccuped; the price is a possibly-missing receipt, now visible (log) on the purge path and registered for the cron path. |
+- Failure mode (concrete, now covered by test 18.9): consent `POST` commits `status='APPROVED'`; process is killed (or the append fails) before/inside `appendAudit(GRANT_CONSENT)` → previously the doctor had live access with no grant row and `ledger_verify()` still reported intact; **after the fix the whole transaction rolls back** (proven by fault injection, §H).
 - Why HIGH for *this* product: the ledger is the trust core ("the patient can verify who held their data and when"); a silent evidence gap is a product-level defect even though no data is corrupted.
-- **Fix (in scope, done):** the audit append moved *inside* the existing `tx()` (passing the tx client) on the core trust-critical paths — consent grant + revoke, appointment book + cancel, encounter create + prescribe-override, document delete, doctor verify, emergency review verdict, signup. Mechanism test added (a failed business operation leaves **neither** business row **nor** ledger row; a success leaves both). The remaining non-core sites (read-only transparency pages, notifications, photo, fhir/print export, etc.) are registered in the gap register as a known limitation with the exact window and rationale for deferral — a full 30-site pass is deliberately not mixed into this day's change set.
+- **Status: PARTIALLY RESOLVED (D74), deliberately not RESOLVED.** The 21 state-mutating sites + the 2 silent cron receipts are the exact remainder; a full pass is a dedicated follow-up (not mixed into other feature days), each site with the §18 mechanism check.
 
 **NG-D04-1 (MEDIUM, fixed):** document delete now runs `UPDATE isDeleted` + `DELETE DocumentBlob` in **one** transaction (blob-orphan window closed); the `DELETE_DOC` audit moved into the same tx.
 
@@ -122,23 +131,24 @@ Findings:
 
 | # | Finding | Change | Risk |
 |---|---|---|---|
-| F1 | NG-D01-1 duplicate index | new `schema/migrations/0007_dedup_observation_index.sql` (`DROP INDEX IF EXISTS "Observation_patient_name_taken_idx"` — the 0005 copy; base index kept) | minimal: identical index remains, no query impact, idempotent |
-| F2 | NG-D05-1 audit atomicity (core set) | `appendAudit` moved inside the existing `tx()` with the tx client in: `patient/consents` (grant+revoke), `patient/appointments` (book+cancel), `doctor/patients/[id]/encounter` (create+prescribe-override), `documents/[id]` (delete), `admin/doctors/[id]/verify`, `admin/emergencies/[id]/review`, `auth/signup` | semantic change only on failure: a failed audit now rolls back the operation (all-or-nothing) instead of silently losing the receipt; success path byte-identical responses |
-| F3 | NG-D04-1 blob orphan | document delete wrapped in `tx()` (isDeleted + blob delete atomic) | none on success path; failure now leaves no half-deleted state |
-| F4 | NG-D05-2 invisible purge-receipt failure | `console.error` on failed `DATA_ERASED` append (semantics unchanged: erasure still completes) | none |
+| A94 | NG-D01-1 duplicate index | new `schema/migrations/0007_dedup_observation_index.sql` (`DROP INDEX IF EXISTS "Observation_patient_name_taken_idx"` — the 0005 copy; base index kept). **Rollback:** one `CREATE INDEX "Observation_patient_name_taken_idx" ON "Observation" ("patientId", name, "takenOn");` (recreates the redundant index only); no data migration, no recovery procedure needed (zero data touched); idempotent, safe on existing DBs (applied + re-run in place on the audit DB pre-e2e) | minimal: identical base index remains, no query impact |
+| A95 | NG-D05-1 audit atomicity (core set) | **10 call-sites** moved inside the existing `tx()` with the tx client: `patient/consents` (GRANT ×2 paths + REVOKE), `patient/appointments` (BOOK — cancel was already in-tx), `doctor/patients/[id]/encounter` (CREATE_ENCOUNTER + PRESCRIBE_OVERRIDE), `documents/[id]` (DELETE_DOC), `admin/emergencies/[id]/review` (EMERGENCY_REVIEWED + DOCTOR_SUSPENDED), `auth/signup` (ACCOUNT_CREATED/DOCTOR_ONBOARDED). (Doctor-verify and booking-cancel were already in-tx before this pass.) | semantic change only on failure: a failed audit now rolls back the operation (all-or-nothing) instead of silently losing the receipt; success path byte-identical responses. Proven by fault injection (18.9), not just by code reading |
+| A96 | NG-D04-1 blob orphan | document delete wrapped in `tx()` (isDeleted + blob delete atomic) | none on success path; failure now leaves no half-deleted state |
+| A97 | NG-D05-2 invisible purge-receipt failure | `console.error` on failed `DATA_ERASED`/`DEPENDENT_ERASED` appends (semantics unchanged: erasure still completes). Scope note: the 2 cron/daily sweep receipts share the after-tx design but were **not** touched this pass and still swallow silently — D74 follow-up | none |
 
 Explicitly **not** done (with reasons): NO ACTION/RESTRICT standardisation (no such FKs exist — earlier draft finding withdrawn after direct `pg_get_constraintdef` verification); mass naive→timestamptz migration (three-layer UTC pinning makes it a no-behaviour-gain risk); emergency-quota DB constraint (needs a sliding-window mechanism — deferred, rate-limit bucket mitigates); `ledger_verify` from-last-anchor (scale watch-item); multi-tenant clinic boundary (out of scope).
 
 ## H. Tests added (exact deltas in the gauntlet, Section J)
 
-New e2e section **§18 "Day 3 data-integrity"** — **25 checks** (runs against a fresh bootstrap; each run's e2e data is isolated by unique-stamp users, and the final re-seed restores clean demo state):
+New e2e section **§18 "Day 3 data-integrity"** — **30 checks** (25 in the original pass + 5 from review-correction F1; runs against a fresh bootstrap; each run's e2e data is isolated by unique-stamp users, and the final re-seed restores clean demo state):
 1. **concurrency/last-seat**: two parallel bookings for the same last seat ⇒ exactly one HTTP 201, one 409; DB holds exactly one live appointment for that (doctor, instant, seat).
 2. **ownership**: patient A's session cannot read patient B's record via the doctor-record path (no consent) ⇒ 403/404; unknown patient id ⇒ 404.
 3. **consent revocation immediacy**: doctor reads record (200) → patient revokes (200) → same doctor re-reads ⇒ 403.
-4. **ledger atomicity**: (a) after a successful consent grant, a `GRANT_CONSENT` ledger row exists for the exact consent id; (b) after a *refused* grant (unverified doctor), **no** ledger row is created and no consent row exists — failed operation leaves no partial evidence.
+4. **ledger atomicity (failure before mutation)**: (a) after a successful consent grant, a `GRANT_CONSENT` ledger row exists for the exact consent id; (b) after a *refused* grant (unverified doctor), **no** ledger row is created and no consent row exists — refused operation leaves no partial evidence. (The complementary failure — the audit append itself failing *after* the business mutation — is covered by 8 below; it was NOT covered before review-correction F1 and the report no longer implies it was.)
 5. **FK RESTRICT probe** (raw SQL in the test, as it is a schema guard, not an app path): `DELETE FROM "User"` for a user who owns a patient profile fails with 23503; `DELETE FROM "Patient"` with consents present fails with 23503.
 6. **migration 0007 + idempotency**: `Observation_patient_name_taken_idx` absent post-bootstrap; re-running the entire `migrations/` folder a second time exits 0 and leaves the schema byte-identical (pg_dump diff = empty).
 7. **document-delete atomicity**: API delete ⇒ `Document.isDeleted=true` AND `DocumentBlob` row gone (single assertion pair).
+8. **fault-injected audit failure rolls back the whole operation (18.9, F1 — LOCAL-DEMO only, 5 checks)**: a `BEFORE INSERT` trigger on `AuditLog` (armed only when `DATABASE_URL` is a local loopback DB — refused, not merely skipped, elsewhere) raises for `action='GRANT_CONSENT'`, so on a real consent grant the append fails **after** the consent mutation executed inside the same transaction. Asserted: (a) the API returns 5xx, (b) the consent row is gone — the real DB transaction rolled back business state, (c) **zero** partial `AuditLog` rows and `ledger_verify()` still reports 0 breaks — no half-written ledger state, (d) cleanup in the guaranteed `finally` removed trigger + function (verified via `pg_trigger`/`pg_proc`), (e) the normal grant path succeeds afterwards with exactly one new ledger row. There is **no production/pilot switch** that could arm this — the guard is a loopback-URL check in test code, and the DB object is test-local.
 
 ## I. Owner-side actions (unchanged from Day 2 list + new)
 
@@ -159,6 +169,18 @@ New e2e section **§18 "Day 3 data-integrity"** — **25 checks** (runs against 
 - post-gauntlet: DB re-seeded to clean demo state (bootstrap `✔ database ready`, ledger 9 rows / 0 breaks); scratch `driftcheck`/`driftcheck2` DBs dropped (0 leftovers).
 - CI/production: **not run** (owner-side after approval) — no merge, no PR, no deploy per the Day 3 brief.
 
+### J2. Correction-pass gauntlet (2026-11-02, PR #9 review-corrections F1–F3 — same sandbox, same env)
+
+Changes since the gauntlet above: e2e §18.9 fault-injection test (5 new checks) + documentation reconciliation only. **No application source code changed** (route/ledger code is byte-identical to the gauntlet above; the running server's build was rebuilt and re-verified regardless).
+
+1. `cd web && npx eslint .` → **0 errors, exit 0**
+2. `cd web && npx tsc --noEmit` → **0 errors, exit 0**
+3. `cd web && npx vitest run` → **24 files passed, 249/249 tests passed, exit 0**
+4. `cd web && node scripts/e2e.mjs` (server on :3000, fresh seed) → **336 passed, 0 failed, 0 skipped, exit 0** — = 306 baseline + 30 §18 checks (incl. the 5 fault-injection checks of §18.9); logs at `/home/user/e2e-f1-final2.log` (sandbox-local). First two runs of the day are on record too: (i) 331/0/**1 skipped** — the injection gate's loopback regex refused a user-embedded URL (logged as A98), (ii) 335/**1 failed** — §18.9b's first draft counted a *pre-existing* pending REQUESTED consent (legitimately rolled back to REQUESTED by the injected failure) as residue; fixed to an exact before/after snapshot diff, which then proved the rollback.
+5. `cd web && NODE_OPTIONS=--max-old-space-size=1150 RETENTION_POLICY=demo NEXT_PUBLIC_DEMO_MODE=1 npx next build` → **exit 0** (54 static + 1 dynamic)
+6. `cd web && NODE_OPTIONS=--max-old-space-size=1150 RETENTION_POLICY=pilot NEXT_PUBLIC_DEMO_MODE=0 npx next build` → **exit 0** (54 static + 1 dynamic)
+- post-run: **injection objects verified absent** (`pg_trigger`/`pg_proc` LIKE `e2e_day3_audit_inject%` → 0), DB re-seeded to clean demo state (ledger 9 rows / 0 breaks), demo server restarted on the rebuilt bundle, `/api/health` → `status:"ok"`, `db.reachable:true`, `ledgerBreaks:0`.
+
 ## K. Master gap register (Day 3 rows; full register lives in `web/DRAWBACKS_AND_BUGFIXES.md` §B)
 
 | ID | Severity | Status | Note |
@@ -173,9 +195,25 @@ New e2e section **§18 "Day 3 data-integrity"** — **25 checks** (runs against 
 | NG-D04-2 ledger_verify O(n) on /health | LOW | REGISTERED (scale watch-item) | NG-I9 owner-side |
 | NG-D04-3 28-query slot grid | LOW | REGISTERED (bounded, acceptable) | — |
 | NG-D04-4 LIKE search | INFO | REGISTERED (pg_trgm future) | small table today |
-| NG-D05-1 audit outside tx (systemic) | HIGH | PARTIALLY RESOLVED (core set fixed) | remaining ~29 sites registered; full pass = future dedicated day |
+| NG-D05-1 audit outside tx (systemic) | HIGH | PARTIALLY RESOLVED (core set fixed, D74) — **not RESOLVED** | fixed set now fault-injection-tested (e2e §18.9); remainder = **21 state-mutating sites + 2 silent cron receipts** (D74), 12 post-commit sites are by-design/read-only (inventory in §D); full pass = dedicated approved follow-up |
 | NG-D05-2 purge receipt invisible failure | MEDIUM | RESOLVED (local) | log added; semantics unchanged |
 | NG-D05-3 emergency quota TOCTOU | LOW | REGISTERED | rate-limit bucket mitigates |
 | NG-D06-1 multi-operator boundary | — | REGISTERED (out of scope) | assess when 2nd clinic signs up |
 
 *Every "RESOLVED" above means resolved on LOCAL-DEMO with regression tests; production-effect verification (CI on main + deploy) is owner-side per the standing rule "no RESOLVED on local-only evidence" — statuses in the gap register use PARTIALLY RESOLVED/RESOLVED(local) accordingly.*
+
+## L. Deployment status & Vercel preview disclosure (2026-11-02, added for review-correction F3)
+
+This section replaces the earlier, imprecise "no Vercel touched / no production database access" statements. The three things that were conflated:
+
+| Thing | Status (2026-11-02) |
+|---|---|
+| **Production deployment** (`citycare-z95n.vercel.app` alias) | **Unchanged.** Still the promoted `dpl_963rr6Ha5zak2ixfihYZ8Pv4yQAQ` at commit `ad6f71a` (main). No promotion happened from the PR push; the alias still points at that deployment. |
+| **Vercel Preview deployments** | **Two new automatic ones exist**, created by Vercel's git integration when the branches were pushed (the PR #9 push created one; the earlier Day-2 docs-branch push created the other). Preview #1: `dpl_2cM2PRMnHUTJCsQusHMZJWXMceeF` (this branch @ `e950f26`, READY 2026-11-02 14:09:13Z, alias `citycare-z95n-git-arena-c08-eac69c-iamjarvis9896-3988s-projects.vercel.app`). Preview #2: `dpl_9BVtnY7hQZXWa6kZhCCGMoaitv9X` (Day-2 docs branch `arena/9f15ad3b-citycare` @ `aee68db`, PR #8, READY 13:19:07Z). Their URLs were **not** opened and no application probe was run against them from this side. |
+| **Production database access** | **Accessed — by Vercel's automatic preview build, not by the agent.** The preview build ran the project's prebuild (`scripts/prebuild-schema-sync.mjs`) against the production Neon database and **applied migration 0007** (evidence, verbatim from the preview build log `dpl_2cM2…`: `▶ database: neondb (PostgreSQL 18.6 (4e5fd08))` · `migration applied: 0007_dedup_observation_index.sql` at 14:08:49Z · `verified: 36 tables · ledger_append/verify · tamper trigger · 3 partial unique indexes · timezone=UTC` · `seed gate: skip — SEED_DEMO=0 — nothing was written and nothing was truncated`). Impact: DDL only — the 0007 statement drops the redundant duplicate `Observation` index (the identical base index remains); **zero data rows were written, truncated, or seeded**. Direct agent/sandbox access to the production DB: **none** (the sandbox has no route to `*.vercel.app` or Neon). |
+
+Consequences & rollback:
+- If the owner wants the production schema returned to the pre-Day-3 state, the documented one-statement rollback applies (`CREATE INDEX "Observation_patient_name_taken_idx" ON "Observation" ("patientId", name, "takenOn");`) — no data recovery involved.
+- This is a direct consequence of the existing Day-2 architecture (A76/D62: prebuild schema-sync + automatic previews on push), not of this pass; the same prebuild pattern ran for every earlier preview build (each a no-op for already-applied migrations). The owner may decide — on merge or before — whether previews should keep targeting the production DB (current design) or point at an isolated DB.
+
+**Owner action (new, F3):** verify preview deployment DB + secret isolation separately — specifically, check the `DATABASE_URL` env var's targets in the Vercel project (the preview *build* demonstrably had the production URL; whether the preview *runtime* does depends on its target setting), and decide preview-DB isolation policy. Also: the orphan standalone `web` Vercel project (from Day 1) remains an owner-side deletion item.

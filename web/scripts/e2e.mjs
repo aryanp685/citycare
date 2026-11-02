@@ -1787,6 +1787,79 @@ if (LOCAL) {
     )).rows[0];
     check("18.8c isDeleted=true AND zero blob rows (no orphaned ciphertext)", state?.gone === true && state?.blobs === 0, JSON.stringify(state));
   }
+
+  // ---- 18.9 FAULT INJECTION: when the audit append itself fails, the whole operation must roll back ----
+  // This is the test that proves A95's atomicity claim with the REAL database transaction:
+  // a BEFORE-INSERT trigger on AuditLog raises for action='GRANT_CONSENT', so the append fails
+  // AFTER the consent mutation has executed inside the same tx. Expected: 5xx, consent rolled
+  // back, zero partial ledger rows, chain still intact. Injection lives in the LOCAL test DB
+  // only (guarded below) and is removed in a finally path; the normal path is re-verified after.
+  {
+    const injectUrl = process.env.DATABASE_URL ?? "";
+    let isLoopback = false;
+    try { const u = new URL(injectUrl); isLoopback = u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname === "::1"; } catch { /* not a parseable URL — refuse */ }
+    const canInject = LOCAL && isLoopback;
+    if (!canInject) {
+      skip("18.9 audit-fault injection", "DATABASE_URL is not a local loopback database — injection refused (safety gate)");
+    } else {
+      const TRIG = "e2e_day3_audit_inject";
+      const FN = "e2e_day3_audit_inject_fn";
+      const cleanup = async () => {
+        try { await sql(`DROP TRIGGER IF EXISTS ${TRIG} ON "AuditLog"`); } catch { /* already gone */ }
+        try { await sql(`DROP FUNCTION IF EXISTS ${FN}()`); } catch { /* already gone */ }
+      };
+      // belt-and-braces: clear any leftover from a previously crashed run BEFORE arming
+      await cleanup();
+      // snapshot the pair's consent state; the rollback assertion is an EXACT diff against it
+      // (a pre-existing pending REQUESTED row from an earlier §18 step is legitimate and must
+      //  survive — what must not happen is a NEW row or a row FLIPPING to APPROVED)
+      const snap = async () => (await sql(
+        `SELECT count(*)::int AS total,
+                count(*) FILTER (WHERE status = 'APPROVED')::int  AS approved,
+                count(*) FILTER (WHERE status = 'REQUESTED')::int AS requested
+         FROM "Consent" WHERE "patientId" = $1 AND "doctorId" = $2`, [e2ePid, e2eDoctorId])).rows[0];
+      // normalize: a live APPROVED consent would make the grant 409 before any tx — revoke it
+      const pre = await snap();
+      if (pre?.approved) {
+        const liveId = (await sql(`SELECT id FROM "Consent" WHERE "patientId"=$1 AND "doctorId"=$2 AND status='APPROVED' LIMIT 1`, [e2ePid, e2eDoctorId])).rows[0]?.id;
+        if (liveId) await pat.patch(`/api/patient/consents?id=${liveId}`, { reason: "day3 18.9 pre-arm normalize" });
+      }
+      const s0 = await snap();
+      try {
+        await sql(`CREATE FUNCTION ${FN}() RETURNS trigger AS $$
+          BEGIN RAISE EXCEPTION 'E2E-DAY3-AUDIT-INJECTION: forced ledger-append failure (rollback test)' USING ERRCODE = 'P0001'; END; $$ LANGUAGE plpgsql`);
+        await sql(`CREATE TRIGGER ${TRIG} BEFORE INSERT ON "AuditLog" FOR EACH ROW
+                   WHEN (NEW.action = 'GRANT_CONSENT') EXECUTE FUNCTION ${FN}()`);
+        const baseGrants = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'GRANT_CONSENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? 0;
+
+        // real state-mutating workflow: the consent grant (its audit append now fails mid-tx)
+        const grant = await pat.post("/api/patient/consents", { doctorId: e2eDoctorId, scope: "SUMMARY_ONLY", expiryDays: 7 });
+        check("18.9a grant with a failing audit append → 5xx (the operation is refused, not silently half-done)", grant.status >= 500 && grant.status < 600, `got ${grant.status} ${JSON.stringify(grant.data)}`);
+
+        const s1 = await snap();
+        check("18.9b business mutation ROLLED BACK (no new consent row, none flipped to APPROVED)",
+          s1.total === s0.total && s1.approved === s0.approved && s1.requested === s0.requested,
+          `before=${JSON.stringify(s0)} after=${JSON.stringify(s1)}`);
+
+        const after = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'GRANT_CONSENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? 0;
+        const breaks = (await sql(`SELECT count(*)::int AS n FROM ledger_verify()`)).rows[0]?.n ?? -1;
+        check("18.9c NO partial AuditLog entry (count unchanged) AND chain still intact", after === baseGrants && breaks === 0, `before=${baseGrants} after=${after} breaks=${breaks}`);
+      } finally {
+        await cleanup();
+        const trigLeft = (await sql(`SELECT count(*)::int AS n FROM pg_trigger WHERE tgname = $1 AND NOT tgisinternal`, [TRIG])).rows[0]?.n;
+        const fnLeft = (await sql(`SELECT count(*)::int AS n FROM pg_proc WHERE proname = $1`, [FN])).rows[0]?.n;
+        check("18.9d failure-injection cleanup completed (trigger + function removed)", trigLeft === 0 && fnLeft === 0, `trigger=${trigLeft} fn=${fnLeft}`);
+        // normal success path after cleanup: grant works again and its ledger row commits
+        const before2 = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'GRANT_CONSENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? -1;
+        const grant2 = await pat.post("/api/patient/consents", { doctorId: e2eDoctorId, scope: "SUMMARY_ONLY", expiryDays: 7 });
+        const after2 = (await sql(`SELECT count(*)::int AS n FROM "AuditLog" WHERE action = 'GRANT_CONSENT' AND "actorId" = $1`, [e2eUid])).rows[0]?.n ?? -1;
+        check("18.9e normal grant after cleanup → success AND exactly one new ledger row", [200, 201].includes(grant2.status) && after2 === before2 + 1, `status=${grant2.status} before2=${before2} after2=${after2}`);
+        // restore §18's end state (no live consent on the pair)
+        const live2 = (await sql(`SELECT id FROM "Consent" WHERE "patientId" = $1 AND "doctorId" = $2 AND status = 'APPROVED' LIMIT 1`, [e2ePid, e2eDoctorId])).rows[0]?.id;
+        if (live2) await pat.patch(`/api/patient/consents?id=${live2}`, { reason: "day3 18.9 restore" });
+      }
+    }
+  }
 }
 
 if (pgClient) await pgClient.end();
