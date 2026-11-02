@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DATA_INVENTORY, DEMO_MODE, DEMO_RETENTION_DAYS, GRIEVANCE, NEGATIVE_ASSURANCES, PRIVACY_NOTICE_VERSION, PROCESSORS } from "@/lib/legal";
-import { LEGAL_LANGS, LEGAL_SUMMARY, pickLang } from "@/lib/legal-i18n";
+import { LEGAL_LANGS, LEGAL_SUMMARY, pickLang, howLongBody } from "@/lib/legal-i18n";
+import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
 
 export const metadata: Metadata = { title: "Privacy notice" };
 
@@ -13,6 +14,14 @@ export const metadata: Metadata = { title: "Privacy notice" };
 export default async function PrivacyNotice({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
   const lang = pickLang((await searchParams).lang);
   const t = LEGAL_SUMMARY[lang];
+  // NG-S15 — the retention copy must state what this deployment ACTUALLY does: the same
+  // policy decision the cron and /api/health use (sweep armed only for an explicit,
+  // consistent RETENTION_POLICY=demo).
+  const retention = evaluateRetentionPolicy(process.env);
+  const points =
+    lang === "en"
+      ? t.points.map((pt) => (pt.heading === "How long" ? { ...pt, body: howLongBody(retention.enabled, DEMO_RETENTION_DAYS) } : pt))
+      : t.points;
   return (
     <article>
       <h1>Privacy notice</h1>
@@ -29,7 +38,7 @@ export default async function PrivacyNotice({ searchParams }: { searchParams: Pr
         <strong>{t.title}</strong>
         <p className="text-sm">{t.operativeNote}{t.reviewNote ? ` ${t.reviewNote}` : ""}</p>
         <ul>
-          {t.points.map((pt) => <li key={pt.heading}><strong>{pt.heading}:</strong> {pt.body}</li>)}
+          {points.map((pt) => <li key={pt.heading}><strong>{pt.heading}:</strong> {pt.body}</li>)}
           <li>{t.rights}</li>
           <li>{t.grievance}</li>
           <li>{t.children}</li>
@@ -43,7 +52,12 @@ export default async function PrivacyNotice({ searchParams }: { searchParams: Pr
       <h2>1. Who is responsible (the &ldquo;Data Fiduciary&rdquo;)</h2>
       <p>CityCare is a final-year academic project built by a student team at G H Raisoni College (Pune). It is operated on a non-commercial basis. For any request about your data, use the <Link href="/legal/grievance">grievance &amp; rights</Link> page. Named contact: {GRIEVANCE.officer}.</p>
       {DEMO_MODE && (
-        <p><strong>Public demo notice.</strong> This deployment is a demonstration. All seeded patients and doctors are synthetic. Please do not enter real personal or health data about yourself or anyone else. Accounts created on the demo are erased automatically {DEMO_RETENTION_DAYS} days after creation (see §6).</p>
+        <p>
+          <strong>Public demo notice.</strong> This deployment is a demonstration. All seeded patients and doctors are synthetic. Please do not enter real personal or health data about yourself or anyone else.{" "}
+          {retention.enabled
+            ? `Accounts created on the demo are erased automatically ${DEMO_RETENTION_DAYS} days after creation (see §6).`
+            : "This deployment does not auto-erase accounts; you can erase your data any time (Access & trust → Erase my data)."}
+        </p>
       )}
 
       <h2>2. What personal data we process (Rules r.3(1)(a) — itemised)</h2>
@@ -79,7 +93,12 @@ export default async function PrivacyNotice({ searchParams }: { searchParams: Pr
 
       <h2>6. How long we keep it (DPDP s.8(7); Rules r.6(1)(e))</h2>
       <ul>
-        <li><strong>Your account and record</strong> — until you erase them (Access &amp; trust → Erase my data) or, on the public demo, {DEMO_RETENTION_DAYS} days after creation, whichever is earlier.</li>
+        <li>
+          <strong>Your account and record</strong> — until you erase them (Access &amp; trust → Erase my data)
+          {retention.enabled
+            ? <> or, on the public demo, {DEMO_RETENTION_DAYS} days after creation, whichever is earlier</>
+            : <>; this deployment does not auto-erase accounts</>}.
+        </li>
         <li><strong>On erasure</strong> — everything you contributed is deleted; notes a doctor wrote about you on CityCare are reduced to an anonymous shell (the clinician&apos;s own record-keeping duty under the NMC/MCI Code of Medical Ethics 2002 Reg. 1.3.1 — 3 years — and the DGHS hospital manual — up to 10 years — belongs to them, not to us). Your nominee&apos;s details and your inbox are deleted too.</li>
         <li><strong>The access ledger</strong> — kept for at least one year after erasure, as Rules r.6(1)(e) requires, and because it is <em>your</em> evidence of who saw your record and when it was destroyed. It contains actor ids, actions and timestamps — not the clinical content.</li>
         <li><strong>Provider backups</strong> — the database provider keeps short-lived point-in-time backups that roll off automatically; we do not restore erased data from them.</li>

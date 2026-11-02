@@ -1,10 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DEMO_MODE, DEMO_RETENTION_DAYS, TERMS_VERSION } from "@/lib/legal";
+import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
 
 export const metadata: Metadata = { title: "Terms of use" };
 
 export default function Terms() {
+  // NG-S15 — state the erasure clause only when the sweep is actually armed (same decision as the cron).
+  const retention = evaluateRetentionPolicy(process.env);
   return (
     <article>
       <h1>Terms of use</h1>
@@ -15,7 +18,12 @@ export default function Terms() {
         <li>CityCare is a <strong>patient-owned health record</strong> with consent-gated doctor access, built as a final-year academic project. It is offered free and on a non-commercial basis.</li>
         <li>It is <strong>not</strong> a hospital, clinic, pharmacy or telemedicine service, <strong>not</strong> a medical device, and <strong>not</strong> certified under ABDM. Nothing on the site is medical advice, diagnosis or treatment. Safety alerts are deterministic rule matches shown to a clinician for their judgement.</li>
         <li><strong>In an emergency, call 108 or 112.</strong> Do not rely on CityCare to reach a doctor.</li>
-        {DEMO_MODE && <li><strong>Public demo.</strong> This deployment may be reset at any time; accounts you create are erased after {DEMO_RETENTION_DAYS} days; seeded people are fictional. No service level is promised.</li>}
+        {DEMO_MODE && (
+          <li>
+            <strong>Public demo.</strong> This deployment may be reset at any time;{" "}
+            {retention.enabled ? <>accounts you create are erased after {DEMO_RETENTION_DAYS} days;</> : <>this deployment does not auto-erase accounts;</>} seeded people are fictional. No service level is promised.
+          </li>
+        )}
       </ul>
 
       <h2>2. Who may use it</h2>

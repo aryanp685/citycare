@@ -31,7 +31,9 @@ try {
 // Next dev hot-reload would otherwise leak a new Pool on every edit.
 const globalForDb = globalThis as unknown as { ccPool?: Pool };
 
-function nodeConnectionString(): string {
+/** The Node-runtime connection string after pooler handling (A42). Exported for the backup
+ *  path, which needs a DEDICATED client (no pool, no 8 s statement_timeout) for COPY. */
+export function nodeConnectionString(): string {
   // The Neon ⇄ Vercel Marketplace integration injects BOTH a pooled URL
   // (DATABASE_URL, via PgBouncer in transaction mode) and a direct one
   // (DATABASE_URL_UNPOOLED). This Pool sends startup parameters

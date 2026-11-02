@@ -1,7 +1,9 @@
 # CityCare — legal & compliance register
 
 _Last verified 28 Sep 2026 against the code in this folder and the live deployment
-(`https://citycare-xi.vercel.app`). Written by an engineer, not a lawyer: every row says what
+(the stack now lives at `https://citycare-z95n.vercel.app`; control matrix re-checked against
+`main@9212ee4` in the 2026-11-01 Step-1 audit, retention row updated 2026-11-02 for NG-S15).
+Written by an engineer, not a lawyer: every row says what
 the law asks, what the code does about it and how to prove it. Where we are **not** compliant
 yet it says so. Get this reviewed by the college's legal cell before any non-demo use._
 
@@ -53,7 +55,7 @@ LLM-generated diagnoses presented as medical advice, fake "NMC verified"/"ABDM c
 | Nomination (s.14) | `PUT/GET/DELETE /api/patient/nominee`, form on *Access & trust*, ledger `NOMINEE_SET/CLEARED`, erased with the record | e2e `nominee saved (DPDP s.14)` |
 | Reasonable security safeguards (s.8(5), r.6) | async scrypt N=2¹⁷, lockout + admin unlock, **server-side sessions** (revocable, device list, sign-out-everywhere), **rate limiting** per IP/user, signed HttpOnly cookies, Origin check, RBAC in SQL, statement timeouts, CSP `frame-ancestors`, HSTS (Vercel), hash-chained append-only ledger verified daily, **break-glass review queue with auto-suspension**, encryption at rest (Neon) | `/api/health`, `/api/cron/daily`, e2e `D2/D8/D9/D14/D41:` |
 | Logs retained ≥ 1 year (r.6(1)(e)) | `AuditLog` is UPDATE/DELETE-blocked by trigger; erasure never touches it | `schema/sql/ledger.sql` |
-| Erase when purpose served (s.8(7)) | Demo retention: self-registered accounts erased after `DEMO_RETENTION_DAYS` (7) by the daily cron; `@demo.in` reserved for seeded identities and refused at signup so nobody can hide under the exemption | cron response `retention{due,patients,doctors}`; e2e `reserved_domain` |
+| Erase when purpose served (s.8(7)) | Demo retention, **policy-gated (NG-S15)**: self-registered accounts are erased after `DEMO_RETENTION_DAYS` (7) by the daily cron **only when the deployment declares `RETENTION_POLICY=demo`** (with the demo banner on). Real-data deployments (`internal`/`pilot`) and any missing/invalid/contradictory configuration **disable the sweep (fail-safe)** — an unknown environment never erases data. `@demo.in` reserved for seeded identities and refused at signup so nobody can hide under the exemption. The effective policy is exposed (safe fields only) on `/api/health` and in the cron response; the notice/banner/terms state exactly what this deployment does | cron response `retention{policy,enabled,reason,due,patients,doctors}`; e2e `reserved_domain` + `S15:` suite (15 checks) |
 | Breach intimation (r.7) | **Tooling** (`/admin/incidents`): open an incident (72-h Board clock starts at `detectedAt`) → one-click intimation to affected users (all patients / all users / listed emails; nature, extent, timing, advice; dependents routed to guardians) → cause + remediation → `boardNotifiedAt` → downloadable r.7(2) JSON report with the intimation count; ledger `INCIDENT_OPENED/NOTIFIED/UPDATED`. Email/SMS leg still needs a provider (F9). Runbook = §4 | e2e `L-G5:` (8 checks) |
 | Cross-border transfer (s.16) | Disclosed: Vercel `sin1` + Neon Singapore; no restricting notification applies as at version date; Mumbai cutover scripted (F21) | `/legal/privacy` §5 |
 | Data Processor contracts (s.8(2)) | Vercel and Neon standard DPAs apply by ToS acceptance; listed in the notice | `PROCESSORS` |
@@ -83,6 +85,6 @@ LLM-generated diagnoses presented as medical advice, fake "NMC verified"/"ABDM c
 ## 5. Demo-specific rules (this deployment)
 
 - Seeded people are fictional; registration numbers like `MMC/2024/98765` are synthetic and labelled as demo data.
-- Banner on every page; signup form repeats it; accounts self-registered are erased after 7 days by `/api/cron/daily` (02:30 IST) — ledger entry `DATA_ERASED reason=demo_retention`.
+- Banner on every page; signup form repeats it; accounts self-registered are erased after 7 days by `/api/cron/daily` (02:30 IST) — ledger entry `DATA_ERASED reason=demo_retention`. **This erasure is armed only because the demo declares `RETENTION_POLICY=demo` (NG-S15): a deployment that does not explicitly declare a policy — or declares `internal`/`pilot` for real data — never runs the sweep (fail-safe; visible in `/api/health` → `retention`).**
 - `CRON_SECRET` protects the job (401 without it, 503 if unset). Vercel marks it *sensitive*, so `vercel env pull` returns a placeholder — keep the real value in the team password manager; the local `.env.local` copy is what the deploy script set.
 - No real patient data may be entered — Terms §3. If someone does, the erasure path exists and the sweep is the backstop.

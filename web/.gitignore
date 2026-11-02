@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# …but the value-free template IS committed (NG-G01: onboarding needs it in the repo)
+!.env.example
 
 # vercel
 .vercel

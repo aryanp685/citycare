@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEmbedded } from "@/components/use-embedded";
+import { DEMO_MODE } from "@/lib/legal";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -77,7 +78,11 @@ export default function SignupPage() {
             <input type="checkbox" className="mt-1" checked={legal.adult} onChange={(e) => setLegal({ ...legal, adult: e.target.checked })} required />
             <span>I am 18 or older. {role === "PATIENT" && "(Accounts for minors need a parent or guardian — coming later.)"}</span>
           </label>
-          <p className="text-xs text-muted">Public demo: do not enter real personal or health data; accounts are erased automatically after a few days.</p>
+          {DEMO_MODE && (
+            <p className="text-xs text-muted">
+              Public demo: do not enter real personal or health data; on the public demo, accounts are erased automatically after a few days.
+            </p>
+          )}
         </div>
         {msg && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{msg}</p>}
         <button className="btn btn-primary justify-center" disabled={busy || !legal.acceptPolicy || !legal.adult}>{busy ? "Creating…" : "Create account"}</button>

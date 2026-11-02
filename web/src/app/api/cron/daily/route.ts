@@ -8,14 +8,18 @@ import { ok, err } from "@/lib/api";
 import { appendAudit } from "@/lib/ledger";
 import { erasePatientData, anonymiseDoctor } from "@/lib/erasure";
 import { DEMO_RETENTION_DAYS, DEMO_SEED_DOMAIN } from "@/lib/legal";
+import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/cron/daily — the single Vercel cron (Hobby allows daily jobs only).
- *   1. Demo retention sweep (L1, DPDP s.8(7)): accounts self-registered on the public demo are
- *      erased DEMO_RETENTION_DAYS after creation. Seeded @demo.in identities are never touched.
- *      Each erasure is a DATA_ERASED ledger entry with reason=demo_retention.
+ *   1. Retention sweep (L1, DPDP s.8(7) — policy-gated, NG-S15): accounts self-registered on the
+ *      public demo are erased DEMO_RETENTION_DAYS after creation, but ONLY when the deployment
+ *      explicitly declares RETENTION_POLICY=demo. Real-data deployments (internal/pilot) and any
+ *      missing/invalid/contradictory configuration DISABLE the sweep (fail-safe: an unknown
+ *      environment never erases data). Seeded @demo.in identities are never touched. Each erasure
+ *      is a DATA_ERASED ledger entry with reason=demo_retention.
  *   2. Ledger integrity check (what /api/health does) so the cron doubles as the daily monitor
  *      and as activity that keeps a free Postgres project from being paused.
  *   3. Housekeeping: expired/revoked sessions and stale rate-limit windows (D44).
@@ -35,19 +39,28 @@ export async function GET(req: Request) {
   if (!okAuth) return err(401, "unauthorized", "cron secret mismatch");
 
   const t0 = Date.now();
-  const due = await all<{ uid: string; role: "PATIENT" | "DOCTOR"; pid: string | null; did: string | null }>(
-    `SELECT u.id AS uid, u.role, p.id AS pid, d.id AS did
-       FROM "User" u
-       LEFT JOIN "Patient" p ON p."userId" = u.id
-       LEFT JOIN "Doctor"  d ON d."userId" = u.id
-      WHERE u.role IN ('PATIENT','DOCTOR')
-        AND u.status <> 'DELETED'
-        AND lower(u.email) NOT LIKE '%@' || $1
-        AND u."createdAt" < now() - make_interval(days => $2::int)
-      ORDER BY u."createdAt"
-      LIMIT 200`,
-    [DEMO_RETENTION_DAYS, DEMO_RETENTION_DAYS],
-  );
+
+  // NG-S15 — policy gate: the sweep runs only for an explicit, consistent RETENTION_POLICY=demo.
+  // The decision (and any fail-safe warning) is computed once here and echoed in the response so
+  // the effective policy is observable without any secret.
+  const retention = evaluateRetentionPolicy(process.env);
+  if (retention.warning) console.warn("[cron/daily] retention sweep disabled — " + retention.warning);
+
+  const due = retention.enabled
+    ? await all<{ uid: string; role: "PATIENT" | "DOCTOR"; pid: string | null; did: string | null }>(
+        `SELECT u.id AS uid, u.role, p.id AS pid, d.id AS did
+           FROM "User" u
+           LEFT JOIN "Patient" p ON p."userId" = u.id
+           LEFT JOIN "Doctor"  d ON d."userId" = u.id
+          WHERE u.role IN ('PATIENT','DOCTOR')
+            AND u.status <> 'DELETED'
+            AND lower(u.email) NOT LIKE '%@' || $1
+            AND u."createdAt" < now() - make_interval(days => $2::int)
+          ORDER BY u."createdAt"
+          LIMIT 200`,
+        [DEMO_RETENTION_DAYS, DEMO_RETENTION_DAYS],
+      )
+    : [];
 
   const swept = { patients: 0, doctors: 0, failed: 0, deferred: 0 };
   for (const r of due) {
@@ -68,8 +81,13 @@ export async function GET(req: Request) {
     }
   }
 
-  // D13 — anchor the chain head (skips if today's head is already anchored)
-  const anchor = await anchorLedgerHead({ ots: process.env.ANCHOR_OTS !== "0" }).catch((e) => ({ anchored: false, seq: null, reason: e instanceof Error ? e.message : "error" }));
+  // D13 — anchor the chain head (skips if today's head is already anchored).
+  // The HTTP response carries a STATIC reason only — driver/network error text can embed
+  // connection details and the body lands in client + platform logs (Day 2 NG-S10, A1).
+  const anchor = await anchorLedgerHead({ ots: process.env.ANCHOR_OTS !== "0" }).catch((e: unknown) => {
+    console.error("[cron] anchor step failed:", e instanceof Error ? e.message : e);
+    return { anchored: false, seq: null, reason: "anchor_failed" };
+  });
 
   // D49 — handover reminders (at most one per guardian per dependent per 30 days)
   const due18 = await all<{ id: string; name: string; guardianUid: string }>(
@@ -91,7 +109,16 @@ export async function GET(req: Request) {
 
   return ok({
     ok: (health?.breaks ?? 1) === 0 && swept.failed === 0,
-    retention: { days: DEMO_RETENTION_DAYS, protectedDomain: DEMO_SEED_DOMAIN, due: due.length, ...swept },
+    // Safe subset only (policy/enabled/reason are constrained enums — no env free-text, no secrets).
+    retention: {
+      policy: retention.policy,
+      enabled: retention.enabled,
+      reason: retention.reason,
+      days: DEMO_RETENTION_DAYS,
+      protectedDomain: DEMO_SEED_DOMAIN,
+      due: due.length,
+      ...swept,
+    },
     ledger: { breaks: health?.breaks ?? null, timezone: health?.tz ?? null },
     housekeeping: { sessionsPruned, rateWindowsPruned },
     anchor,

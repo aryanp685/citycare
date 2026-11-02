@@ -1,6 +1,6 @@
 # Deploying CityCare to Vercel (Hobby) + Neon Postgres
 
-> **Live:** https://citycare-xi.vercel.app — demo `ramesh@demo.in` / `city1234` (all demo users share it;
+> **Live:** https://citycare-z95n.vercel.app (fresh git-linked stack, 2026-10-31) — demo `ramesh@demo.in` / `city1234` (all demo users share it;
 > doctors: `dr.kulkarni@demo.in` …). Deployed 27 Sep 2026 from this tree; function region `sin1`,
 > database Neon Free (Postgres 18.6) in `ap-southeast-1`, provisioned through the Vercel Marketplace.
 
@@ -72,14 +72,14 @@ What it does (each step asserts its result and stops on failure):
 | 1 | `vercel project add citycare` (no-op if exists) + `vercel link --yes` — `.env.local` is backed up and restored around it because `link` silently pulls the project's development env into that file | idempotent |
 | 2 | Resolve the database: `DATABASE_URL` from your shell, else `vercel env pull` → `DATABASE_URL_UNPOOLED` from the Marketplace resource | — |
 | 3 | `db-bootstrap.sh`: applies `citycare_init.sql` + `constraints.sql` + `ledger.sql`, `ALTER DATABASE … timezone='UTC'`, seeds demo users, asserts 25 tables / ledger functions / tamper trigger / 3 partial indexes / `ledger_verify()` = 0 breaks | skips schema if tables exist, seed if users exist (`FORCE_SCHEMA=1` / `FORCE_SEED=1`) |
-| 4 | env: `DATABASE_URL` only when you supplied it (Marketplace vars are left alone); `SESSION_SECRET`, `CRON_SECRET`, `DOCUMENT_KEY`, `ANCHOR_SIGNING_KEY` **only if missing** on the project — re-runs never rotate them (rotating `SESSION_SECRET` signs everyone out; rotating `DOCUMENT_KEY` makes every uploaded file unreadable); pass `NAME=…` to rotate deliberately; `RESEND_API_KEY` + `EMAIL_FROM` are set only when you pass them | safe |
+| 4 | env: `DATABASE_URL` only when you supplied it (Marketplace vars are left alone); `SESSION_SECRET`, `CRON_SECRET`, `DOCUMENT_KEY`, `ANCHOR_SIGNING_KEY` **only if missing** on the project — re-runs never rotate them (rotating `SESSION_SECRET` signs everyone out; rotating `DOCUMENT_KEY` makes every uploaded file unreadable); pass `NAME=…` to rotate deliberately; `RESEND_API_KEY` + `EMAIL_FROM` are set only when you pass them; **`RETENTION_POLICY=demo`** for the public demo (NG-S15: without it the 7-day demo sweep is OFF by fail-safe — the banner keeps showing but accounts are no longer auto-erased; `/api/health` → `retention` shows `enabled:false, reason:"missing_policy"`). Real-data deployments set `internal` or `pilot` (sweep permanently off) and `NEXT_PUBLIC_DEMO_MODE=0` | safe |
 | 5 | `vercel deploy --prod --yes` (cloud build, ~1 min), then the production aliases are read from `vercel inspect` (the per-deployment URL is behind Vercel's SSO deployment protection by design) | new deployment |
 | 6 | smoke test on the public alias: `GET /login` 200 · `POST /api/auth/login` 200 with `Set-Cookie … Secure; SameSite=lax` · anonymous `/patient` 307 | — |
 
 Verify the whole application afterwards (creates + cleans its own users, but **locks `anita@demo.in`
 for the lockout test** — reseed after: `FORCE_SEED=1 DATABASE_URL=… npm run db:bootstrap`):
 ```bash
-BASE=https://citycare-xi.vercel.app node scripts/e2e.mjs     # expect 52 passed, 0 failed, 5 skipped
+BASE=https://citycare-z95n.vercel.app node scripts/e2e.mjs   # expect 0 failed; DB-local checks skip at runtime (direct DB access is impossible through the proxy)
 ```
 
 ## Deploy — option B: no CLI, no token (GitHub import)
@@ -112,7 +112,7 @@ is applied automatically on that deploy (A76: code and schema always move togeth
   remove those two Pool options first and re-run the e2e.
 - **Deployment protection.** `https://citycare-<hash>-<team>.vercel.app` URLs redirect to Vercel
   SSO (302, `_vercel_sso_nonce` cookie) — that is Vercel's default and not a bug. Share the
-  production alias `https://citycare-xi.vercel.app` (or `citycare-iamjarvis9896-3988s-projects.vercel.app`).
+  production alias `https://citycare-z95n.vercel.app`.
 - **Node version.** The project setting says Node 24.x (Vercel default); Next 16 is fine on it, and
   the build ran on it. `engines` is not pinned on purpose.
 - **Cookies.** Deployed site issues `SameSite=Lax; Secure`; iframe embedding gets

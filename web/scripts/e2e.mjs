@@ -1,12 +1,13 @@
 // End-to-end trust test over HTTP. Requires the dev server on :3000 and a seeded DB.
 // Run:  node scripts/e2e.mjs
 const BASE = process.env.BASE ?? "http://127.0.0.1:3000";
+import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 // Local convenience: pick CRON_SECRET / DATABASE_URL up from .env.local so the cron and the
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
   for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-    const m = line.match(/^(CRON_SECRET|DATABASE_URL)=(.*)$/);
+    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR|SESSION_SECRET|RETENTION_POLICY)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
   }
 } catch { /* no .env.local — fine */ }
@@ -27,14 +28,14 @@ function check(name, cond, detail = "") {
 }
 
 class Session {
-  constructor(label) { this.label = label; this.cookie = ""; }
+  constructor(label, base = BASE) { this.label = label; this.base = base; this.cookie = ""; }
   async req(method, path, body, form = false) {
-    const res = await fetch(BASE + path, {
+    const res = await fetch(this.base + path, {
       method,
       headers: {
         ...(body !== undefined ? { "content-type": form ? "application/x-www-form-urlencoded" : "application/json" } : {}),
         ...(this.cookie ? { cookie: this.cookie } : {}),
-        origin: BASE, // same-origin so the CSRF guard passes
+        origin: this.base, // same-origin so the CSRF guard passes
       },
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
       redirect: "manual",
@@ -51,13 +52,13 @@ class Session {
   get(path) { return this.req("GET", path); }
   /** multipart upload — the runtime sets the boundary, so no content-type header here */
   async upload(path, formData) {
-    const res = await fetch(BASE + path, { method: "POST", headers: { ...(this.cookie ? { cookie: this.cookie } : {}), origin: BASE }, body: formData, redirect: "manual" });
+    const res = await fetch(this.base + path, { method: "POST", headers: { ...(this.cookie ? { cookie: this.cookie } : {}), origin: this.base }, body: formData, redirect: "manual" });
     let data = null; try { data = await res.json(); } catch { data = null; }
     return { status: res.status, data };
   }
   /** raw GET that keeps headers + bytes (for signed download links) */
   async raw(path, extraHeaders = {}) {
-    const res = await fetch(BASE + path, { headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...extraHeaders }, redirect: "manual" });
+    const res = await fetch(this.base + path, { headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...extraHeaders }, redirect: "manual" });
     return { status: res.status, headers: res.headers, bytes: new Uint8Array(await res.arrayBuffer()) };
   }
   post(path, body, form = false) { return this.req("POST", path, body, form); }
@@ -848,6 +849,18 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
     const grid = await pat.get(`/api/patient/doctors/${e2eDoctorId}/slots`);
     const slot = (grid.data?.grid ?? []).flatMap((g) => g.slots).find((s) => s.iso === at);
     check("D6: slots API shows 2 seats left at a fresh instant", grid.status === 200 && slot?.left === 2, JSON.stringify(slot));
+    // e2e does NOT reseed between runs, and `at` is a fixed instant: on a warm DB the seeded
+    // users (vikas, sunita) may still hold appointments at `at` from a previous run, which makes
+    // b2 fail with the CORRECT 409 patient_overlap instead of the expected b3 slot_full
+    // (observed 2026-11-02: 201/409/201 on the second run). Clear the three test patients'
+    // prior appointments at this instant so the capacity check measures only this run's bookings.
+    await sql(
+      `DELETE FROM "Appointment"
+       WHERE "scheduledAt"=$1 AND "patientId" IN (
+         SELECT p.id FROM "Patient" p JOIN "User" u ON u.id=p."userId" WHERE u.email IN ($2,$3,$4)
+       )`,
+      [at, patEmail, "vikas@demo.in", "sunita@demo.in"],
+    );
     const b1 = await pat.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: at, reason: "seat 1" });
     const b2 = await stranger2.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: at, reason: "seat 2" });
     const third = new Session("third");
@@ -966,6 +979,648 @@ console.log("\n— 13. F18: print / PDF visit summary —");
   const noPage = await kulkarni18.raw(`/doctor/patients/${rameshId?.rows[0]?.id}`);
   check("F18: a doctor WITHOUT live consent gets NO print block at all", noPage.status === 200 && !new TextDecoder().decode(noPage.bytes).includes("print-summary"), `status ${noPage.status}`);
 }
+console.log("\n— 14. backup / DR (NG-S09): encrypted daily backup, private store, restore drill —");
+{
+  const bNoAuth = await fetch(BASE + "/api/cron/backup");
+  check("B: backup cron refuses without the secret (401/503, never 200)", bNoAuth.status === 401 || bNoAuth.status === 503, `got ${bNoAuth.status}`);
+
+  if (process.env.CRON_SECRET) {
+    const bWrong = await fetch(BASE + "/api/cron/backup", { headers: { authorization: `Bearer ${"w".repeat(43)}` } });
+    check("B: backup cron rejects a wrong secret (401)", bWrong.status === 401, `got ${bWrong.status}`);
+
+    const bResp = await fetch(BASE + "/api/cron/backup", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const bj = await bResp.json().catch(() => ({}));
+    check(
+      "B: backup cron runs with the secret and reports file facts (no secrets/PHI in the response)",
+      bResp.status === 200 && bj.ok === true && bj.backup && Number(bj.backup.fileSize) > 0 &&
+        /^[0-9a-f]{64}$/.test(bj.backup.sha256 ?? "") &&
+        (bj.backup.store === "local" || bj.backup.store === "blob") &&
+        Number.isInteger(bj.backup.tables) && bj.backup.tables >= 30,
+      `${bResp.status} ${JSON.stringify(bj).slice(0, 200)}`,
+    );
+
+    const bMeta = await sql(`SELECT count(*)::int n FROM "Backup" WHERE status = 'ok'`);
+    check("B: a 'Backup' metadata row (status ok) was recorded", bMeta?.rows[0]?.n >= 1, JSON.stringify(bMeta?.rows[0]));
+    const bCols = await sql(
+      `SELECT count(*)::int n FROM information_schema.columns
+        WHERE table_name = 'Backup' AND column_name IN ('email','phone','patient','address','name')`,
+    );
+    check("B: the 'Backup' metadata table has no patient-data columns", bCols?.rows[0]?.n === 0, JSON.stringify(bCols?.rows[0]));
+
+    if (process.env.BACKUP_DIR && bj.backup?.objectName) {
+      const { execFile } = await import("node:child_process");
+      const { promisify } = await import("node:util");
+      const { readFileSync, existsSync } = await import("node:fs");
+      const run = promisify(execFile);
+      const file = process.env.BACKUP_DIR + "/" + bj.backup.objectName;
+      check("B: the encrypted file exists in the private store dir", existsSync(file), file);
+
+      const v = await run(process.execPath, ["scripts/backup.mjs", "verify", file])
+        .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+        .catch((e) => ({ ok: false, err: String(e?.stderr || e?.message).slice(0, 200) }));
+      check("B: the stored file verifies (decrypt + payload sha + section integrity) and matches the response sha", v.ok === true && v.fileSha256 === bj.backup.sha256, JSON.stringify(v).slice(0, 200));
+
+      const bytes = readFileSync(file);
+      check(
+        "B: the stored file is encrypted, not plaintext (magic CCB1; no user email in the bytes)",
+        bytes.subarray(0, 4).toString("latin1") === "CCB1" && !bytes.toString("latin1").includes("ramesh@demo.in"),
+      );
+
+      // full restore drill: isolated scratch DB + ledger verify + row counts + login/record check
+      const dts = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const scratch = `citycare_drill_${dts.getUTCFullYear()}${pad(dts.getUTCMonth() + 1)}${pad(dts.getUTCDate())}_${pad(dts.getUTCHours())}${pad(dts.getUTCMinutes())}${pad(dts.getUTCSeconds())}`;
+      const d = await run(process.execPath, ["scripts/restore-drill.mjs", file, "--scratch", scratch, "--verify-email", "ramesh@demo.in", "--verify-password", "city1234"], { maxBuffer: 16 * 1024 * 1024, timeout: 240_000 })
+        .then((r) => ({ code: 0, out: r.stdout, err: "" }))
+        .catch((e) => ({ code: e?.code ?? 1, out: String(e?.stdout ?? ""), err: String(e?.stderr ?? e?.message).slice(0, 300) }));
+      let dj = null;
+      try { dj = JSON.parse(d.out.slice(d.out.indexOf("{"))); } catch { dj = null; }
+      check("B: restore drill SUCCEEDED on the isolated scratch DB", d.code === 0 && dj?.status === "success", `code ${d.code} ${d.err || JSON.stringify(dj?.failure ?? null)}`);
+      check("B: restored DB passes ledger_verify() (0 breaks)", dj?.checks?.ledgerVerify?.ok === true, JSON.stringify(dj?.checks?.ledgerVerify ?? null));
+      check("B: restored row counts match the backup manifest exactly", dj?.checks?.rowCounts?.ok === true, JSON.stringify(dj?.checks?.rowCounts ?? null).slice(0, 200));
+      check("B: restored table CONTENT matches the manifest exactly (re-COPY row-multiset compare, order-independent — A88)", dj?.checks?.contentMatch?.ok === true, JSON.stringify(dj?.checks?.contentMatch ?? null).slice(0, 200));
+      check("B: login + record check passes on restored data (ramesh@demo.in)", dj?.checks?.login?.ok === true, JSON.stringify(dj?.checks?.login ?? null).slice(0, 200));
+      check("B: scratch DB was dropped after the drill (no leftover)", dj?.scratchDropped === true, JSON.stringify({ dropped: dj?.scratchDropped, err: dj?.droppedError ?? null }));
+      check("B: drill measured RPO (backup age) and RTO (restore duration)", Number.isFinite(dj?.measurements?.backupAgeMs) && Number.isFinite(dj?.measurements?.restoreMs), JSON.stringify(dj?.measurements ?? null));
+    } else {
+      skip("B: file verify + restore drill", "BACKUP_DIR or backup objectName missing (non-local store)");
+    }
+
+    const bh = await fetch(BASE + "/api/health");
+    const bhj = await bh.json().catch(() => ({}));
+    check(
+      "B: /api/health surfaces the backup fact (configured, lastSuccessAt set, not stale, no secrets)",
+      bh.status === 200 && bhj.backups?.configured === true && !!bhj.backups?.lastSuccessAt && bhj.backups?.stale === false,
+      JSON.stringify(bhj.backups ?? null),
+    );
+  } else {
+    skip("B: backup cron with secret", "CRON_SECRET not in env");
+  }
+}
+
+console.log("\n— 15. retention sweep policy (NG-S15): explicit policy, fail-safe, real data never swept —");
+{
+  // The cron route and /api/health consult this exact module. The real-data and fail-safe
+  // paths are pinned here at the decision level (the route executes ZERO sweep SQL when the
+  // decision is disabled — a 10-day real-data account is safe by construction); the demo path
+  // is additionally proven end-to-end below against the live instance, which declares
+  // RETENTION_POLICY=demo.
+  const { evaluateRetentionPolicy } = await import("../src/lib/retention-core.mjs");
+
+  check("S15: RETENTION_POLICY=pilot ⇒ sweep disabled (10-day real-data account survives by construction)",
+    evaluateRetentionPolicy({ RETENTION_POLICY: "pilot", NEXT_PUBLIC_DEMO_MODE: "0" }).enabled === false);
+  check("S15: RETENTION_POLICY=internal ⇒ sweep disabled (regardless of the banner)",
+    ["0", "1", undefined].every((b) => {
+      const env = { RETENTION_POLICY: "internal" };
+      if (b !== undefined) env.NEXT_PUBLIC_DEMO_MODE = b;
+      return evaluateRetentionPolicy(env).enabled === false;
+    }));
+  check("S15: MISSING policy ⇒ fails safe (sweep off + loud warning)", (() => {
+    const r = evaluateRetentionPolicy({});
+    return r.enabled === false && r.reason === "missing_policy" && /fail-safe/.test(r.warning ?? "");
+  })());
+  check("S15: INVALID policy ⇒ fails safe (raw value never reaches the safe fields)", (() => {
+    const r = evaluateRetentionPolicy({ RETENTION_POLICY: "bogus-value-XYZ" });
+    return r.enabled === false && r.reason === "invalid_policy" && r.policy === null;
+  })());
+  check("S15: CONTRADICTORY config (demo policy, banner off) ⇒ fails safe",
+    evaluateRetentionPolicy({ RETENTION_POLICY: "demo", NEXT_PUBLIC_DEMO_MODE: "0" }).enabled === false);
+
+  if (!process.env.CRON_SECRET) {
+    skip("S15: live demo-sweep behaviour", "CRON_SECRET not in env");
+  } else {
+    const emailA = `e2e.s15a.${stamp}@e2e.test`; // will be made overdue (10 days)
+    const emailB = `e2e.s15b.${stamp}@e2e.test`; // stays fresh → must survive
+    const sA = await new Session("s15a").post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S15A ${stamp}`, email: emailA, phone: uniqPhone("8"), password: "e2epassword1" });
+    const sB = await new Session("s15b").post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S15B ${stamp}`, email: emailB, phone: uniqPhone("8"), password: "e2epassword1" });
+    check("S15: two fresh demo accounts created via normal signup", sA.status === 201 && sB.status === 201, `${sA.status}/${sB.status}`);
+
+    const pre = await sql(`SELECT u.id AS uid, p.id AS pid FROM "User" u JOIN "Patient" p ON p."userId" = u.id WHERE u.email = $1`, [emailA]);
+    const back = await sql(`UPDATE "User" SET "createdAt" = now() - interval '10 days' WHERE email = $1`, [emailA]);
+    check("S15: account A backdated 10 days (past the 7-day demo horizon)", back?.rowCount === 1 && pre?.rowCount === 1, `back=${back?.rowCount ?? "n/a"}`);
+
+    const cron15 = await fetch(BASE + "/api/cron/daily", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const c15 = await cron15.json().catch(() => ({}));
+
+    check("S15: live cron reports the ACTIVE policy (demo/enabled/ok) and swept the due account",
+      cron15.status === 200 && c15.retention?.policy === "demo" && c15.retention?.enabled === true && c15.retention?.reason === "ok"
+        && c15.retention?.protectedDomain === "demo.in" && c15.retention?.patients >= 1,
+      JSON.stringify(c15.retention ?? null));
+
+    const h15 = await fetch(BASE + "/api/health");
+    const h15j = await h15.json().catch(() => ({}));
+    check("S15: /api/health exposes the policy (safe fields only, no PHI)",
+      h15.status === 200 && h15j.retention?.policy === "demo" && h15j.retention?.enabled === true && h15j.retention?.reason === "ok"
+        && Number.isInteger(h15j.retention?.days) && h15j.retention?.protectedDomain === "demo.in",
+      JSON.stringify(h15j.retention ?? null));
+    const secrets = [process.env.CRON_SECRET, process.env.SESSION_SECRET, process.env.BACKUP_KEY].filter(Boolean);
+    const leaked = [JSON.stringify(h15j), JSON.stringify(c15)].some((body) => secrets.some((s) => body.includes(s)));
+    check("S15: health + cron responses leak no secrets", !leaked, "a secret value appeared in a public response body");
+
+    const postA = await sql(`SELECT status, email, "passwordHash" FROM "User" WHERE id = $1`, [pre?.rows?.[0]?.uid]);
+    const patA = await sql(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pre?.rows?.[0]?.pid]);
+    check("S15: the 10-day demo account WAS erased (User DELETED + anonymised, hash '!', Patient [REDACTED])",
+      postA?.rows?.[0]?.status === "DELETED" && /^erased-.*@deleted\.invalid$/.test(postA?.rows?.[0]?.email ?? "")
+        && postA?.rows?.[0]?.passwordHash === "!" && patA?.rows?.[0]?.fullName === "[REDACTED]",
+      JSON.stringify({ u: postA?.rows ?? null, p: patA?.rows ?? null }));
+
+    const postB = await sql(`SELECT status FROM "User" WHERE email = $1`, [emailB]);
+    const seed = await sql(`SELECT status FROM "User" WHERE email = 'ramesh@demo.in'`);
+    check("S15: fresh demo account SURVIVES the sweep (only overdue ones are targeted)", postB?.rows?.[0]?.status !== undefined && postB.rows[0].status !== "DELETED", JSON.stringify(postB?.rows ?? null));
+    check("S15: seeded @demo.in account is never touched (protected domain)", seed?.rows?.[0]?.status !== undefined && seed.rows[0].status !== "DELETED", JSON.stringify(seed?.rows ?? null));
+    check("S15: ledger still verifies clean after the sweep (cron report)", c15.ledger?.breaks === 0, JSON.stringify(c15.ledger ?? null));
+
+    const days = c15.retention?.days ?? 7;
+    // Strip React's text-node comment markers + tags so the check is on rendered CONTENT, not markup.
+    const plain = (html) => html.replace(/<!--.*?-->/gs, "").replace(/<[^>]+>/g, "");
+    const notice = plain(await (await fetch(BASE + "/legal/privacy")).text());
+    const terms = plain(await (await fetch(BASE + "/legal/terms")).text());
+    check("S15: privacy notice + terms state the demo erasure (notice matches the armed sweep)",
+      notice.includes(`erased automatically ${days} days after creation`) && terms.includes(`erased after ${days} days`),
+      "demo erasure clause missing from the notice copy");
+  }
+}
+
+console.log("\n— 16. final technical verification (2026-11-02): consistent snapshot · document-level recovery · DB-down observability —");
+{
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { readFileSync, mkdtempSync, rmSync, readdirSync } = await import("node:fs");
+  const run = promisify(execFile);
+  const WEB = new URL("../", import.meta.url).pathname; // web/
+  const { default: pg } = await import("pg");
+  const bc = await import("../src/lib/backup-core.mjs");
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // one user owned by this section (patient profile auto-created on signup)
+  const s16 = new Session("s16");
+  const emailU = `s16.${stamp}@e2e.citycare.test`;
+  const su = await s16.post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `E2E S16 ${stamp}`, email: emailU, phone: uniqPhone("7"), password: "e2epassword1" });
+  const uidRow = await sql(`SELECT id FROM "User" WHERE lower(email) = lower($1)`, [emailU]);
+  const uid = uidRow?.rows?.[0]?.id;
+  const patRow = await sql(`SELECT id, "fullName" FROM "Patient" WHERE "userId" = $1`, [uid]);
+  const pid = patRow?.rows?.[0]?.id;
+  const origName = patRow?.rows?.[0]?.fullName;
+  check("S16: owned test user + patient exist (used by all sub-checks)", su.status === 201 && !!uid && !!pid, `signup ${su.status} uid=${uid ?? "n/a"}`);
+
+  // ---- 16a: deterministic snapshot isolation — proves the REPEATABLE READ guarantee
+  //      the backup dump now relies on (a new transaction sees a committed writer; the
+  //      open REPEATABLE READ snapshot does NOT, no matter when the writer commits) ----
+  {
+    const connA = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    const connB = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await connA.connect();
+    await connB.connect();
+    let okA = false;
+    let detail = "setup error";
+    try {
+      await connB.query("BEGIN");
+      await connB.query(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, ["S16-SNAP-WRITE", pid]);
+      await connA.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const r1 = (await connA.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      await connB.query("COMMIT"); // writer commits while the snapshot is open
+      const r2 = (await connA.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      await connA.query("ROLLBACK");
+      const r3 = (await connB.query(`SELECT "fullName" FROM "Patient" WHERE id = $1`, [pid])).rows[0];
+      okA = r1.fullName === origName && r2.fullName === origName && r3.fullName === "S16-SNAP-WRITE";
+      detail = `snapshot saw "${r1.fullName}" → "${r2.fullName}" across the commit; fresh tx saw "${r3.fullName}"`;
+    } catch (e) {
+      detail = String(e?.message ?? e);
+    } finally {
+      await connA.query("ROLLBACK").catch(() => null);
+      await connB.query("ROLLBACK").catch(() => null);
+      await connA.end().catch(() => null);
+      await connB.end().catch(() => null);
+      await sql(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [origName, pid]);
+    }
+    check("S16a: REPEATABLE READ snapshot stays stable through a concurrent commit (the guarantee the dump uses)", okA, detail);
+  }
+
+  // ---- 16b: real backups taken while a writer commits between tables ⇒ no cross-table
+  //      mixed state (User is copied before Patient in FK order; with per-statement
+  //      autocommit an interleaving commit could have landed between the two COPYs) ----
+  if (process.env.BACKUP_DIR) {
+    // The writer's commit must be able to land DURING the dump to be a real interleaving
+    // test: open the write transaction, start the backup WITHOUT awaiting it, commit after
+    // a varied delay (child-process startup means the snapshot position varies per run).
+    // INVARIANT (what a consistent snapshot means): the pair (User.phone, Patient.fullName)
+    // captured in ANY backup must equal the pair of exactly ONE committed writer state —
+    // never a combination of values from two different commits (the old per-table
+    // autocommit could produce that). We don't assert WHICH commit won the race — only
+    // that the pair is unambiguous.
+    const states = [];
+    {
+      const cur = await sql("SELECT (SELECT \"phone\" FROM \"User\" WHERE id = $1) p, (SELECT \"fullName\" FROM \"Patient\" WHERE id = $2) n", [uid, pid]);
+      states.push({ phone: cur.p, name: cur.n });
+    }
+    let okB = true;
+    let detailB = "every captured pair matches exactly one committed writer state";
+    const delays = [1, 4, 9, 16, 30, 60, 100, 150];
+    for (let i = 1; i <= 8; i++) {
+      const thisPhone = uniqPhone("6");
+      const thisName = `S16-SNAP-U${i}`;
+      const w = new pg.Client({ connectionString: process.env.DATABASE_URL });
+      await w.connect();
+      await w.query("BEGIN");
+      await w.query(`UPDATE "User" SET "phone" = $1 WHERE id = $2`, [thisPhone, uid]);
+      await w.query(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [thisName, pid]);
+      const p = run(process.execPath, ["scripts/backup.mjs", "create"], { cwd: WEB, maxBuffer: 8 * 1024 * 1024, timeout: 120_000 })
+        .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+        .catch((e) => ({ ok: false, err: String(e?.stderr ?? e?.message).slice(0, 160) }));
+      await sleep(delays[i - 1]); // position the commit at a varied point relative to the dump
+      try {
+        await w.query("COMMIT");
+      } finally {
+        await w.end().catch(() => null);
+      }
+      states.push({ phone: thisPhone, name: thisName }); // committed at this point
+      const bk = await p;
+      if (!bk.ok) { okB = false; detailB = `backup ${i} failed: ${bk.err ?? JSON.stringify(bk).slice(0, 160)}`; break; }
+      const v = bc.verifyBackupFile(readFileSync(process.env.BACKUP_DIR + "/" + bk.objectName), bc.backupKey());
+      const rowOf = (sectionName, id) =>
+        v.sections.find((s) => s.name === sectionName).copyText.split("\n").find((l) => l.startsWith(id + "\t"));
+      // User: id(0) email(1) phone(2) … · Patient: id(0) userId(1) fullName(2) …
+      const uPhone = rowOf("User", uid)?.split("\t")[2] ?? null;
+      const pName = rowOf("Patient", pid)?.split("\t")[2] ?? null;
+      const uniform = states.some((s) => s.phone === uPhone && s.name === pName);
+      if (!uniform) { okB = false; detailB = `iter ${i}: backup captured User.phone=${uPhone} + Patient.fullName="${pName}" — that combination was never committed by any single writer transaction (a mixed state ⇒ the snapshot guarantee is broken)`; break; }
+    }
+    check("S16b: 8 backups taken under concurrent writers — every captured (User, Patient) pair is one single committed state (no cross-table mixed values)", okB, detailB);
+    // reset to a fresh, collision-proof value (a fixed constant collides on re-runs:
+    // every previous e2e run's owned user still holds its reset value)
+    await sql(`UPDATE "User" SET "phone" = $1 WHERE id = $2`, [uniqPhone("7"), uid]);
+    await sql(`UPDATE "Patient" SET "fullName" = $1 WHERE id = $2`, [origName, pid]);
+  } else {
+    skip("S16b: concurrent-writer backups", "BACKUP_DIR not set (non-local store)");
+  }
+
+  // ---- 16c: database unavailability ⇒ the failure is still independently observable
+  //      (no failure row can be written to the dead DB: the platform log line is the
+  //      independent record; v1 has no automated alerting — do not claim otherwise) ----
+  {
+    const metaBefore = (await sql(`SELECT count(*)::int n FROM "Backup"`))?.rows?.[0]?.n ?? null;
+    const deadDir = mkdtempSync("/tmp/ccbk-dbdn-");
+    let dnOk = false;
+    let dnCode = 0;
+    let dnOut = "";
+    try {
+      const r = await run(process.execPath, ["scripts/backup.mjs", "create"], {
+        cwd: WEB,
+        env: { ...process.env, DATABASE_URL: "postgresql://e2e@127.0.0.1:1/citycare", BACKUP_DIR: deadDir },
+        maxBuffer: 4 * 1024 * 1024,
+        timeout: 60_000,
+      });
+      dnOk = true;
+      dnCode = 0;
+      dnOut = String(r.stdout) + String(r.stderr);
+    } catch (e) {
+      dnCode = Number(e?.code ?? 1);
+      dnOut = String(e?.stdout ?? "") + String(e?.stderr ?? e?.message ?? "");
+    }
+    const filesBeforeClean = readdirSync(deadDir);
+    rmSync(deadDir, { recursive: true, force: true });
+    check("S16c: DB down ⇒ backup exits non-zero (no silent success)", dnOk === false && dnCode !== 0, `ok=${dnOk} code=${dnCode}`);
+    check("S16c: DB down ⇒ stable FATAL marker in the platform log (independent observability)", dnOut.includes(bc.BACKUP_FATAL_MARKER), dnOut.slice(0, 220));
+    check("S16c: DB down ⇒ no encrypted file written to the store", !filesBeforeClean.some((f) => f.endsWith(".ccbk")), `store contained: ${filesBeforeClean.join(", ") || "(empty)"}`);
+    const metaAfter = (await sql(`SELECT count(*)::int n FROM "Backup"`))?.rows?.[0]?.n ?? null;
+    check("S16c: DB down ⇒ no spurious 'Backup' metadata row", metaAfter === metaBefore, `before=${metaBefore} after=${metaAfter}`);
+  }
+
+  // ---- 16d: DOCUMENT-LEVEL recovery drill — a real document, decrypted from the
+  //      restored scratch DB with the application's own crypto (this is NOT the same
+  //      evidence as the row-multiset COPY compare — one proves bytes, the other proves
+  //      a document actually decrypts and matches its plaintext checksum) ----
+  if (process.env.BACKUP_DIR) {
+    const canary = `CCDOCVERIFY-${stamp}-${crypto.randomBytes(8).toString("hex")}`;
+    const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n${canary}\ntrailer<</Root 1 0 R>>\n%%EOF\n`;
+    const pdfBytes = new TextEncoder().encode(pdf);
+    const wantSha = crypto.createHash("sha256").update(pdfBytes).digest("hex");
+    const fd = new FormData();
+    fd.append("file", new Blob([pdfBytes], { type: "application/pdf" }), "verify.pdf");
+    fd.append("title", "Synthetic verify doc");
+    fd.append("type", "LAB_REPORT");
+    fd.append("issuedOn", "2026-09-15");
+    if (!s16.cookie) await s16.post("/api/auth/login", { email: emailU, password: "e2epassword1" });
+    const up = await s16.upload("/api/patient/documents", fd);
+    const docId = up.data?.id;
+    check("S16d: synthetic document uploaded (unique canary; server sha matches local sha256)", up.status === 201 && up.data?.sha256 === wantSha && !!docId, `${up.status} sha=${String(up.data?.sha256 ?? "").slice(0, 12)}`);
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const dts = new Date();
+    const scratch = `citycare_drill_${dts.getUTCFullYear()}${pad(dts.getUTCMonth() + 1)}${pad(dts.getUTCDate())}_${pad(dts.getUTCHours())}${pad(dts.getUTCMinutes())}${pad(dts.getUTCSeconds())}`;
+    const drill = (extraArgs) =>
+      run(process.execPath, ["scripts/restore-drill.mjs", ...extraArgs], { cwd: WEB, maxBuffer: 16 * 1024 * 1024, timeout: 300_000 })
+        .then((r) => ({ code: 0, out: String(r.stdout), err: "" }))
+        .catch((e) => ({ code: Number(e?.code ?? 1), out: String(e?.stdout ?? ""), err: String(e?.stderr ?? e?.message).slice(0, 300) }));
+    const parseDrill = (out) => { try { return JSON.parse(out.slice(out.indexOf("{"))); } catch { return null; } };
+
+    const bk2 = await run(process.execPath, ["scripts/backup.mjs", "create"], { cwd: WEB, maxBuffer: 8 * 1024 * 1024, timeout: 120_000 })
+      .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+      .catch(() => ({ ok: false }));
+    if (bk2.ok && bk2.objectName) {
+      const file2 = process.env.BACKUP_DIR + "/" + bk2.objectName;
+      const dv = await drill([file2, "--scratch", scratch, "--verify-document", docId]);
+      const dvj = parseDrill(dv.out);
+      check("S16d: drill --verify-document SUCCEEDS — a document DECRYPTED from the restored scratch (not just COPY'd)", dv.code === 0 && dvj?.status === "success" && dvj?.checks?.documentVerify?.ok === true, `code ${dv.code} ${dv.err || JSON.stringify(dvj?.checks?.documentVerify ?? dvj?.failure ?? null).slice(0, 200)}`);
+      check("S16d: decrypted bytes match the stored SHA-256 and declared byte length", dvj?.checks?.documentVerify?.checksumMatch === true && dvj?.checks?.documentVerify?.sizeMatch === true, JSON.stringify(dvj?.checks?.documentVerify ?? null));
+      check("S16d: drill output leaks NO plaintext (canary absent from stdout and stderr)", !dv.out.includes(canary) && !dv.err.includes(canary), "canary string found in drill output");
+      check("S16d: scratch DB dropped after the verify gate ran", dvj?.scratchDropped === true, JSON.stringify({ dropped: dvj?.scratchDropped, err: dvj?.droppedError ?? null }));
+
+      const badUuid = "00000000-0000-4000-8000-000000000000";
+      const dn = await drill([file2, "--scratch", scratch, "--verify-document", badUuid]);
+      const dnj = parseDrill(dn.out);
+      check("S16d: unknown document id FAILS the drill (found=false), and the scratch is STILL dropped on that failure", dnj?.status === "failed" && dnj?.checks?.documentVerify?.found === false && dnj?.scratchDropped === true, JSON.stringify(dnj?.checks?.documentVerify ?? dnj?.failure ?? null).slice(0, 200));
+    } else {
+      skip("S16d: --verify-document drill", "backup create failed (non-local store or env)");
+    }
+    const delD = docId ? await s16.del(`/api/documents/${docId}`) : null;
+    check("S16d: cleanup — synthetic document deleted (bytes removed, tombstone kept for the ledger)", !!delD && delD.status === 200 && delD.data?.deleted === true, JSON.stringify(delD?.data ?? delD?.status));
+  } else {
+    skip("S16d: document-level drill", "BACKUP_DIR not set (non-local store)");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+console.log("\n— 17. NG-S14: demo/pilot environment isolation (seed gate + real-data env behaviour) —");
+if (!LOCAL || !process.env.DATABASE_URL) {
+  skip("NG-S14: demo/pilot environment isolation", "requires a local PostgreSQL + DATABASE_URL (isolated scratch databases); not available for this remote BASE");
+} else {
+{
+  // The seed gate (src/lib/demo-seed-core.mjs) is the single chokepoint that decides
+  // whether scripts/seed.mjs — the ONLY code that creates demo accounts — may run in an
+  // environment. This section proves, on ISOLATED scratch databases (dropped in `finally`):
+  //   * demo mode seeds (explicit + default), pilot/production modes refuse/skip,
+  //     contradictory and unverified configs are refused BEFORE any write (the pre-seeded
+  //     marker row survives a refused run);
+  //   * a fresh pilot DB + app: published demo credentials are DENIED, normal patient and
+  //     doctor registration/authentication work, no demo records exist, and the retention
+  //     sweep stays disabled for real data;
+  //   * the existing public demo on the synthetic demo env (BASE) still works.
+  const { execFile, spawn } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const run = promisify(execFile);
+  const pgMod = (await import("pg")).default;
+
+  const suffix = Date.now().toString(36);
+  const scratch = {
+    demo: `citycare_e2e_demo_${suffix}`,
+    pilot: `citycare_e2e_pilot_${suffix}`,
+    prod: `citycare_e2e_prod_${suffix}`,
+  };
+  const scratchClients = {};
+  let pilotProc = null;
+  const pilotPort = Number(process.env.E2E_PILOT_PORT ?? 3007);
+  const pilotBase = `http://127.0.0.1:${pilotPort}`;
+
+  const scratchUrl = (name) => {
+    const u = new URL(process.env.DATABASE_URL);
+    u.pathname = "/" + name;
+    return u.toString();
+  };
+
+  async function createScratch(name) {
+    // name is a generated identifier (citycare_e2e_* + base36 timestamp) — safe to inline.
+    await sql(`DROP DATABASE IF EXISTS ${name}`);
+    await sql(`CREATE DATABASE ${name}`);
+    const c = new pgMod.Client({ connectionString: scratchUrl(name) });
+    await c.connect();
+    await c.query(`SET client_min_messages='warning';`);
+    const files = [
+      "../schema/citycare_init.sql",
+      "../schema/sql/constraints.sql",
+      "../schema/sql/ledger.sql",
+      ...readdirSync("../schema/migrations").filter((f) => f.endsWith(".sql")).sort().map((f) => `../schema/migrations/${f}`),
+    ];
+    for (const f of files) await c.query(readFileSync(f, "utf8"));
+    scratchClients[name] = c;
+  }
+
+  /** Run the seed script against a scratch DB with a specific gate config.
+      policy/seed: undefined → the variable is REMOVED from the env (unverified case). */
+  async function runSeed(dbName, policy, seed) {
+    const env = { ...process.env };
+    env.DATABASE_URL = scratchUrl(dbName);
+    env.SCRYPT_N = "4096"; // fast hashes for the throwaway scratch DBs
+    if (policy === undefined) delete env.RETENTION_POLICY;
+    else env.RETENTION_POLICY = policy;
+    if (seed === undefined) delete env.SEED_DEMO;
+    else env.SEED_DEMO = seed;
+    return run(process.execPath, ["scripts/seed.mjs"], { env, encoding: "utf8" })
+      .then((r) => ({ code: 0, out: r.stdout + "\n" + r.stderr }))
+      .catch((e) => ({ code: e.code ?? 1, out: String(e.stdout ?? "") + "\n" + String(e.stderr ?? "") }));
+  }
+
+  const demoUserCount = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "User" WHERE email ILIKE '%@demo.in'`)).rows[0].n);
+
+  const totalRows = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "User"`)).rows[0].n);
+
+  const hospCount = async (dbName) =>
+    Number((await scratchClients[dbName].query(`SELECT count(*)::int n FROM "Hospital"`)).rows[0].n);
+
+  try {
+    await createScratch(scratch.demo);
+    await createScratch(scratch.pilot);
+    await createScratch(scratch.prod);
+
+    // 1. demo mode: seed runs (explicit SEED_DEMO=1 and the default unset)
+    const s1 = await runSeed(scratch.demo, "demo", "1");
+    check(
+      "NG-S14: demo mode — seed runs (SEED_DEMO=1 + RETENTION_POLICY=demo) and creates the 11 demo identities",
+      s1.code === 0 && (await demoUserCount(scratch.demo)) === 11,
+      `exit ${s1.code} demoUsers=${await demoUserCount(scratch.demo)} ${s1.out.slice(0, 160)}`,
+    );
+    const s1b = await runSeed(scratch.demo, "demo", undefined);
+    check(
+      "NG-S14: demo mode — default (SEED_DEMO unset) still seeds (backward-compatible synthetic demo)",
+      s1b.code === 0 && (await demoUserCount(scratch.demo)) === 11,
+      `exit ${s1b.code}`,
+    );
+
+    // 2. pilot mode: refuse by default, skip on explicit SEED_DEMO=0 — DB never touched
+    const s2a = await runSeed(scratch.pilot, "pilot", undefined);
+    check(
+      "NG-S14: pilot mode — unset SEED_DEMO REFUSES (fail-safe default; exit 2, zero rows)",
+      s2a.code === 2 && /refus/i.test(s2a.out) && (await totalRows(scratch.pilot)) === 0 && (await hospCount(scratch.pilot)) === 0,
+      `exit ${s2a.code} ${s2a.out.slice(0, 160)}`,
+    );
+    const s2b = await runSeed(scratch.pilot, "pilot", "0");
+    check(
+      "NG-S14: pilot mode — SEED_DEMO=0 skips cleanly (exit 0, zero rows, nothing truncated)",
+      s2b.code === 0 && /skipped/i.test(s2b.out) && (await totalRows(scratch.pilot)) === 0 && (await hospCount(scratch.pilot)) === 0,
+      `exit ${s2b.code} ${s2b.out.slice(0, 160)}`,
+    );
+
+    // 3. production-grade mode (internal): SEED_DEMO=0 skips
+    const s3 = await runSeed(scratch.prod, "internal", "0");
+    check(
+      "NG-S14: production-grade mode (RETENTION_POLICY=internal) — SEED_DEMO=0 skips (exit 0, zero rows)",
+      s3.code === 0 && /skipped/i.test(s3.out) && (await totalRows(scratch.prod)) === 0,
+      `exit ${s3.code} ${s3.out.slice(0, 160)}`,
+    );
+
+    // 4. contradictory / unverified configs are refused BEFORE any write (marker row survives)
+    await scratchClients[scratch.prod].query(
+      `INSERT INTO "Hospital" (id,name,address,city,"isEmpanelled",rating,"createdAt") VALUES (gen_random_uuid(),'NGS14 Marker Clinic','Marker St','Pune',true,4,now())`,
+    );
+    const s4a = await runSeed(scratch.prod, "internal", "1");
+    const markerLeft = Number(
+      (await scratchClients[scratch.prod].query(`SELECT count(*)::int n FROM "Hospital" WHERE name = 'NGS14 Marker Clinic'`)).rows[0].n,
+    );
+    check(
+      "NG-S14: contradictory config (SEED_DEMO=1 on a real-data env) is REFUSED (exit 2) and the pre-existing row survives",
+      s4a.code === 2 && /contradictory/i.test(s4a.out) && markerLeft === 1 && (await totalRows(scratch.prod)) === 0,
+      `exit ${s4a.code} marker=${markerLeft} ${s4a.out.slice(0, 160)}`,
+    );
+    const s4b = await runSeed(scratch.prod, undefined, undefined);
+    check(
+      "NG-S14: unverified env (no RETENTION_POLICY, no SEED_DEMO) is REFUSED by default (exit 2)",
+      s4b.code === 2 && /missing\/invalid/i.test(s4b.out) && (await totalRows(scratch.prod)) === 0,
+      `exit ${s4b.code} ${s4b.out.slice(0, 160)}`,
+    );
+
+    // 5. a real pilot APP on the fresh pilot DB (schema-only, SEED_DEMO=0 env)
+    {
+      // Port pre-check: a FOREIGN process already listening on the pilot port (e.g. an
+      // orphan from an earlier crashed run) would silently answer our probes and make every
+      // "pilot" check hit the WRONG database. Connection refused = port free (expected);
+      // any HTTP response = port occupied (fail loudly, do not proceed).
+      let portOccupied = null;
+      let up = false;
+      try {
+        const probe = await fetch(pilotBase + "/api/health");
+        portOccupied = `HTTP ${probe.status}`;
+      } catch { /* ECONNREFUSED — port is free */ }
+      if (portOccupied) {
+        check("NG-S14: pilot app boots on a fresh pilot DB (health 200, retention policy=pilot, sweep disabled)",
+          false, `port ${pilotPort} already occupied by a foreign process (${portOccupied}) — kill it and re-run; refusing to proceed`);
+      } else {
+      const env = { ...process.env, NEXT_TELEMETRY_DISABLED: "1" };
+      env.DATABASE_URL = scratchUrl(scratch.pilot);
+      env.RETENTION_POLICY = "pilot";
+      env.SEED_DEMO = "0";
+      env.ANCHOR_OTS = "0";
+      env.TZ_POLICY = "Asia/Kolkata";
+      delete env.BACKUP_KEY;
+      delete env.BACKUP_DIR;
+      delete env.BLOB_READ_WRITE_TOKEN;
+      // detached: its own process group, so cleanup can SIGKILL the WHOLE tree
+      // (`npx next start` forks a `next-server` child that must die with it — killing
+      // only the npx pid orphans the server, which keeps the port + DB connections).
+      pilotProc = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", String(pilotPort)], { env, cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], detached: true });
+      let pilotLog = "";
+      pilotProc.stdout?.on("data", (d) => (pilotLog += d));
+      pilotProc.stderr?.on("data", (d) => (pilotLog += d));
+      for (let i = 0; i < 30; i++) {
+        try {
+          const r = await fetch(pilotBase + "/api/health");
+          if (r.status === 200) { up = true; break; }
+        } catch { /* not up yet */ }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      check("NG-S14: pilot app boots on a fresh pilot DB (health 200, retention policy=pilot, sweep disabled)",
+        up, `pilotLog tail: ${pilotLog.slice(-200)}`);
+      }
+      if (up) {
+        const ph = await (await fetch(pilotBase + "/api/health")).json();
+        check("NG-S14: pilot /api/health reports the real-data policy (policy=pilot, enabled=false, policy_disables_sweep)",
+          ph.retention?.policy === "pilot" && ph.retention?.enabled === false && ph.retention?.reason === "policy_disables_sweep",
+          JSON.stringify(ph.retention ?? null));
+
+        // 6. published demo credentials are DENIED on the pilot DB
+        const demoLogin = await fetch(pilotBase + "/api/auth/login", {
+          method: "POST", headers: { "content-type": "application/json", origin: pilotBase },
+          body: JSON.stringify({ email: "ramesh@demo.in", password: "city1234" }), redirect: "manual",
+        });
+        check("NG-S14: published demo credential (ramesh@demo.in) is DENIED on a fresh pilot DB (401)",
+          demoLogin.status === 401, `status ${demoLogin.status}`);
+        const demoDoc = await fetch(pilotBase + "/api/auth/login", {
+          method: "POST", headers: { "content-type": "application/json", origin: pilotBase },
+          body: JSON.stringify({ email: "dr.kulkarni@demo.in", password: "city1234" }), redirect: "manual",
+        });
+        check("NG-S14: published demo doctor credential (dr.kulkarni@demo.in) is DENIED on a fresh pilot DB (401)",
+          demoDoc.status === 401, `status ${demoDoc.status}`);
+
+        // 7. normal patient registration works on the pilot DB
+        const pSess = new Session("ngs14-patient", pilotBase);
+        const pEmail = `e2e.ngs14p.${stamp}@e2e.test`;
+        const ps = await pSess.post("/api/auth/signup", { role: "PATIENT", acceptPolicy: true, adult: true, name: `NGS14 Patient ${stamp}`, email: pEmail, phone: uniqPhone("7"), password: "e2epassword1" });
+        check("NG-S14: normal patient registration works on the pilot DB (signup 201 + session)",
+          ps.status === 201, `${ps.status} ${JSON.stringify(ps.data)}`);
+        const pme = await pSess.get("/api/auth/me");
+        check("NG-S14: the new pilot patient has a live session (role PATIENT)",
+          pme.status === 200 && pme.data?.viewer?.role === "PATIENT", `${pme.status} ${JSON.stringify(pme.data?.viewer ?? null)}`);
+
+        // 8. normal doctor authentication works on the pilot DB
+        const dSess = new Session("ngs14-doctor", pilotBase);
+        const dEmail = `e2e.ngs14d.${stamp}@e2e.test`;
+        const ds = await dSess.post("/api/auth/signup", { role: "DOCTOR", acceptPolicy: true, adult: true, name: `NGS14 Doctor ${stamp}`, email: dEmail, phone: uniqPhone("7"), password: "e2edocpassword1", qualification: "MBBS", consultationFee: 600, specialty: "General Medicine", registrationNo: `NGS14/${stamp.slice(-5)}` });
+        check("NG-S14: normal doctor registration works on the pilot DB (signup 201)",
+          ds.status === 201, `${ds.status} ${JSON.stringify(ds.data)}`);
+        const dLogin = await new Session("ngs14-doclogin", pilotBase).post("/api/auth/login", { email: dEmail, password: "e2edocpassword1" });
+        check("NG-S14: normal doctor authentication works on the pilot DB (fresh login 200)",
+          dLogin.status === 200, `status ${dLogin.status}`);
+
+        // 9. no demo records in the pilot DB (but the real registrations ARE there)
+        const demoInPilot = await demoUserCount(scratch.pilot);
+        const realPatient = Number(
+          (await scratchClients[scratch.pilot].query(`SELECT count(*)::int n FROM "User" WHERE email = $1`, [pEmail])).rows[0].n,
+        );
+        check(
+          "NG-S14: no demo records exist in the pilot DB (zero @demo.in users, zero seeded hospitals) while the real registration is present",
+          demoInPilot === 0 && (await hospCount(scratch.pilot)) === 0 && realPatient === 1,
+          `demoUsers=${demoInPilot} hospitals=${await hospCount(scratch.pilot)} realPatient=${realPatient}`,
+        );
+
+        // 10. retention behaviour stays safe on the pilot DB (sweep disabled, zero swept)
+        const cron = await fetch(pilotBase + "/api/cron/daily", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+        const cj = await cron.json().catch(() => ({}));
+        check(
+          "NG-S14: retention behaviour safe on the pilot DB (daily cron: sweep disabled, 0 patients/doctors swept, 200)",
+          cron.status === 200 && cj.retention?.enabled === false && cj.retention?.reason === "policy_disables_sweep" && cj.retention?.patients === 0 && cj.retention?.doctors === 0,
+          `${cron.status} ${JSON.stringify(cj.retention ?? null)}`,
+        );
+      }
+    }
+
+    // 11. the existing public demo on the synthetic demo env (BASE) still works
+    const baseDemo = new Session("ngs14-basedemo");
+    const bd = await baseDemo.post("/api/auth/login", { email: "ramesh@demo.in", password: "city1234" });
+    const bdHome = bd.status === 200 ? await baseDemo.get("/patient") : { status: 0 };
+    check(
+      "NG-S14: existing public demo is still functional on the synthetic demo env (ramesh@demo.in login 200 + patient home 200)",
+      bd.status === 200 && bdHome.status === 200,
+      `login ${bd.status} home ${bdHome.status}`,
+    );
+  } finally {
+    // Kill the WHOLE process group (npx forks a next-server child; killing only the
+    // npx pid orphans the server, which keeps the port + DB connections alive).
+    if (pilotProc?.pid) {
+      try { process.kill(-pilotProc.pid, "SIGKILL"); }
+      catch { try { pilotProc.kill("SIGKILL"); } catch { /* already gone */ } }
+    }
+    await new Promise((r) => setTimeout(r, 1000)); // let the killed app's sockets close
+    for (const c of Object.values(scratchClients)) {
+      try { await c.end(); } catch { /* ignore */ }
+    }
+    const leftover = [];
+    for (const name of Object.values(scratch)) {
+      let ok = false;
+      for (let attempt = 0; attempt < 4 && !ok; attempt++) {
+        try { await sql(`DROP DATABASE IF EXISTS ${name}`); ok = true; }
+        catch (e) {
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+          else leftover.push(name + ":" + String(e?.message ?? e).slice(0, 80));
+        }
+      }
+    }
+    check("NG-S14: cleanup — all scratch databases dropped (no leftovers)", leftover.length === 0, JSON.stringify(leftover));
+  }
+}
+}
+
 if (pgClient) await pgClient.end();
 
 console.log(`\n========================\n e2e: ${pass} passed, ${failc} failed${skipped ? `, ${skipped} skipped (runtime-specific)` : ""}\n========================`);

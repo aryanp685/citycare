@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { homeFor } from "@/lib/roles";
+import { DEMO_MODE } from "@/lib/legal";
 import { useEmbedded } from "@/components/use-embedded";
 import { Warmup } from "@/components/warmup";
 import Link from "next/link";
@@ -8,7 +9,11 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("ramesh@demo.in");
+  // NG-S14 (Day 2): demo credentials are disclosed ONLY on demo-presented deployments
+  // (NEXT_PUBLIC_DEMO_MODE != "0", baked at build time). A pilot/production build ships
+  // an empty field and no demo hint — published demo accounts are never presented as
+  // pilot accounts.
+  const [email, setEmail] = useState(DEMO_MODE ? "ramesh@demo.in" : "");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -78,10 +83,12 @@ export default function LoginPage() {
         <p className="text-sm text-muted">
           No account? <Link className="text-brand font-semibold" href="/signup">Create one</Link> · Locked out or forgot? <Link className="text-brand font-semibold" href="/recover">Recover</Link>
         </p>
-        <p className="text-xs text-muted">
-          Demo users (password <span className="kbd">city1234</span>): ramesh@demo.in, anita@demo.in (patients) ·
-          dr.kulkarni@demo.in, dr.joshi@demo.in (doctors)
-        </p>
+        {DEMO_MODE && (
+          <p className="text-xs text-muted">
+            Demo users (password <span className="kbd">city1234</span>): ramesh@demo.in, anita@demo.in (patients) ·
+            dr.kulkarni@demo.in, dr.joshi@demo.in (doctors)
+          </p>
+        )}
       </form>
     </main>
   );
