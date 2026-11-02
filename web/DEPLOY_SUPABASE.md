@@ -46,7 +46,7 @@ to `bom1`, (4) deploys via `scripts/vercel-deploy.sh` (keeps `SESSION_SECRET`, s
 (5) proves the live app is on the new database through `/api/health`. Then:
 
 ```bash
-BASE=https://citycare-xi.vercel.app node scripts/e2e.mjs      # expect 52 pass / 0 fail / 5 skipped
+BASE=https://citycare-z95n.vercel.app node scripts/e2e.mjs    # expect 0 failed (DB-local checks skip at runtime)
 DATABASE_URL="$SUPABASE_DB_URL" FORCE_SEED=1 bash scripts/db-bootstrap.sh   # e2e locks anita@demo.in → reseed
 ```
 

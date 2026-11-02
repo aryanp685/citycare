@@ -1,6 +1,6 @@
 # CityCare Web — the application
 
-Next.js 16 (App Router) · React 19 · TypeScript 5 strict · Tailwind 4 · node-postgres.
+Next.js 16 (App Router) · React 19 · TypeScript strict (TS 6 API / tsgo 7 CLI) · Tailwind 4 · node-postgres.
 Talks **directly** to the PostgreSQL database built by `../schema/` — the SQL files
 there are the single source of truth (Prisma is not in the runtime path; see
 DRAWBACKS §D1 for why).
@@ -20,7 +20,7 @@ sudo -u postgres createdb -O citycare citycare || true
 cd ../web
 npm install
 npm run seed            # demo users, doctors, records — and a VERIFIED audit chain
-npm test                # 72 unit tests (slots/rules/parser/consent/auth/cookie+CSRF policy/scrypt knob/pg retry policy)
+npm test                # 213 unit tests (slots/rules/parser/consent/auth/cookie+CSRF policy/scrypt knob/pg retry policy/backup core/pg-copy/retention policy)
 
 # 2a) PREFERRED for demos / the sandbox preview: production build (≈160 MB RSS, no
 #     on-demand compiles; dev-mode Turbopack was OOM-killed on a 2 GB box — bug A24)
@@ -29,11 +29,11 @@ npm run start -- -H 0.0.0.0 -p 3000
 # 2b) development with hot reload:
 npm run dev -- -H 0.0.0.0 -p 3000
 
-# 3) full product flow over HTTP (54 assertions incl. consent + ledger + locking + the
-#    proxied-HTTPS / iframe sign-in path):
+# 3) full product flow over HTTP (272 checks incl. consent + ledger + locking + the
+#    proxied-HTTPS / iframe sign-in path + backup/DR drill + retention policy):
 node scripts/e2e.mjs    # needs the server running; re-seeds are NOT required after
 
-# 4) Deploy — LIVE at https://citycare-xi.vercel.app (Vercel Hobby sin1 + Neon Free Singapore) — DEPLOY_VERCEL.md
+# 4) Deploy — LIVE at https://citycare-z95n.vercel.app (Vercel Hobby sin1 + Neon Free Singapore) — DEPLOY_VERCEL.md
 npm run db:bootstrap    # DATABASE_URL=… → schema + UTC + seed on a hosted Postgres (asserted, idempotent)
 npm run vercel:deploy   # needs VERCEL_TOKEN + DATABASE_URL — see DEPLOY_VERCEL.md
 # Cloudflare alternative: local Worker preview on the real runtime, and the one-command deploy

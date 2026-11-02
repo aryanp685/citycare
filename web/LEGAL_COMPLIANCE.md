@@ -1,7 +1,9 @@
 # CityCare — legal & compliance register
 
 _Last verified 28 Sep 2026 against the code in this folder and the live deployment
-(`https://citycare-xi.vercel.app`). Written by an engineer, not a lawyer: every row says what
+(the stack now lives at `https://citycare-z95n.vercel.app`; control matrix re-checked against
+`main@9212ee4` in the 2026-11-01 Step-1 audit, retention row updated 2026-11-02 for NG-S15).
+Written by an engineer, not a lawyer: every row says what
 the law asks, what the code does about it and how to prove it. Where we are **not** compliant
 yet it says so. Get this reviewed by the college's legal cell before any non-demo use._
 

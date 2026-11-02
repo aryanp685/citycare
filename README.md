@@ -66,7 +66,7 @@ Two environment notes found while verifying:
 | Hallucinated claims are caught | 6/6 injected hallucinations caught, 0 correct summaries wrongly blocked |
 | The guard layer has tests | 20 unit tests, all passing |
 | The audit ledger is tamper-evident **in the live database** | `schema/sql/ledger.sql` — 31-row stress, in-place edit detected, row deletion detected, 4-way concurrent-append race clean, and verify reports 0 breaks even when the session timezone is switched to +14 |
-| **The website exists and works** | `web/` — Next.js 16 + React 19 + Tailwind 4 on this exact schema; `tsc` strict clean, 48 unit tests, `next build` OK, and `scripts/e2e.mjs` 43/43 over HTTP: signup → booking 409s → consent 403/grant/200 → safety 422/override → revoke → instant 403 → patient-visible ledger verified |
+| **The website exists and works** | `web/` — Next.js 16 + React 19 + Tailwind 4 on this exact schema; `tsc` strict clean, 213 unit tests, `next build` OK, and `scripts/e2e.mjs` 272/272 over HTTP (signup → booking 409s → consent 403/grant/200 → safety 422/override → revoke → instant 403 → patient-visible ledger → backup/DR drill → retention policy; verified 2026-11-02) |
 
 ## The website (`web/`)
 
@@ -75,9 +75,10 @@ the source of truth). Quick start:
 
 ```bash
 cd web
-npm install && npm run seed && npm test     # 48 unit tests
+cp .env.example .env.local                  # template with generation commands (no real values)
+npm install && npm run seed && npm test     # 213 unit tests
 npm run dev                                 # dev server on :3000
-node scripts/e2e.mjs                        # 43 HTTP assertions (server must be running)
+node scripts/e2e.mjs                        # 272 HTTP assertions (server must be running)
 ```
 
 Demo logins (password `city1234`): `ramesh@demo.in`, `anita@demo.in`, `vikas@demo.in`
@@ -92,14 +93,15 @@ deadlock, plpgsql traps…), is in **`web/DRAWBACKS_AND_BUGFIXES.md`**.
   on a real model must be measured by you and reported honestly.
 - **No real patient data.** Everything here is synthetic by design.
 - **No live integrations.** ABDM sandbox, RxNav and the SMS gateway are
-  described, not connected. Likewise OCR is simulated (pasted text) and file
-  storage is unimplemented — `Document` rows carry checksum/IV fields by design.
+  described, not connected. Likewise OCR is simulated (pasted text). File
+  storage IS implemented (F12: uploads encrypted AES-256-GCM under `DOCUMENT_KEY`,
+  `DocumentBlob` storage, consent-gated downloads — see `web/FEATURES.md`).
 - **`npm run build` needs ~1.5 GB free RAM** (worked here with
   `NODE_OPTIONS=--max-old-space-size=1150`; OOM-killed at default on this 2 GB box).
 
 ### Deploy
 
-**Live: https://citycare-xi.vercel.app** (Vercel Hobby, functions in `sin1`, Neon Free Postgres in Singapore via the Vercel Marketplace; demo `ramesh@demo.in` / `city1234`). Verified with the full e2e suite against the live URL (52 passed · 0 failed · 5 not-applicable).
+**Live: https://citycare-z95n.vercel.app** (Vercel Hobby, functions in `sin1`, Neon Free Postgres in Singapore via the Vercel Marketplace; demo `ramesh@demo.in` / `city1234`). Fresh git-linked stack verified at deploy time (2026-10-31: smoke + demo login; `web/DEPLOY_VERCEL.md`); the last full-suite run against the previous live URL recorded 52 passed / 0 failed / 5 skipped, and re-running the current 272-check suite against the live URL is an owner-side check (this sandbox cannot reach `*.vercel.app` — register NG-G04).
 ```bash
 cd web && export VERCEL_TOKEN=… DATABASE_URL='postgresql://…neon.tech/neondb?sslmode=require'
 npm run vercel:deploy      # db bootstrap → link → env → deploy → smoke test   (web/DEPLOY_VERCEL.md)

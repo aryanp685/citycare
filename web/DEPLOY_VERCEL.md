@@ -1,6 +1,6 @@
 # Deploying CityCare to Vercel (Hobby) + Neon Postgres
 
-> **Live:** https://citycare-xi.vercel.app — demo `ramesh@demo.in` / `city1234` (all demo users share it;
+> **Live:** https://citycare-z95n.vercel.app (fresh git-linked stack, 2026-10-31) — demo `ramesh@demo.in` / `city1234` (all demo users share it;
 > doctors: `dr.kulkarni@demo.in` …). Deployed 27 Sep 2026 from this tree; function region `sin1`,
 > database Neon Free (Postgres 18.6) in `ap-southeast-1`, provisioned through the Vercel Marketplace.
 
@@ -79,7 +79,7 @@ What it does (each step asserts its result and stops on failure):
 Verify the whole application afterwards (creates + cleans its own users, but **locks `anita@demo.in`
 for the lockout test** — reseed after: `FORCE_SEED=1 DATABASE_URL=… npm run db:bootstrap`):
 ```bash
-BASE=https://citycare-xi.vercel.app node scripts/e2e.mjs     # expect 52 passed, 0 failed, 5 skipped
+BASE=https://citycare-z95n.vercel.app node scripts/e2e.mjs   # expect 0 failed; DB-local checks skip at runtime (direct DB access is impossible through the proxy)
 ```
 
 ## Deploy — option B: no CLI, no token (GitHub import)
@@ -112,7 +112,7 @@ is applied automatically on that deploy (A76: code and schema always move togeth
   remove those two Pool options first and re-run the e2e.
 - **Deployment protection.** `https://citycare-<hash>-<team>.vercel.app` URLs redirect to Vercel
   SSO (302, `_vercel_sso_nonce` cookie) — that is Vercel's default and not a bug. Share the
-  production alias `https://citycare-xi.vercel.app` (or `citycare-iamjarvis9896-3988s-projects.vercel.app`).
+  production alias `https://citycare-z95n.vercel.app`.
 - **Node version.** The project setting says Node 24.x (Vercel default); Next 16 is fine on it, and
   the build ran on it. `engines` is not pinned on purpose.
 - **Cookies.** Deployed site issues `SameSite=Lax; Secure`; iframe embedding gets

@@ -1,5 +1,5 @@
 # F19 — CI gate: the same four checks the deploy script relies on, on every push / PR.
-# Runs against a throw-away Postgres 17 so the e2e suite (217 HTTP checks) is real, not mocked.
+# Runs against a throw-away Postgres 17 so the e2e suite (272 HTTP checks) is real, not mocked.
 name: ci
 on:
   push:

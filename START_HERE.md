@@ -1,31 +1,42 @@
-# CityCare — package contents (zip built 2026-10-29)
+# CityCare — repository guide (updated 2026-11-02)
 
-Live site: https://citycare-xi.vercel.app  (demo: ramesh@demo.in / city1234 — see web/README.md for all accounts)
+Live site: https://citycare-z95n.vercel.app  (demo: ramesh@demo.in / city1234 — see web/README.md for all accounts)
 
 | Path | What it is |
 |---|---|
 | `web/` | The Next.js 16 / React 19 / TypeScript site (API routes, pages, tests, scripts). Start with `web/README.md`. |
-| `web/DRAWBACKS_AND_BUGFIXES.md` | Honest dev diary: bugs A1–A74 found & fixed, drawbacks D1–D59 with status. |
+| `web/DRAWBACKS_AND_BUGFIXES.md` | Honest dev diary: bugs A1–A84 found & fixed, drawbacks D1–D68 with status. |
 | `web/FEATURES.md`, `web/LEGAL_COMPLIANCE.md` | Shipped features with proof; DPDP Act 2023 / Rules 2025 control matrix. |
+| `web/docs/operations/` | Backup & DR: architecture, restore runbook, backup configuration, executed restore drill report (NG-S09, 2026-11-02). |
 | `web/DEPLOY_VERCEL.md`, `web/DEPLOY_CLOUDFLARE.md`, `web/DEPLOY_SUPABASE.md` | Deployment paths (Vercel + Neon is the live one). |
-| `schema/` | Postgres schema: `citycare_init.sql`, `sql/constraints.sql`, `sql/ledger.sql` (hash-chained append-only ledger), `migrations/0001–0004`. |
+| `schema/` | Postgres schema: `citycare_init.sql`, `sql/constraints.sql`, `sql/ledger.sql` (hash-chained append-only ledger), `migrations/0001–0006`. |
 | `ai_layer/` | Python mock-extractor evaluation harness (not wired into the site by design — see AI_ACCURACY_AND_HALLUCINATION.md). |
 | `trust/` | Trust/consent design notes. |
-| `CITYCARE_PROJECT_PLAN.md`, `PLAN_REVIEW_AND_DRAWBACKS.md`, `DATA_AND_TRUST.md`, `AI_ACCURACY_AND_HALLUCINATION.md` | Plan, critique, data/trust and anti-hallucination design docs. |
+| `CITYCARE_MASTER_GAP_REGISTER.md` | The live gap register (73 findings, ID-stable, each with status + evidence). |
+| `CITYCARE_PROJECT_PLAN.md`, `PLAN_REVIEW_AND_DRAWBACKS.md`, `DATA_AND_TRUST.md`, `AI_ACCURACY_AND_HALLUCINATION.md` | Plan, critique, data/trust and anti-hallucination design docs (dated — historical). |
 | `uploads/Seminar 1.pdf` | The Project Progress Seminar-I slides (as submitted). |
-| `.github/workflows/ci.yml` | CI gate (lint, tsc, vitest, licences, bootstrap, build, 217-check e2e). The remote now exists (created 2026-10-31) but GitHub Actions is disabled for this repo, so the 2026-10-31 push produced a 0-second failure with no log (see D59). The identical local sequence was re-run green in the sandbox on 2026-10-31. |
+| `.github/workflows/ci.yml` | CI gate (lint, tsc, vitest, licences, bootstrap, build, 272-check e2e). GitHub Actions is disabled for this repo, so the identical sequence is run locally (see web/README.md "Verified" blocks for the dated green runs). |
 
 ## Run locally (from `web/`)
+
 ```
-cp .env.example .env.local        # fill SESSION_SECRET, CRON_SECRET, DOCUMENT_KEY, ANCHOR_SIGNING_KEY (commands are in the file)
+cp .env.example .env.local        # template with generation commands (no real values)
 npm install
-export DATABASE_URL=postgres://citycare:citycare@127.0.0.1:5432/citycare   # Postgres 17 with role/db "citycare"
-FORCE_SEED=1 bash scripts/db-bootstrap.sh                                    # schema + migrations + demo data
-# (no psql on the machine? identical, pure-node: node scripts/db-bootstrap-node.mjs)
-npm run build && npm start                                                   # http://localhost:3000
-npx vitest run && node scripts/e2e.mjs                                       # 131 unit tests, 217 HTTP checks
+# .env.local already points DATABASE_URL at 127.0.0.1:5432/citycare; if your Postgres differs, edit it
+FORCE_SEED=1 bash scripts/db-bootstrap.sh      # schema + migrations + demo data (psql-free: node scripts/db-bootstrap-node.mjs)
+NODE_OPTIONS=--max-old-space-size=1150 npm run build && npm run start -- -H 0.0.0.0 -p 3000
+npx vitest run && node scripts/e2e.mjs          # 213 unit tests, 272 HTTP checks (e2e needs the server)
 ```
 
-## Not in this zip (on purpose)
-- `web/.env.local` and `web/.dev.vars` — they hold the **production** `DOCUMENT_KEY`, `ANCHOR_SIGNING_KEY`, `CRON_SECRET` and `SESSION_SECRET`. Those live on the Vercel project (`vercel env pull`) and on the build machine. Never put them in a shared zip.
+`.env.example` declares `RETENTION_POLICY=demo` (the 7-day demo sweep is armed for a demo
+machine — NG-S15; real-data machines set `internal`/`pilot`, which turns the sweep off).
+Fill the `<generate>` secrets (SESSION_SECRET, CRON_SECRET, and optionally DOCUMENT_KEY /
+BACKUP_KEY / ANCHOR_SIGNING_KEY) with the commands written in the file.
+
+## Never commit (gitignored)
+
+- `web/.env.local` / `web/.dev.vars` — they hold the real `SESSION_SECRET`, `CRON_SECRET`,
+  `DOCUMENT_KEY`, `ANCHOR_SIGNING_KEY`, `BACKUP_KEY`. Production values live on the Vercel
+  project (`vercel env pull`) and on the build machine. The template `.env.example` is safe
+  by construction: it carries no values.
 - `node_modules/`, `.next/`, `.open-next/`, `.wrangler/` — regenerated by `npm install` / `npm run build`.

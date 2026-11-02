@@ -47,16 +47,16 @@ the web app by design**.
 | LOC (`web/src`, ts+tsx) | **12,048** | `wc -l` |
 | Unit test files / tests | **18 files / 162 tests** — **run: 162/162 pass** | `npx vitest run` |
 | E2E HTTP checks | **241** — **run: 241/241 pass** (fresh seed, Node prod server) | `node scripts/e2e.mjs` |
-| DB tables | **35** | `information_schema` |
-| DB foreign keys / unique+PK constraints / indexes | **45 / 35 / 96** | `information_schema` / `pg_indexes` |
+| DB tables | **36** | `information_schema` |
+| DB foreign keys / unique+PK constraints / indexes | **45 / 36 / 98** | `information_schema` / `pg_indexes` |
 | Custom trigger / ledger functions | 1 (`audit_no_update` + `reject_audit_tampering`) / 2 (`ledger_append`, `ledger_verify`) | `pg_trigger` / `pg_proc` |
-| Schema SQL | `citycare_init.sql` + `constraints.sql` + `ledger.sql` + 5 migrations = **1,142 lines** | `wc -l` |
+| Schema SQL | `citycare_init.sql` + `constraints.sql` + `ledger.sql` + 6 migrations = **1,170 lines** | `wc -l` |
 
 Historical figures quoted in the brief (52 routes / 27 pages / 32 components / ~10,800 LOC /
-131 unit / 217 e2e) were from October 2026. **Current verified**: 54 routes / 27 pages / 40
-component files / 12,048 LOC / 162 unit / 241 e2e.
+131 unit / 217 e2e) were from October 2026. **Current verified (2026-11-02, after NG-S09 +
+NG-S15)**: 55 routes / 27 pages / 43 component files / 13,763 LOC (src) / 213 unit / 272 e2e.
 
-## 3. Route inventory (all 54 API routes, grouped)
+## 3. Route inventory (all 55 API routes, grouped)
 
 **Auth (11)**: `login`, `logout`, `me`, `signup`, `forgot`, `reset`, `recover`,
 `recovery-codes`, `sessions`, `verify-email/{request,confirm}` — scrypt N=2¹⁷ async, HS256
@@ -81,9 +81,10 @@ text → DRAFT meds), `print-summary` (F18), `purge` (real erasure).
 unjustified), grievances (30-day SLA), incidents/breach register (72-h Board clock, r.7(2)
 report), locked accounts, unlock, system monitor.
 
-**Shared (9)**: `notifications` (+read), `grievances`, `legal/acceptance`, `ledger/anchors`
-(+`[seq]/ots`), `health` (public), `cron/daily` (bearer secret; retention sweep, ledger verify,
-session/rate-limit prune, OTS anchor), `patient/photo`.
+**Shared (10)**: `notifications` (+read), `grievances`, `legal/acceptance`, `ledger/anchors`
+(+`[seq]/ots`), `health` (public), `cron/daily` (bearer secret; policy-gated retention sweep,
+ledger verify, session/rate-limit prune, OTS anchor), `cron/backup` (bearer secret; daily
+encrypted backup, NG-S09), `patient/photo`.
 
 ## 4. Page inventory (27)
 
@@ -166,12 +167,16 @@ START_HERE/README **does not exist in the repo** (finding NG-G01).
 
 ## 9. Background jobs
 
-One cron: `POST /api/cron/daily` (Vercel schedule 02:30 IST, bearer `CRON_SECRET`, 503 if
-unset, 401 on mismatch — verified by probe). It: erases self-registered demo accounts past
-7 days (budgeted 20 s, `deferred` reported), prunes expired sessions + stale rate-limit
-windows, runs `ledger_verify()`, signs the ledger head (Ed25519) and submits to
-OpenTimestamps (best-effort 5 s; skipped locally with `ANCHOR_OTS=0`). No queue, no worker —
-there is nothing slow enough to justify one (documented decision).
+Two crons (the Vercel Hobby 2-cron limit is exactly met):
+`GET /api/cron/daily` (Vercel schedule 02:30 IST, bearer `CRON_SECRET`, 503 if unset, 401 on
+mismatch — verified by probe). It: erases self-registered demo accounts past 7 days — **only
+when `RETENTION_POLICY=demo` is declared (NG-S15 fail-safe gate)** (budgeted 20 s, `deferred`
+reported), prunes expired sessions + stale rate-limit windows, runs `ledger_verify()`, signs
+the ledger head (Ed25519) and submits to OpenTimestamps (best-effort 5 s; skipped locally with
+`ANCHOR_OTS=0`). And `GET /api/cron/backup` (21:30 UTC, same bearer) — daily encrypted backup
+(NG-S09: AES-256-GCM container, private store, `"Backup"` metadata trail, 20 s soft budget;
+see `web/docs/operations/`). No queue, no worker — there is nothing slow enough to justify
+one (documented decision).
 
 ## 10. What this architecture is / is not
 

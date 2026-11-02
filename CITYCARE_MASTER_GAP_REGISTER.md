@@ -1463,19 +1463,41 @@ Step 1 (DPDP Rules 2025 G.S.R. 846(E), notified 13 Nov 2025, three commencement 
 #### NG-G01 — Stale top-level docs + missing `web/.env.example` (P2)
 - **Category**: Governance → Documentation accuracy
 - **Description**: (a) `web/.env.example` is referenced by `START_HERE.md` ("cp .env.example .env.local") and the root README but **does not exist in the repo** (verified: `find`, 2026-11-01) — onboarding is broken for a new machine. (b) `START_HERE.md` cites the old live URL (`citycare-xi.vercel.app`), migrations 0001–0004, and 131/217 test counts — all superseded (current: `citycare-z95n.vercel.app`, 0001–0005 + prebuild hook, 162/241). (c) The root README cites 48 unit tests / 43 e2e and "file storage is unimplemented" (F12 shipped real storage). (d) The `ci.yml` comment says 217 checks.
-- **Current implementation / observed behaviour**: All verified by direct read on 2026-11-01. The in-repo `web/README.md` verified blocks are current (dated rounds) — the drift is in the root-level docs written for the 2026-10-29 zip.
+- **Current implementation / observed behaviour (original, 2026-11-01)**: All verified by direct read on 2026-11-01. The in-repo `web/README.md` verified blocks are current (dated rounds) — the drift is in the root-level docs written for the 2026-10-29 zip.
 - **Expected behaviour**: One source of truth per fact; an onboarding command that actually works.
-- **Evidence**: file reads + `find` (2026-11-01).
+- **Evidence (original)**: file reads + `find` (2026-11-01).
 - **Evidence status**: VERIFIED
 - **Severity**: Low (onboarding) + Medium (examiners/viva readers get wrong numbers) · **Priority**: P2
 - **Business impact**: An examiner who follows START_HERE hits a missing file and stale claims on the first try.
-- **Patient safety impact**: None. **Security/privacy impact**: None (the missing template carries no secrets — it is a template; the hygiene note is that it must stay value-free). **Technical impact**: None.
+- **Patient safety impact**: None. **Security/privacy impact**: None (the template carries no secrets — it must stay value-free; enforced: every secret line is empty with a generation command). **Technical impact**: None.
 - **Dependencies**: none.
-- **Recommended solution**: Step-2 W0 — create `web/.env.example` (generation commands, no values); sync START_HERE/README/ci comments to the 2026-11-01 state (URL, counts, migrations, prebuild note).
+- **Recommended solution (original)**: Step-2 W0 — create `web/.env.example` (generation commands, no values); sync START_HERE/README/ci comments to the 2026-11-01 state (URL, counts, migrations, prebuild note).
 - **Required tests**: `cp .env.example .env.local` + bootstrap + build works on a clean checkout; doc numbers match the suites (grep-check committed).
 - **Acceptance criteria**: no doc in the repo cites a number or URL the tests/production contradict (a spot-check list committed).
 - **External deps / approvals**: none.
-- **Complexity**: Small · **Status**: Open
+- **Complexity**: Small
+- **Status**: **RESOLVED** (2026-11-02).
+
+**Implementation (Step 2 Batch 1, 2026-11-02).**
+- **Root-cause fix first (A84)**: `web/.gitignore`'s blanket `.env*` rule was ignoring `.env.example` itself — the template could never be tracked, which is why onboarding was broken even in principle. Added `!.env.example` (verified: template trackable, `.env.local` still ignored).
+- **`web/.env.example` created** — the complete, exact set of variables the code reads (mechanically cross-checked against a `process.env.*` + env-object grep of `src/` + `scripts/`: **0 invented, 0 missing**), with generation commands inline and **no real values** (only `DATABASE_URL` pre-filled with the local dev default the bootstrap creates, and the non-secret declaration `RETENTION_POLICY=demo`). New WS-A/WS-B vars documented there: `BACKUP_KEY`/`BACKUP_DIR`/`BACKUP_RETENTION_DAYS`, `RETENTION_POLICY`/`DEMO_RETENTION_DAYS`/`NEXT_PUBLIC_DEMO_MODE`, `BLOB_READ_WRITE_TOKEN` (prod-only).
+- **Stale docs synced** (live/operational docs only — dated historical reports, journal entries and audit evidence are deliberately left as-is):
+  - `START_HERE.md` — rewritten: URL → `citycare-z95n.vercel.app`; A1–A84/D1–D68; migrations 0001–0006; 213 unit / 272 e2e; working `.env.example` onboarding flow; git-era "never commit" section.
+  - Root `README.md` — 48→213 unit, 43→272 e2e (×3 spots); "file storage is unimplemented" → implemented (F12); live URL → z95n with an honest verification note (deploy-time smoke 2026-10-31; last full-suite live profile 52/0/5 on the previous URL; current 272-check live re-run is owner-side — no invented numbers).
+  - `.github/workflows/ci.yml` — "217 HTTP checks" → 272.
+  - `web/DEPLOY_VERCEL.md` — header URL → z95n; e2e-verify step URL + de-committed the stale "expect 52" (now: expect 0 failed, DB-local checks skip); deployment-protection alias → z95n.
+  - `web/DEPLOY_SUPABASE.md` — same URL/expectation fix in its verify step.
+  - `web/LEGAL_COMPLIANCE.md` — header: live stack now at z95n; control matrix re-checked vs `main@9212ee4` (2026-11-01 audit), retention row updated 2026-11-02 (NG-S15).
+  - `web/README.md` — "TypeScript 5" → TS 6 API/tsgo 7 CLI; 72→213 unit; 54→272 e2e; live URL → z95n.
+  - `CITYCARE_CURRENT_ARCHITECTURE.md` — re-measured "Current verified": 55 routes / 27 pages / 43 component files / 13,763 LOC / 213 unit / 272 e2e; 36 tables / 45 FK / 36 unique+PK / 98 indexes; 6 migrations = 1,170 schema-SQL lines; route inventory +55 with `cron/backup`; background-jobs section now describes **both** crons (incl. the NG-S15 gate).
+
+**Tests / verification (2026-11-02):**
+1. Template↔code cross-check: 0 invented / 0 missing (machine-checked, reproducible grep).
+2. All generation commands in the template executed successfully.
+3. **Onboarding flow executed**: `cp .env.example .env.local` → fill generated secrets → `FORCE_SEED=1 node scripts/db-bootstrap-node.mjs` (11 users, ledger 0 breaks) → app start → `/api/health` honest on the minimal template env (`documentKey:"derived"`, `anchorSigning:false`, `backups.configured:false`, `retention: demo/enabled/ok`) → demo login 200 + session works. (Build already green on the same code; the template's `NEXT_PUBLIC_*` defaults match the previous inlining, so no separate rebuild was needed.) Original dev env restored afterwards (verified: `documentKey:"env"`, `backups.configured:true`).
+4. **Spot-check list (committed here)** — every live doc's numbers/URLs checked against the 2026-11-02 measured state: live URL `citycare-z95n.vercel.app` (START_HERE, root README, DEPLOY_VERCEL header + alias, DEPLOY_SUPABASE, LEGAL_COMPLIANCE, web/README) ✓; unit count 213 (vitest run) ✓; e2e count 272 (full run 272/272) ✓; migrations 0001–0006 (dir listing) ✓; A-range A1–A84 / D-range D1–D68 (DRAWBACKS headings) ✓; schema 36 tables/45 FK/36 uq+PK/98 ix + 1,170 SQL lines (information_schema + `wc -l`) ✓; routes 55/pages 27/components 43/LOC 13,763 (filesystem counts) ✓; two crons `0 21`/`30 21` UTC (`vercel.json`) ✓. Remaining `citycare-xi` mentions are all in dated historical contexts (Sept plan/review docs, dated deploy log lines, bug-journal entries, audit evidence) — correct as history.
+
+**Acceptance criteria evidence**: the spot-check list above is committed in this entry; the onboarding command now actually works (item 3); the template is value-free by construction.
 
 #### NG-G08 — E2E suite is coupled to demo data and rate-limit caveats *(NEW at consolidation)* (P2)
 - **Category**: Governance → Test infrastructure
