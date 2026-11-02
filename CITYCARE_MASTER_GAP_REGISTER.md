@@ -129,9 +129,9 @@ interviews, Hobby ToS caps non-commercial).
 #### NG-S09 — No database backup / disaster-recovery path
 - **Category**: Security & Ops → Data resilience
 - **Description**: Production data lives only in Neon Free (no PITR, autosuspend, 0.5 GB cap). There is no scheduled dump, no private backup store, and no documented/tested restore procedure anywhere in the repo.
-- **Current implementation / observed behaviour**: Nothing performs a backup. `web/scripts` contains bootstrap/seed/e2e/deploy scripts only (verified by directory read, 2026-11-01). The deploy docs state "free tiers — no backup: disclose in report" (an accepted demo limitation, now a pilot blocker).
+- **Current implementation / observed behaviour (original, 2026-11-01)**: Nothing performs a backup. `web/scripts` contains bootstrap/seed/e2e/deploy scripts only (verified by directory read, 2026-11-01). The deploy docs state "free tiers — no backup: disclose in report" (an accepted demo limitation, now a pilot blocker).
 - **Expected behaviour**: A scheduled encrypted dump (RPO documented) and a restore runbook that has been executed at least once, with `ledger_verify()` clean on the restored DB.
-- **Evidence**: Step-1 security doc §2; repo script inventory; `web/DEPLOY_VERCEL.md`; plan doc §6 deploy note.
+- **Evidence (original)**: Step-1 security doc §2; repo script inventory; `web/DEPLOY_VERCEL.md`; plan doc §6 deploy note.
 - **Evidence status**: VERIFIED (absence confirmed by inspection, 2026-11-01)
 - **Severity**: High · **Priority**: P0 (launch blocker)
 - **Business impact**: One provider incident (or a fat-fingered `FORCE_SCHEMA=1` against prod — the guard is human discipline) destroys the product's entire asset: records, consents, ledger evidence.
@@ -139,11 +139,38 @@ interviews, Hobby ToS caps non-commercial).
 - **Security/privacy impact**: DPDP "reasonable security safeguards" (s.8(5)/r.6, from 13 May 2027; SPDI today) plausibly include recoverability for health data.
 - **Technical impact**: None until the event; then total.
 - **Dependencies**: production DB access (owner credentials).
-- **Recommended solution**: Step-2 W1 — daily `pg_dump` under `CRON_SECRET` to a private object store (30-day retention) + restore runbook + drill.
+- **Recommended solution (original)**: Step-2 W1 — daily `pg_dump` under `CRON_SECRET` to a private object store (30-day retention) + restore runbook + drill.
 - **Required tests**: restore drill (restore → schema check → `ledger_verify()` = 0 breaks → login works); dump-failure alerting.
 - **Acceptance criteria**: **A documented, executed restore drill** whose output is committed to the repo (date, RPO/RTO, `ledger_verify` result); a cron failure is observable.
 - **External deps / approvals**: owner's prod DB access.
-- **Complexity**: Small · **Status**: Open
+- **Complexity**: Small
+- **Status**: **PARTIALLY IMPLEMENTED** (2026-11-02) — code complete + sandbox drill **executed successfully**; production execution outstanding (owner-side).
+
+**Implementation (Step 2 Batch 1, 2026-11-01 → 2026-11-02).** Daily encrypted backup, private store, observable failures, human-run scratch-only restore, and a real executed drill. `pg_dump` was **not** used (no binary in the sandbox or Vercel; pooler-hostile) — the equivalent is a per-table `COPY TO/FROM` logical dump with a versioned, self-verifying container.
+
+- **Files added**
+  - `schema/migrations/0006_backup_metadata.sql` — `"Backup"` metadata table (15 cols incl. JSONB `rowCounts`); every attempt (ok **and** failed) is a row → backup health is an auditable trail, never a silent gap.
+  - `web/src/lib/backup-core.mjs` (+ `.d.mts`) — the single implementation: config (`BACKUP_KEY` 32-B b64, store kind, retention clamp), FK-topological table order, AES-256-GCM container (`CCB1` magic, manifest with exact section byte lengths — no pattern-based re-parsing), file naming, local-0600 / Vercel-Blob-**private** stores, prune (keeps newest, never to zero), COPY capture, `createBackup` (all-or-nothing, 20 s soft budget), metadata recording, staleness (30 h).
+  - `web/src/lib/pg-copy.mjs` (+ `.d.mts`) — pg 8.23 COPY protocol adapter (pg has none: `handleCopyData` no-op / `handleCopyInResponse` fails). Invariants: no `then` (self-unwrap deadlock), copy every chunk (pg-protocol buffer reuse), no query callback (error swallowing) — all three are real bugs found during this work (A77–A79).
+  - `web/scripts/backup.mjs` — CLI: `create` / `list` / `verify <file>` (same core as the cron).
+  - `web/scripts/restore-drill.mjs` — the runbook's executable form: scratch DB name **must** match `^citycare_drill_\d{8}_\d{6}$` (restore can never target a real DB by name), refuses an existing scratch, gates: file integrity → schema (base + migrations) → FK-ordered COPY in ONE transaction → **`ledger_verify() = 0`** → row counts → **content byte-identical (re-COPY compare)** → login/record check → scratch dropped. Always prints the JSON report (A81).
+  - `web/docs/operations/BACKUP_AND_DISASTER_RECOVERY.md`, `RESTORE_RUNBOOK.md`, `BACKUP_CONFIGURATION.md`, `RESTORE_DRILL_REPORT.md` — the four required ops docs.
+- **Files modified**
+  - `web/src/app/api/cron/backup/route.ts` (new route) — `GET`, `Bearer $CRON_SECRET` (unset ⇒ 503, mismatch ⇒ 401, timing-safe), dedicated pg client (no pool 8 s statement_timeout, 15 s connect timeout, `timezone=UTC`), read-only over the DB (no restore/delete capability), failures recorded as metadata rows.
+  - `web/vercel.json` — second cron `30 21 * * *` UTC (02:30 IST daily; offset from the 21:00 daily job). Exactly meets the Hobby 2-cron limit (D65).
+  - `web/src/app/api/health/route.ts` — `backups: {configured, lastSuccessAt, ageMs, stale}` fact (no secrets, no PHI).
+  - `web/src/lib/db.ts` — exported `nodeConnectionString()` for the dedicated client.
+  - `web/scripts/e2e.mjs` — section 14 (16 backup/DR checks incl. the full drill).
+- **Tests added / executed / results (2026-11-02, sandbox)**
+  - `backup-core.test.ts` — 28 unit tests (format, crypto round-trip, manifest/tamper, ordering, naming, prune edge cases, stores, metadata SQL, staleness) — **28/28 pass**.
+  - `pg-copy.test.ts` — 10 unit tests (chunk queuing/ordering/terminal, error paths, bounded COPY-FROM chunking, delegation + literal-COPY-safety, and the three regression pins A77–A79) — **10/10 pass**.
+  - Vitest total **200/200** (baseline 162 + 28 + 10).
+  - E2e total **257/257** (baseline 241 + 16 backup/DR checks) — including: cron 401/503 without/wrong secret; run with secret reports facts only; metadata row `status=ok`; metadata table has no PHI columns; file exists in store; file verifies (decrypt + sha + manifest); file is encrypted (magic CCB1, **no user email in the bytes**); **drill success on isolated scratch DB; `ledger_verify()` 0 breaks; row counts match; content byte-identical; login + record check pass; scratch dropped; RPO/RTO measured; health surfaces the backup fact**.
+  - **Standalone executed drill** (`RESTORE_DRILL_REPORT.md`): exit 0, `"status": "success"`, all gates green, **RTO 609 ms** (file → verified scratch DB), backup age 118 ms, scratch dropped. Earlier failed attempts (thenable deadlock, chunk aliasing, error swallowing, TDZ) are all fixed and pinned — the drill demonstrably fails when it should.
+- **Security review**: no public backup endpoint (bearer-auth, 503-when-unconfigured); response/metadata carry no secrets or PHI (size, sha256, counts, db-identity fingerprint only); `BACKUP_KEY` never derived from `SESSION_SECRET`, never committed, never in DB; store is private (blob `access:"private"` / local 0600); restore is human-run and **structurally cannot target the live DB** (scratch-name regex + refuse-existing + only CREATE/DROP of that name on the real DB); ledger verification is never bypassed (a gate, not a switch).
+- **Production verification status**: **NOT executed** — the Vercel cron has not run against the production Neon DB (deployment requires explicit owner approval; prod env vars `BACKUP_KEY`/`BLOB_READ_WRITE_TOKEN` not yet set). Sandbox execution is the current evidence ceiling.
+- **Remaining blockers**: owner-side prod deploy + env + first cron run + one production-size drill (runbook §8) before RTO ≤ 1 h can be claimed for production; then the finding can move to RESOLVED.
+- **Docs**: `web/docs/operations/BACKUP_AND_DISASTER_RECOVERY.md` · `RESTORE_RUNBOOK.md` · `BACKUP_CONFIGURATION.md` · `RESTORE_DRILL_REPORT.md` · `web/DRAWBACKS_AND_BUGFIXES.md` A77–A82, D63–D67.
 
 #### NG-S15 — Live demo retention sweep will erase real pilot users if the pilot reuses the production instance *(NEW at consolidation)*
 - **Category**: Security & Ops → Data lifecycle / environment separation

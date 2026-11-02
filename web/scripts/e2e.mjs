@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 // psql-backed checks run without exporting anything. Against a remote BASE only CRON_SECRET is used.
 try {
   for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-    const m = line.match(/^(CRON_SECRET|DATABASE_URL)=(.*)$/);
+    const m = line.match(/^(CRON_SECRET|DATABASE_URL|BACKUP_KEY|BACKUP_DIR)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, "");
   }
 } catch { /* no .env.local — fine */ }
@@ -848,6 +848,18 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
     const grid = await pat.get(`/api/patient/doctors/${e2eDoctorId}/slots`);
     const slot = (grid.data?.grid ?? []).flatMap((g) => g.slots).find((s) => s.iso === at);
     check("D6: slots API shows 2 seats left at a fresh instant", grid.status === 200 && slot?.left === 2, JSON.stringify(slot));
+    // e2e does NOT reseed between runs, and `at` is a fixed instant: on a warm DB the seeded
+    // users (vikas, sunita) may still hold appointments at `at` from a previous run, which makes
+    // b2 fail with the CORRECT 409 patient_overlap instead of the expected b3 slot_full
+    // (observed 2026-11-02: 201/409/201 on the second run). Clear the three test patients'
+    // prior appointments at this instant so the capacity check measures only this run's bookings.
+    await sql(
+      `DELETE FROM "Appointment"
+       WHERE "scheduledAt"=$1 AND "patientId" IN (
+         SELECT p.id FROM "Patient" p JOIN "User" u ON u.id=p."userId" WHERE u.email IN ($2,$3,$4)
+       )`,
+      [at, patEmail, "vikas@demo.in", "sunita@demo.in"],
+    );
     const b1 = await pat.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: at, reason: "seat 1" });
     const b2 = await stranger2.post("/api/patient/appointments", { doctorId: e2eDoctorId, scheduledAt: at, reason: "seat 2" });
     const third = new Session("third");
@@ -966,6 +978,85 @@ console.log("\n— 13. F18: print / PDF visit summary —");
   const noPage = await kulkarni18.raw(`/doctor/patients/${rameshId?.rows[0]?.id}`);
   check("F18: a doctor WITHOUT live consent gets NO print block at all", noPage.status === 200 && !new TextDecoder().decode(noPage.bytes).includes("print-summary"), `status ${noPage.status}`);
 }
+console.log("\n— 14. backup / DR (NG-S09): encrypted daily backup, private store, restore drill —");
+{
+  const bNoAuth = await fetch(BASE + "/api/cron/backup");
+  check("B: backup cron refuses without the secret (401/503, never 200)", bNoAuth.status === 401 || bNoAuth.status === 503, `got ${bNoAuth.status}`);
+
+  if (process.env.CRON_SECRET) {
+    const bWrong = await fetch(BASE + "/api/cron/backup", { headers: { authorization: `Bearer ${"w".repeat(43)}` } });
+    check("B: backup cron rejects a wrong secret (401)", bWrong.status === 401, `got ${bWrong.status}`);
+
+    const bResp = await fetch(BASE + "/api/cron/backup", { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });
+    const bj = await bResp.json().catch(() => ({}));
+    check(
+      "B: backup cron runs with the secret and reports file facts (no secrets/PHI in the response)",
+      bResp.status === 200 && bj.ok === true && bj.backup && Number(bj.backup.fileSize) > 0 &&
+        /^[0-9a-f]{64}$/.test(bj.backup.sha256 ?? "") &&
+        (bj.backup.store === "local" || bj.backup.store === "blob") &&
+        Number.isInteger(bj.backup.tables) && bj.backup.tables >= 30,
+      `${bResp.status} ${JSON.stringify(bj).slice(0, 200)}`,
+    );
+
+    const bMeta = await sql(`SELECT count(*)::int n FROM "Backup" WHERE status = 'ok'`);
+    check("B: a 'Backup' metadata row (status ok) was recorded", bMeta?.rows[0]?.n >= 1, JSON.stringify(bMeta?.rows[0]));
+    const bCols = await sql(
+      `SELECT count(*)::int n FROM information_schema.columns
+        WHERE table_name = 'Backup' AND column_name IN ('email','phone','patient','address','name')`,
+    );
+    check("B: the 'Backup' metadata table has no patient-data columns", bCols?.rows[0]?.n === 0, JSON.stringify(bCols?.rows[0]));
+
+    if (process.env.BACKUP_DIR && bj.backup?.objectName) {
+      const { execFile } = await import("node:child_process");
+      const { promisify } = await import("node:util");
+      const { readFileSync, existsSync } = await import("node:fs");
+      const run = promisify(execFile);
+      const file = process.env.BACKUP_DIR + "/" + bj.backup.objectName;
+      check("B: the encrypted file exists in the private store dir", existsSync(file), file);
+
+      const v = await run(process.execPath, ["scripts/backup.mjs", "verify", file])
+        .then((r) => { try { return JSON.parse(r.stdout); } catch { return {}; } })
+        .catch((e) => ({ ok: false, err: String(e?.stderr || e?.message).slice(0, 200) }));
+      check("B: the stored file verifies (decrypt + payload sha + section integrity) and matches the response sha", v.ok === true && v.fileSha256 === bj.backup.sha256, JSON.stringify(v).slice(0, 200));
+
+      const bytes = readFileSync(file);
+      check(
+        "B: the stored file is encrypted, not plaintext (magic CCB1; no user email in the bytes)",
+        bytes.subarray(0, 4).toString("latin1") === "CCB1" && !bytes.toString("latin1").includes("ramesh@demo.in"),
+      );
+
+      // full restore drill: isolated scratch DB + ledger verify + row counts + login/record check
+      const dts = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const scratch = `citycare_drill_${dts.getUTCFullYear()}${pad(dts.getUTCMonth() + 1)}${pad(dts.getUTCDate())}_${pad(dts.getUTCHours())}${pad(dts.getUTCMinutes())}${pad(dts.getUTCSeconds())}`;
+      const d = await run(process.execPath, ["scripts/restore-drill.mjs", file, "--scratch", scratch, "--verify-email", "ramesh@demo.in", "--verify-password", "city1234"], { maxBuffer: 16 * 1024 * 1024, timeout: 240_000 })
+        .then((r) => ({ code: 0, out: r.stdout, err: "" }))
+        .catch((e) => ({ code: e?.code ?? 1, out: String(e?.stdout ?? ""), err: String(e?.stderr ?? e?.message).slice(0, 300) }));
+      let dj = null;
+      try { dj = JSON.parse(d.out.slice(d.out.indexOf("{"))); } catch { dj = null; }
+      check("B: restore drill SUCCEEDED on the isolated scratch DB", d.code === 0 && dj?.status === "success", `code ${d.code} ${d.err || JSON.stringify(dj?.failure ?? null)}`);
+      check("B: restored DB passes ledger_verify() (0 breaks)", dj?.checks?.ledgerVerify?.ok === true, JSON.stringify(dj?.checks?.ledgerVerify ?? null));
+      check("B: restored row counts match the backup manifest exactly", dj?.checks?.rowCounts?.ok === true, JSON.stringify(dj?.checks?.rowCounts ?? null).slice(0, 200));
+      check("B: restored table CONTENT is byte-identical to the manifest (re-COPY compare)", dj?.checks?.contentMatch?.ok === true, JSON.stringify(dj?.checks?.contentMatch ?? null).slice(0, 200));
+      check("B: login + record check passes on restored data (ramesh@demo.in)", dj?.checks?.login?.ok === true, JSON.stringify(dj?.checks?.login ?? null).slice(0, 200));
+      check("B: scratch DB was dropped after the drill (no leftover)", dj?.scratchDropped === true, JSON.stringify({ dropped: dj?.scratchDropped, err: dj?.droppedError ?? null }));
+      check("B: drill measured RPO (backup age) and RTO (restore duration)", Number.isFinite(dj?.measurements?.backupAgeMs) && Number.isFinite(dj?.measurements?.restoreMs), JSON.stringify(dj?.measurements ?? null));
+    } else {
+      skip("B: file verify + restore drill", "BACKUP_DIR or backup objectName missing (non-local store)");
+    }
+
+    const bh = await fetch(BASE + "/api/health");
+    const bhj = await bh.json().catch(() => ({}));
+    check(
+      "B: /api/health surfaces the backup fact (configured, lastSuccessAt set, not stale, no secrets)",
+      bh.status === 200 && bhj.backups?.configured === true && !!bhj.backups?.lastSuccessAt && bhj.backups?.stale === false,
+      JSON.stringify(bhj.backups ?? null),
+    );
+  } else {
+    skip("B: backup cron with secret", "CRON_SECRET not in env");
+  }
+}
+
 if (pgClient) await pgClient.end();
 
 console.log(`\n========================\n e2e: ${pass} passed, ${failc} failed${skipped ? `, ${skipped} skipped (runtime-specific)` : ""}\n========================`);
