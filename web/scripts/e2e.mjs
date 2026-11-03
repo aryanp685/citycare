@@ -2143,7 +2143,32 @@ if (LOCAL) {
       if (r22b) {
         check("18.22b a 40-hex SHA that is not a commit in this repository → refuses", r22b.status === 1 && out(r22b).includes("not a commit in this repository"), `status=${r22b.status}`);
         const r22c = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: branchHead, MIGRATION_TARGET: LATEST_MIG, MIGRATION_DATABASE_URL: gateUrl }));
-        check("18.22c a real commit NOT reachable from main (this PR's head) → refuses (only main-reachable commits may migrate production)", r22c.status === 1 && out(r22c).includes("NOT reachable from the protected production release branch"), `status=${r22c.status}`);
+        // 2026-11-03 (18.22c fix): the validator is branch-shape-AWARE by design — a
+        // commit NOT reachable from main must be refused, and a main-reachable commit
+        // must be accepted. The old assertion pinned only the refusal direction, which
+        // deterministically failed on push-to-main (HEAD == main tip is reachable, so
+        // the validator correctly accepts it). Assert the matching direction per
+        // shape, using the same probe convention as the validator itself (merge-base
+        // --is-ancestor, one --deepen=2000 retry on shallow history). If reachability
+        // cannot be decided after the retry, keep the REFUSAL direction so the failure
+        // is loud — this security check is never silently skipped.
+        let headReachable;
+        if (branchHead === mainHead) {
+          headReachable = true; // same object as the main tip — trivially reachable
+        } else {
+          const reachProbe = () => spawnSync("git", ["merge-base", "--is-ancestor", branchHead, "origin/main"], { encoding: "utf8" }).status;
+          let probe = reachProbe(); // 0 = reachable, 1 = not reachable, other = undecidable (shallow)
+          if (probe !== 0 && probe !== 1) {
+            spawnSync("git", ["fetch", "--deepen=2000", "origin", "main", "--quiet"], { encoding: "utf8" });
+            probe = reachProbe();
+          }
+          headReachable = probe === 0; // undecidable after retry → refusal direction (fail loud, never skip)
+        }
+        if (headReachable) {
+          check("18.22c HEAD is reachable from main (push-to-main shape) → validator ACCEPTS (a main-reachable commit is the only commit that may migrate production)", r22c.status === 0 && out(r22c).includes("validated: commit="), `status=${r22c.status}`);
+        } else {
+          check("18.22c a real commit NOT reachable from main (this PR's head) → refuses (only main-reachable commits may migrate production)", r22c.status === 1 && out(r22c).includes("NOT reachable from the protected production release branch"), `status=${r22c.status}`);
+        }
         const r22d = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: "9999_nope.sql", MIGRATION_DATABASE_URL: gateUrl }));
         check("18.22d a target that does not exist in the commit → refuses", r22d.status === 1 && out(r22d).includes("not present in schema/migrations"), `status=${r22d.status}`);
         const r22e = runValidator(valEnv({ MIGRATION_WORKFLOW_COMMIT_SHA: mainHead, MIGRATION_TARGET: LATEST_MIG }));
