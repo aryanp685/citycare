@@ -75,3 +75,15 @@ Legal-driven items are marked ⚖.
 | F21 ⚖ | **Supabase Mumbai cutover** (`scripts/supabase-cutover.sh`) | data residency (L-G6); needs the session-pooler URI from the account owner | 10 min |
 
 Deliberately **not** on the list: LLM-generated clinical summaries (see `../AI_ACCURACY_AND_HALLUCINATION.md` — only as suggestions with provenance, after F12), blockchain (the hash-chained ledger already gives tamper evidence without a network), ABDM certification (sandbox demo only).
+
+### NG-F02 — grievance officer contact (implemented locally; pending owner review)
+
+The public privacy and grievance pages render one server-side contact from the existing
+`NEXT_PUBLIC_GRIEVANCE_OFFICER` and `NEXT_PUBLIC_GRIEVANCE_EMAIL` deployment variables.
+Both must be syntactically valid; missing, partial or invalid configuration publishes
+neither and explicitly states that the external contact is unpublished. The in-app desk
+and its 30-day workflow are unchanged. Values are public, not credentials, and there is
+no in-app configuration endpoint. The owner must appoint an officer and provide a
+monitored mailbox; validation cannot establish identity, mailbox ownership or delivery.
+HTTP notice checks and the database-backed grievance workflow regression passed locally
+with synthetic values; see the implementation ledger. No claim of regulatory approval is made.

@@ -1,0 +1,17 @@
+[
+  {
+    "locale": "en",
+    "status": "PASS",
+    "detail": "HTTP 201 and localized role=status"
+  },
+  {
+    "locale": "hi",
+    "status": "PASS",
+    "detail": "HTTP 201 and localized role=status"
+  },
+  {
+    "locale": "mr",
+    "status": "PASS",
+    "detail": "HTTP 201 and localized role=status"
+  }
+]

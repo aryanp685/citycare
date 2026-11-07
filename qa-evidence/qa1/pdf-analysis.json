@@ -1,0 +1,412 @@
+{
+  "patient-short-en-A4": {
+    "pages": [
+      {
+        "chars": 1256,
+        "image": "patient-short-en-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+      "You can share it with any doctor. Your CityCare record keeps the full history.",
+      "CityCare — consent-first personal health record · citycare (demo build)"
+    ]
+  },
+  "patient-short-en-Letter": {
+    "pages": [
+      {
+        "chars": 1255,
+        "image": "patient-short-en-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+      "You can share it with any doctor. Your CityCare record keeps the full history.",
+      "CityCare — consent-first personal health record · citycare (demo build)"
+    ]
+  },
+  "patient-short-hi-A4": {
+    "pages": [
+      {
+        "chars": 1338,
+        "image": "patient-short-hi-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "नवीनतम लैब मान",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ]
+  },
+  "patient-short-hi-Letter": {
+    "pages": [
+      {
+        "chars": 1338,
+        "image": "patient-short-hi-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "नवीनतम लैब मान",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ]
+  },
+  "patient-short-mr-A4": {
+    "pages": [
+      {
+        "chars": 1425,
+        "image": "patient-short-mr-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "अॅलर्जी",
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ]
+  },
+  "patient-short-mr-Letter": {
+    "pages": [
+      {
+        "chars": 1425,
+        "image": "patient-short-mr-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "अॅलर्जी",
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 0,
+    "footer_lines": [
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ]
+  },
+  "patient-long-en-A4": {
+    "pages": [
+      {
+        "chars": 1130,
+        "image": "patient-long-en-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1403,
+        "image": "patient-long-en-A4-page-2.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1279,
+        "image": "patient-long-en-A4-page-3.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+      "You can share it with any doctor. Your CityCare record keeps the full history.",
+      "CityCare — consent-first personal health record · citycare (demo build)"
+    ]
+  },
+  "patient-long-en-Letter": {
+    "pages": [
+      {
+        "chars": 1026,
+        "image": "patient-long-en-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1298,
+        "image": "patient-long-en-Letter-page-2.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1487,
+        "image": "patient-long-en-Letter-page-3.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+      "You can share it with any doctor. Your CityCare record keeps the full history.",
+      "CityCare — consent-first personal health record · citycare (demo build)"
+    ]
+  },
+  "patient-long-hi-A4": {
+    "pages": [
+      {
+        "chars": 1165,
+        "image": "patient-long-hi-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1421,
+        "image": "patient-long-hi-A4-page-2.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1329,
+        "image": "patient-long-hi-A4-page-3.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "पुराने दस्तावेज़ों से 3 अपुष्ट मसौदे शामिल नहीं हैं",
+      "नवीनतम लैब मान",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ]
+  },
+  "patient-long-hi-Letter": {
+    "pages": [
+      {
+        "chars": 1061,
+        "image": "patient-long-hi-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1298,
+        "image": "patient-long-hi-Letter-page-2.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1556,
+        "image": "patient-long-hi-Letter-page-3.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "पुराने दस्तावेज़ों से 3 अपुष्ट मसौदे शामिल नहीं हैं",
+      "नवीनतम लैब मान",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+      "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+      "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+    ]
+  },
+  "patient-long-mr-A4": {
+    "pages": [
+      {
+        "chars": 1156,
+        "image": "patient-long-mr-A4-page-1.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1404,
+        "image": "patient-long-mr-A4-page-2.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      },
+      {
+        "chars": 1462,
+        "image": "patient-long-mr-A4-page-3.png",
+        "size_pt": [
+          595.9199829101562,
+          841.9199829101562
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "अॅलर्जी",
+      "जुन्या कागदपत्रांतील 3 अपुष्ट मसुदे वगळले",
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ]
+  },
+  "patient-long-mr-Letter": {
+    "pages": [
+      {
+        "chars": 1052,
+        "image": "patient-long-mr-Letter-page-1.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1298,
+        "image": "patient-long-mr-Letter-page-2.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      },
+      {
+        "chars": 1672,
+        "image": "patient-long-mr-Letter-page-3.png",
+        "size_pt": [
+          612.0,
+          792.0
+        ]
+      }
+    ],
+    "missing_dom_lines": [
+      "अॅलर्जी",
+      "जुन्या कागदपत्रांतील 3 अपुष्ट मसुदे वगळले",
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ],
+    "missing_or_duplicated_markers": {},
+    "draft_name_printed": false,
+    "marker_count": 107,
+    "footer_lines": [
+      "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+      "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+      "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+    ]
+  },
+  "doctor-A4": {
+    "page_chars": [
+      730,
+      0
+    ],
+    "identical_raster_per_page": [
+      true,
+      true
+    ],
+    "same_page_count": true
+  },
+  "doctor-Letter": {
+    "page_chars": [
+      729,
+      0
+    ],
+    "identical_raster_per_page": [
+      true,
+      true
+    ],
+    "same_page_count": true
+  }
+}

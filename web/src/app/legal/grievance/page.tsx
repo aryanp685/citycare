@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { GRIEVANCE } from "@/lib/legal";
+import { GrievanceContact } from "@/components/grievance-contact";
 import { GrievanceDesk } from "@/components/grievance-desk";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Grievance & your rights" };
 
@@ -34,14 +37,7 @@ export default function Grievance() {
       <h2>Raise a grievance</h2>
       <p>File it here — it lands in the administrators&apos; queue with a {GRIEVANCE.responseDays}-day clock, every status change is written to the audit ledger, and the reply arrives in your CityCare inbox. No email account is needed.</p>
       <GrievanceDesk />
-      <p className="mt-6"><strong>Grievance Officer:</strong> {GRIEVANCE.officer}.</p>
-      {GRIEVANCE.email ? (
-        <p><strong>Email:</strong> <a href={`mailto:${GRIEVANCE.email}`}>{GRIEVANCE.email}</a></p>
-      ) : (
-        <div className="callout">
-          <strong>Email channel not yet published.</strong> The in-app desk above is the primary channel and works today. A named officer and a monitored mailbox will be added here before any non-demo use; until then, people who cannot sign in may contact the project team through the college (G H Raisoni College, Pune — Department of Science &amp; Technology).
-        </div>
-      )}
+      <GrievanceContact />
       <p>Please include: the email registered on your account, what happened (with dates), and what outcome you want. We will acknowledge receipt, investigate, and reply within {GRIEVANCE.responseDays} days. We never ask for your password.</p>
 
       <h2>Doctors: verification appeals</h2>

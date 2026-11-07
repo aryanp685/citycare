@@ -262,11 +262,23 @@ console.log("\n— 4. trust core on OUR OWN pair: 403 -> grant -> 200 -> safety 
   });
   check('same rx WITH written override -> saved', prescOv.status === 201, JSON.stringify(prescOv.data).slice(0, 140));
 
+  // Signed doctor link remains consent-scoped at download time, even after it was minted.
+  const revokeFile = new FormData();
+  revokeFile.append("file", new Blob([new TextEncoder().encode("%PDF-1.4\nsynthetic\n%%EOF\n")], { type: "application/pdf" }), "synthetic.pdf");
+  revokeFile.append("title", "Synthetic consent test"); revokeFile.append("type", "OTHER");
+  const revokeUpload = await pat.upload("/api/patient/documents", revokeFile);
+  const revokeLink = await doc.post(`/api/documents/${revokeUpload.data?.id}/link`, {});
+  check("D4 revoke: scoped doctor can mint link before revocation", revokeUpload.status === 201 && revokeLink.status === 200, `${revokeUpload.status} ${revokeLink.status}`);
   const allC = await pat.get('/api/patient/consents');
   const live = allC.data.consents.find((c) => c.status === 'APPROVED' && c.doctorId === e2eDoctorId);
   check('live approved consent visible', !!live, JSON.stringify(allC.data.consents.map((c) => c.status)));
   const rev = await pat.patch(`/api/patient/consents?id=${live.id}`, { reason: 'e2e revoke' });
   check('revoke returns 200', rev.status === 200, JSON.stringify(rev.data));
+  const revokedDownload = await doc.raw(revokeLink.data?.url ?? "/x");
+  check("D4 revoke: minted doctor link denied immediately after revocation", revokedDownload.status === 403, `got ${revokedDownload.status}`);
+  const revokedUi = await doc.raw(`${revokeLink.data?.url ?? "/x"}&ui_lang=hi`);
+  check("D4 revoke: localized response remains denied", revokedUi.status === 403 && /अनुमति/.test(new TextDecoder().decode(revokedUi.bytes)), `got ${revokedUi.status}`);
+  if (revokeUpload.data?.id) await pat.del(`/api/documents/${revokeUpload.data.id}`);
 
   const d3r = await doc.get(`/api/doctor/patients/${e2ePid}/record`);
   check('doctor read AFTER revoke -> instant 403', d3r.status === 403, `got ${d3r.status}`);
@@ -724,10 +736,21 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
   check("D4: download returns the original bytes with the right type", dl.status === 200 && dl.headers.get("content-type")?.startsWith("application/pdf") && dl.bytes.length === pdfBytes.length && /attachment|inline/.test(dl.headers.get("content-disposition") ?? ""), `${dl.status} ${dl.headers.get("content-type")} ${dl.bytes.length}`);
   const forged = await pat.raw((link.data?.url ?? "/x").replace(/sig=[^&]+/, "sig=AAAA"));
   check("D4: forged signature → 403", forged.status === 403, `got ${forged.status}`);
+  for (const locale of ["en", "hi", "mr"]) {
+    const path = (link.data?.url ?? "/x").replace(/sig=[^&]+/, "sig=AAAA") + `&ui_lang=${locale}`;
+    const localized = await pat.raw(path);
+    check(`D4 localized: forged link ${locale} remains denied`, localized.status === 403 && localized.headers.get("content-type")?.includes("text/html") && new TextDecoder().decode(localized.bytes).includes(`lang="${locale}"`), `got ${localized.status}`);
+  }
+  const expired = await pat.raw((link.data?.url ?? "/x").replace(/exp=[^&]+/, "exp=1") + "&ui_lang=mr");
+  check("D4 localized: expired link remains denied", expired.status === 403 && /कालबाह्य/.test(new TextDecoder().decode(expired.bytes)), `got ${expired.status}`);
+  const unauth = await new Session("anonymous").raw((link.data?.url ?? "/x") + "&ui_lang=hi");
+  check("D4 localized: anonymous download remains denied", unauth.status === 401 && /साइन इन/.test(new TextDecoder().decode(unauth.bytes)), `got ${unauth.status}`);
   const stranger2 = new Session("stranger2");
   await stranger2.post("/api/auth/login", { email: "vikas@demo.in", password: "city1234" });
   const otherLink = await stranger2.raw(link.data?.url ?? "/x");
   check("D4: a different signed-in user cannot replay my link (403)", otherLink.status === 403, `got ${otherLink.status}`);
+  const otherUi = await stranger2.raw((link.data?.url ?? "/x") + "&ui_lang=hi");
+  check("D4 localized: cross-patient replay remains denied", otherUi.status === 403 && /लिंक/.test(new TextDecoder().decode(otherUi.bytes)), `got ${otherUi.status}`);
   const otherMint = await stranger2.post(`/api/documents/${docId}/link`, {});
   check("D4: another patient cannot mint a link for my file (404)", otherMint.status === 404, `got ${otherMint.status}`);
   const cons = await pat.get("/api/patient/consents");
@@ -738,6 +761,8 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
   check("D4: upload and download are in my ledger", (led.data?.entries ?? []).some((e) => e.action === "UPLOAD_DOC") && (led.data?.entries ?? []).some((e) => e.action === "DOWNLOAD_DOC"), JSON.stringify((led.data?.entries ?? []).map((e) => e.action)));
   const delDoc = await pat.del(`/api/documents/${docId}`);
   check("D4: delete → 200 and the link is dead afterwards", delDoc.status === 200 && (await pat.raw(link.data?.url ?? "/x")).status === 404, `got ${delDoc.status}`);
+  const missingUi = await pat.raw((link.data?.url ?? "/x") + "&ui_lang=mr");
+  check("D4 localized: deleted document remains unavailable", missingUi.status === 404 && /उपलब्ध/.test(new TextDecoder().decode(missingUi.bytes)), `got ${missingUi.status}`);
 
   // ---- recovery codes ----
   const rc0 = await pat.get("/api/auth/recovery-codes");

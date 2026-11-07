@@ -1,0 +1,246 @@
+{
+  "mode": "ambient",
+  "chromium": "HeadlessChrome/153.0.8010.0",
+  "locale": {
+    "en": {
+      "h1": "Records",
+      "screenComputed": "inter, \"inter Fallback\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fonts": [
+        {
+          "family": "inter",
+          "status": "loaded",
+          "weight": "100 900",
+          "display": "swap"
+        },
+        {
+          "family": "inter Fallback",
+          "status": "error",
+          "weight": "normal",
+          "display": "auto"
+        }
+      ],
+      "fontSetStatus": "loaded",
+      "screenH1Fonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 7
+        }
+      ],
+      "screenDocumentHeadingFonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 37
+        }
+      ],
+      "printComputed": "\"Noto Sans Devanagari\", ui-sans-serif, system-ui, sans-serif",
+      "printH1Fonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 24
+        }
+      ],
+      "printHeadingFonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 9
+        }
+      ]
+    },
+    "hi": {
+      "h1": "रिकॉर्ड",
+      "screenComputed": "inter, \"inter Fallback\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fonts": [
+        {
+          "family": "inter",
+          "status": "loaded",
+          "weight": "100 900",
+          "display": "swap"
+        },
+        {
+          "family": "inter Fallback",
+          "status": "error",
+          "weight": "normal",
+          "display": "auto"
+        }
+      ],
+      "fontSetStatus": "loaded",
+      "screenH1Fonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 7
+        }
+      ],
+      "screenDocumentHeadingFonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 33
+        }
+      ],
+      "printComputed": "\"Noto Sans Devanagari\", ui-sans-serif, system-ui, sans-serif",
+      "printH1Fonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 28
+        }
+      ],
+      "printHeadingFonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 6
+        }
+      ]
+    },
+    "mr": {
+      "h1": "नोंदी",
+      "screenComputed": "inter, \"inter Fallback\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fonts": [
+        {
+          "family": "inter",
+          "status": "loaded",
+          "weight": "100 900",
+          "display": "swap"
+        },
+        {
+          "family": "inter Fallback",
+          "status": "error",
+          "weight": "normal",
+          "display": "auto"
+        }
+      ],
+      "fontSetStatus": "loaded",
+      "screenH1Fonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 5
+        }
+      ],
+      "screenDocumentHeadingFonts": [
+        {
+          "familyName": "Inter Variable",
+          "postScriptName": "InterVariable",
+          "isCustomFont": true,
+          "glyphCount": 34
+        }
+      ],
+      "printComputed": "\"Noto Sans Devanagari\", ui-sans-serif, system-ui, sans-serif",
+      "printH1Fonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 24
+        }
+      ],
+      "printHeadingFonts": [
+        {
+          "familyName": "DejaVu Sans",
+          "postScriptName": "DejaVuSans-Bold",
+          "isCustomFont": false,
+          "glyphCount": 7
+        }
+      ]
+    }
+  },
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3116/_next/static/media/InterVariable-s.p.2c0y96ae70xfx.woff2",
+      "resourceType": "font"
+    },
+    {
+      "url": "http://127.0.0.1:3116/_next/static/media/InterVariable-s.p.2c0y96ae70xfx.woff2",
+      "resourceType": "font"
+    },
+    {
+      "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNSIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJXaW5kb3dUZXh0IiBkPSJNMjAgM2gtMVYxaC0ydjJIN1YxSDV2Mkg0Yy0xLjEgMC0yIC45LTIgMnYxNmMwIDEuMS45IDIgMiAyaDE2YzEuMSAwIDItLjkgMi0yVjVjMC0xLjEtLjktMi0yLTJ6bTAgMThINFY4aDE2djEzeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=",
+      "resourceType": "image"
+    }
+  ],
+  "errors": [
+    {
+      "url": "http://127.0.0.1:3116/?_rsc=_H_fFy2_Q06N8BA7",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/?_rsc=sW2A7HEmFQnSVIMx",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/notifications?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/doctors?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/access?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/legal/privacy?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/legal/grievance?_rsc=0u6D4mAe9tddS0MV",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/notifications?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/doctors?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/records?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/patient/access?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/legal/privacy?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:3116/legal/grievance?_rsc=z0auDR-76iLYEJAI",
+      "failure": "net::ERR_ABORTED"
+    }
+  ]
+}

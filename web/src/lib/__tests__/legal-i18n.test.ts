@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LEGAL_LANGS, LEGAL_SUMMARY, pickLang } from "../legal-i18n";
+import { LEGAL_LANGS, LEGAL_SUMMARY, pickLang, howLongBody } from "../legal-i18n";
 import { GRIEVANCE, DEMO_RETENTION_DAYS } from "../legal";
 
 describe("legal summaries in hi/mr (L-G2, DPDP s.5(3))", () => {
@@ -24,6 +24,14 @@ describe("legal summaries in hi/mr (L-G2, DPDP s.5(3))", () => {
       expect(t.points.some((p) => p.body.includes(String(DEMO_RETENTION_DAYS)))).toBe(true);
       expect(t.points.some((p) => p.body.includes("60"))).toBe(true); // break-glass minutes
     }
+  });
+  it.each(["en", "hi", "mr"] as const)("%s retention summary tracks enabled policy and configured days", (lang) => {
+    expect(howLongBody(true, 19, lang)).toContain("19");
+    expect(howLongBody(false, 19, lang)).not.toContain("19");
+  });
+  it("Hindi and Marathi disabled summaries explicitly say accounts are not automatically erased", () => {
+    expect(howLongBody(false, 7, "hi")).toContain("अपने आप नहीं");
+    expect(howLongBody(false, 7, "mr")).toContain("आपोआप पुसली जात नाहीत");
   });
   it("hi/mr are actually Devanagari, not English placeholders", () => {
     for (const l of ["hi", "mr"] as const) expect(/[\u0900-\u097F]/.test(LEGAL_SUMMARY[l].title)).toBe(true);

@@ -1,0 +1,29 @@
+PASS en: locale switch, root lang, reload persistence 
+FAIL en: populated timeline, labs, medications, allergy and charts missing Timeline
+PASS en: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"Enter a valid date before saving.","role":"alert"}
+FAIL en: upload, signed download and delete Cannot read properties of null (reading 'click')
+PASS en: backfill preview, save and confirm draft preview, save and PATCH confirm returned 200
+PASS en: FHIR export status success saved 1 file(s)
+PASS en: FHIR failure status (synthetic 500 injected) 
+FAIL en: desktop/mobile layout, print media PDF mobile horizontal overflow {"viewport":390,"scroll":411}
+PASS en: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS hi: locale switch, root lang, reload persistence 
+PASS hi: populated timeline, labs, medications, allergy and charts 
+PASS hi: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"सहेजने से पहले सही तारीख दर्ज करें।","role":"alert"}
+FAIL hi: upload, signed download and delete Cannot read properties of null (reading 'click')
+PASS hi: backfill preview, save and confirm draft preview, save and PATCH confirm returned 200
+FAIL hi: FHIR export status success no file saved
+PASS hi: FHIR failure status (synthetic 500 injected) 
+FAIL hi: desktop/mobile layout, print media PDF mobile horizontal overflow {"viewport":390,"scroll":411}
+PASS hi: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS mr: locale switch, root lang, reload persistence 
+PASS mr: populated timeline, labs, medications, allergy and charts 
+PASS mr: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"जतन करण्यापूर्वी वैध तारीख भरा.","role":"alert"}
+FAIL mr: upload, signed download and delete Cannot read properties of null (reading 'click')
+PASS mr: backfill preview, save and confirm draft preview, save and PATCH confirm returned 200
+FAIL mr: FHIR export status success no file saved
+PASS mr: FHIR failure status (synthetic 500 injected) 
+FAIL mr: desktop/mobile layout, print media PDF mobile horizontal overflow {"viewport":390,"scroll":411}
+PASS mr: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS keyboard tab order and focus indication (English) [{"tag":"A","text":"Privacy notice","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"SELECT","text":"English\nहिन्दी\nमराठी","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"CityCare","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"2","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"BUTTON","text":"Sign out","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"Dashboard1","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"Find doctors","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"}]
+TOTAL 28 19 9

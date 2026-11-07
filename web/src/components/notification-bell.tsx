@@ -8,7 +8,7 @@ import { motion, AnimatePresence, useReducedMotion } from "motion/react";
  * tab is visible. (SSE/WebSockets would need a long-lived function — not a fit for Vercel Hobby's
  * 30 s limit; polling a partial-index count costs ~1 ms per call.)
  */
-export function NotificationBell({ initial, href }: { initial: number; href: string }) {
+export function NotificationBell({ initial, href, unreadLabel = "Inbox, {count} unread" }: { initial: number; href: string; unreadLabel?: string }) {
   const [n, setN] = useState(initial);
   const reduce = useReducedMotion();
   useEffect(() => {
@@ -27,7 +27,7 @@ export function NotificationBell({ initial, href }: { initial: number; href: str
     return () => { alive = false; clearInterval(id); document.removeEventListener("visibilitychange", tick); };
   }, []);
   return (
-    <Link href={href} aria-label={`Inbox, ${n} unread`} className="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-wash transition-colors no-underline text-ink">
+    <Link href={href} aria-label={unreadLabel.replace("{count}", String(n))} className="relative inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-wash transition-colors no-underline text-ink">
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" /><path d="M10 20a2 2 0 0 0 4 0" />
       </svg>

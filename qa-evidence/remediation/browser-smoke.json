@@ -1,0 +1,192 @@
+{
+  "en": {
+    "320": {
+      "scroll": 320,
+      "client": 320,
+      "inner": 288,
+      "columns": "288px",
+      "extra": []
+    },
+    "375": {
+      "scroll": 375,
+      "client": 375,
+      "inner": 343,
+      "columns": "343px",
+      "extra": []
+    },
+    "390": {
+      "scroll": 390,
+      "client": 390,
+      "inner": 358,
+      "columns": "358px",
+      "extra": []
+    },
+    "414": {
+      "scroll": 414,
+      "client": 414,
+      "inner": 382,
+      "columns": "382px",
+      "extra": []
+    },
+    "768": {
+      "scroll": 768,
+      "client": 768,
+      "inner": 736,
+      "columns": "360px 360px",
+      "extra": []
+    },
+    "1280": {
+      "scroll": 1280,
+      "client": 1280,
+      "inner": 1120,
+      "columns": "552px 552px",
+      "extra": []
+    },
+    "axe": [],
+    "h1": [
+      "Records"
+    ],
+    "region": {
+      "role": "Notices and language preference",
+      "lang": "en"
+    },
+    "print": {
+      "summary": "CityCare — visit summary\nGenerated 6 Nov 2026, 10:15 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nPenicillin — critical\nSulfa drug — warning\nActive conditions\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nCurrent medicines (confirmed only)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nSelf-reported readings — latest values\nBP systolic — latest 141 mmHg · improving, above target range\nFasting glucose — latest 149 mg/dL · improving, above target range\nHbA1c — latest 7.9 % · improving, above target range\nLatest lab values\nHbA1c 9.2 % (ref 4.0–5.6) · 06 Nov 2026\nLDL 96 mg/dL (ref 0–100) · 06 Nov 2026\nCreatinine 1.0 mg/dL (ref 0.7–1.3) · 06 Nov 2026\nLast visit\n07 Sept 2026 · Dr. Asha Kulkarni\nBP stable, sugar improving\nAdvice: Continue current medicines; low-sugar diet.\nFollow-up: 22 Oct 2026\n\nThis summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.\n\nYou can share it with any doctor. Your CityCare record keeps the full history.\n\nCityCare — consent-first personal health record · citycare (demo build)",
+      "bodyHeight": 900,
+      "mainHeight": 670.75,
+      "summaryPosition": "static"
+    }
+  },
+  "hi": {
+    "320": {
+      "scroll": 320,
+      "client": 320,
+      "inner": 288,
+      "columns": "288px",
+      "extra": []
+    },
+    "375": {
+      "scroll": 375,
+      "client": 375,
+      "inner": 343,
+      "columns": "343px",
+      "extra": []
+    },
+    "390": {
+      "scroll": 390,
+      "client": 390,
+      "inner": 358,
+      "columns": "358px",
+      "extra": []
+    },
+    "414": {
+      "scroll": 414,
+      "client": 414,
+      "inner": 382,
+      "columns": "382px",
+      "extra": []
+    },
+    "768": {
+      "scroll": 768,
+      "client": 768,
+      "inner": 736,
+      "columns": "360px 360px",
+      "extra": []
+    },
+    "1280": {
+      "scroll": 1280,
+      "client": 1280,
+      "inner": 1120,
+      "columns": "552px 552px",
+      "extra": []
+    },
+    "axe": [],
+    "h1": [
+      "रिकॉर्ड"
+    ],
+    "region": {
+      "role": "सूचनाएँ और भाषा की पसंद",
+      "lang": "hi"
+    },
+    "print": {
+      "summary": "CityCare — मुलाकात का सारांश\nबनाया गया 6 नव॰ 2026, 10:15 pm IST · आपके अपने CityCare रिकॉर्ड से\nमरीज़\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nएलर्जी\nPenicillin — गंभीर\nSulfa drug — चेतावनी\nसक्रिय स्वास्थ्य स्थितियाँ\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nवर्तमान दवाएँ (केवल पुष्ट)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nस्वयं दर्ज रीडिंग — नवीनतम मान\nBP systolic — नवीनतम 141 mmHg · सुधर रहा है, लक्ष्य सीमा से ऊपर\nFasting glucose — नवीनतम 149 mg/dL · सुधर रहा है, लक्ष्य सीमा से ऊपर\nHbA1c — नवीनतम 7.9 % · सुधर रहा है, लक्ष्य सीमा से ऊपर\nनवीनतम लैब मान\nHbA1c 9.2 % (संदर्भ 4.0–5.6) · 06 नव॰ 2026\nLDL 96 mg/dL (संदर्भ 0–100) · 06 नव॰ 2026\nCreatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · 06 नव॰ 2026\nपिछली मुलाकात\n07 सित॰ 2026 · Dr. Asha Kulkarni\nBP stable, sugar improving\nसलाह: Continue current medicines; low-sugar diet.\nअगली मुलाक़ात: 22 अक्टू॰ 2026\n\nयह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।\n\nआप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।\n\nCityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)",
+      "bodyHeight": 900,
+      "mainHeight": 670.75,
+      "summaryPosition": "static"
+    }
+  },
+  "mr": {
+    "320": {
+      "scroll": 320,
+      "client": 320,
+      "inner": 288,
+      "columns": "288px",
+      "extra": []
+    },
+    "375": {
+      "scroll": 375,
+      "client": 375,
+      "inner": 343,
+      "columns": "343px",
+      "extra": []
+    },
+    "390": {
+      "scroll": 390,
+      "client": 390,
+      "inner": 358,
+      "columns": "358px",
+      "extra": []
+    },
+    "414": {
+      "scroll": 414,
+      "client": 414,
+      "inner": 382,
+      "columns": "382px",
+      "extra": []
+    },
+    "768": {
+      "scroll": 768,
+      "client": 768,
+      "inner": 736,
+      "columns": "360px 360px",
+      "extra": []
+    },
+    "1280": {
+      "scroll": 1280,
+      "client": 1280,
+      "inner": 1120,
+      "columns": "552px 552px",
+      "extra": []
+    },
+    "axe": [],
+    "h1": [
+      "नोंदी"
+    ],
+    "region": {
+      "role": "सूचना आणि भाषेची पसंती",
+      "lang": "mr"
+    },
+    "print": {
+      "summary": "CityCare — भेटीचा सारांश\nतयार केले ६ नोव्हें, २०२६, १०:१५ PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\nरुग्ण\nRamesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nअॅलर्जी\nPenicillin — गंभीर\nSulfa drug — इशारा\nसक्रिय आरोग्य स्थिती\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nसध्याची औषधे (फक्त पुष्टी केलेली)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nस्वतः नोंदवलेली रीडिंग — नवीनतम मूल्ये\nBP systolic — नवीनतम 141 mmHg · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nFasting glucose — नवीनतम 149 mg/dL · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nHbA1c — नवीनतम 7.9 % · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nनवीनतम लॅब मूल्ये\nHbA1c 9.2 % (संदर्भ 4.0–5.6) · ०६ नोव्हें, २०२६\nLDL 96 mg/dL (संदर्भ 0–100) · ०६ नोव्हें, २०२६\nCreatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · ०६ नोव्हें, २०२६\nमागील भेट\n०७ सप्टें, २०२६ · Dr. Asha Kulkarni\nBP stable, sugar improving\nसल्ला: Continue current medicines; low-sugar diet.\nपुढील भेट: २२ ऑक्टो, २०२६\n\nहा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.\n\nतुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.\n\nCityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)",
+      "bodyHeight": 900,
+      "mainHeight": 670.75,
+      "summaryPosition": "static"
+    }
+  },
+  "fonts": {
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable",
+        "isCustomFont": true,
+        "glyphCount": 7
+      },
+      {
+        "familyName": "Noto Sans Devanagari",
+        "postScriptName": "NotoSansDevanagari-Regular",
+        "isCustomFont": false,
+        "glyphCount": 24
+      }
+    ]
+  }
+}

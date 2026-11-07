@@ -1,0 +1,357 @@
+{
+  "note": "Controlled in-memory browser DOM/style experiments only; not a product implementation or post-fix verification.",
+  "viewport": {
+    "en": {
+      "320": {
+        "client": 320,
+        "scroll": 411
+      },
+      "375": {
+        "client": 375,
+        "scroll": 411
+      },
+      "390": {
+        "client": 390,
+        "scroll": 411
+      },
+      "414": {
+        "client": 414,
+        "scroll": 414
+      },
+      "768": {
+        "client": 768,
+        "scroll": 768
+      },
+      "1280": {
+        "client": 1280,
+        "scroll": 1280
+      }
+    },
+    "hi": {
+      "320": {
+        "client": 320,
+        "scroll": 411
+      },
+      "375": {
+        "client": 375,
+        "scroll": 411
+      },
+      "390": {
+        "client": 390,
+        "scroll": 411
+      },
+      "414": {
+        "client": 414,
+        "scroll": 414
+      },
+      "768": {
+        "client": 768,
+        "scroll": 768
+      },
+      "1280": {
+        "client": 1280,
+        "scroll": 1280
+      }
+    },
+    "mr": {
+      "320": {
+        "client": 320,
+        "scroll": 411
+      },
+      "375": {
+        "client": 375,
+        "scroll": 411
+      },
+      "390": {
+        "client": 390,
+        "scroll": 411
+      },
+      "414": {
+        "client": 414,
+        "scroll": 414
+      },
+      "768": {
+        "client": 768,
+        "scroll": 768
+      },
+      "1280": {
+        "client": 1280,
+        "scroll": 1280
+      }
+    }
+  },
+  "mobileInterventions": {
+    "en": {
+      "base": {
+        "scroll": 411,
+        "grid": "395px"
+      },
+      "noFile": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "fileSized": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "rootTrackPlusFile": {
+        "scroll": 390,
+        "grid": "358px"
+      },
+      "fullTrial": {
+        "320": {
+          "before": 411,
+          "after": 320
+        },
+        "375": {
+          "before": 411,
+          "after": 375
+        },
+        "390": {
+          "before": 411,
+          "after": 390
+        },
+        "414": {
+          "before": 414,
+          "after": 414
+        },
+        "768": {
+          "before": 768,
+          "after": 768
+        },
+        "1280": {
+          "before": 1280,
+          "after": 1280
+        }
+      }
+    },
+    "hi": {
+      "base": {
+        "scroll": 411,
+        "grid": "395px"
+      },
+      "noFile": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "fileSized": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "rootTrackPlusFile": {
+        "scroll": 390,
+        "grid": "358px"
+      },
+      "fullTrial": {
+        "320": {
+          "before": 411,
+          "after": 320
+        },
+        "375": {
+          "before": 411,
+          "after": 375
+        },
+        "390": {
+          "before": 411,
+          "after": 390
+        },
+        "414": {
+          "before": 414,
+          "after": 414
+        },
+        "768": {
+          "before": 768,
+          "after": 768
+        },
+        "1280": {
+          "before": 1280,
+          "after": 1280
+        }
+      }
+    },
+    "mr": {
+      "base": {
+        "scroll": 411,
+        "grid": "395px"
+      },
+      "noFile": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "fileSized": {
+        "scroll": 406,
+        "grid": "390px"
+      },
+      "rootTrackPlusFile": {
+        "scroll": 390,
+        "grid": "358px"
+      },
+      "fullTrial": {
+        "320": {
+          "before": 411,
+          "after": 320
+        },
+        "375": {
+          "before": 411,
+          "after": 375
+        },
+        "390": {
+          "before": 411,
+          "after": 390
+        },
+        "414": {
+          "before": 414,
+          "after": 414
+        },
+        "768": {
+          "before": 768,
+          "after": 768
+        },
+        "1280": {
+          "before": 1280,
+          "after": 1280
+        }
+      }
+    }
+  },
+  "print": {
+    "before": {
+      "body": {
+        "tag": "BODY",
+        "id": "",
+        "cls": "",
+        "height": 2263.5,
+        "scrollHeight": 2264,
+        "display": "block",
+        "position": "static",
+        "visibility": "visible",
+        "overflow": "visible",
+        "breakInside": "auto"
+      },
+      "main": {
+        "tag": "MAIN",
+        "id": "",
+        "cls": "max-w-6xl mx-auto px-4 py-6",
+        "height": 2029.59375,
+        "scrollHeight": 2030,
+        "display": "block",
+        "position": "static",
+        "visibility": "hidden",
+        "overflow": "visible",
+        "breakInside": "auto"
+      },
+      "summary": {
+        "tag": "DIV",
+        "id": "print-summary",
+        "cls": "print-summary",
+        "height": 748.75,
+        "scrollHeight": 749,
+        "display": "block",
+        "position": "absolute",
+        "visibility": "visible",
+        "overflow": "visible",
+        "breakInside": "auto"
+      },
+      "sections": [
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 55.5,
+          "scrollHeight": 56,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 55.5,
+          "scrollHeight": 56,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 55.5,
+          "scrollHeight": 56,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 131.5,
+          "scrollHeight": 132,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 93.5,
+          "scrollHeight": 94,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 74.5,
+          "scrollHeight": 75,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        },
+        {
+          "tag": "DIV",
+          "id": "",
+          "cls": "ps-section",
+          "height": 93.5,
+          "scrollHeight": 94,
+          "display": "block",
+          "position": "static",
+          "visibility": "visible",
+          "overflow": "visible",
+          "breakInside": "auto"
+        }
+      ]
+    },
+    "after": {
+      "bodyHeight": 900,
+      "summaryHeight": 746.75
+    },
+    "textIdentical": true,
+    "shortA4Pages": {
+      "before": 3,
+      "isolated": 1
+    },
+    "longSyntheticMarkers": {
+      "beforePages": 3,
+      "isolatedPages": 3,
+      "missing": 0
+    }
+  }
+}

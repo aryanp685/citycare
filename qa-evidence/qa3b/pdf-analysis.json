@@ -1,0 +1,98 @@
+{
+  "on-en": {
+    "pages": 3,
+    "page_chars": [
+      1130,
+      1403,
+      1279
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "on-hi": {
+    "pages": 3,
+    "page_chars": [
+      1165,
+      1421,
+      1329
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "on-mr": {
+    "pages": 3,
+    "page_chars": [
+      1156,
+      1404,
+      1462
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "off-en": {
+    "pages": 3,
+    "page_chars": [
+      1130,
+      1403,
+      1279
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "off-hi": {
+    "pages": 3,
+    "page_chars": [
+      1165,
+      1421,
+      1329
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "off-mr": {
+    "pages": 3,
+    "page_chars": [
+      1156,
+      1404,
+      1462
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  }
+}

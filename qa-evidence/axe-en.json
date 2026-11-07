@@ -1,0 +1,40 @@
+{
+  "violations": [
+    {
+      "id": "page-has-heading-one",
+      "impact": "moderate",
+      "help": "Page should contain a level-one heading",
+      "nodes": [
+        {
+          "target": [
+            "html"
+          ],
+          "html": "<html lang=\"en\" class=\"inter_c797bb46-module__33iy7q__variable\">",
+          "failureSummary": "Fix all of the following:\n  Page must have a level-one heading"
+        }
+      ]
+    },
+    {
+      "id": "region",
+      "impact": "moderate",
+      "help": "All page content should be contained by landmarks",
+      "nodes": [
+        {
+          "target": [
+            ".bg-amber-50"
+          ],
+          "html": "<div lang=\"en\" role=\"note\" class=\"bg-amber-50 border-b border-amber-200 text-amber-900 text-xs\">",
+          "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+        },
+        {
+          "target": [
+            ".border-b.bg-white.px-4"
+          ],
+          "html": "<div lang=\"en\" class=\"border-b border-line bg-white px-4 py-2 text-sm\">",
+          "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+        }
+      ]
+    }
+  ],
+  "incomplete": []
+}

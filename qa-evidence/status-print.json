@@ -1,0 +1,32 @@
+[
+  {
+    "n": "en: documents loading then injected failure and retry",
+    "s": "PASS",
+    "d": "localized loading status, injected error alert, retry succeeds"
+  },
+  {
+    "n": "en: print button sends audit and triggers browser print event",
+    "s": "PASS",
+    "d": "audit 200, beforeprint observed (headless; native dialog not inspected)"
+  },
+  {
+    "n": "hi: documents loading then injected failure and retry",
+    "s": "PASS",
+    "d": "localized loading status, injected error alert, retry succeeds"
+  },
+  {
+    "n": "hi: print button sends audit and triggers browser print event",
+    "s": "PASS",
+    "d": "audit 200, beforeprint observed (headless; native dialog not inspected)"
+  },
+  {
+    "n": "mr: documents loading then injected failure and retry",
+    "s": "PASS",
+    "d": "localized loading status, injected error alert, retry succeeds"
+  },
+  {
+    "n": "mr: print button sends audit and triggers browser print event",
+    "s": "PASS",
+    "d": "audit 200, beforeprint observed (headless; native dialog not inspected)"
+  }
+]

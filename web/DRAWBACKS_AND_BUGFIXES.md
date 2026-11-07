@@ -511,3 +511,15 @@ SSR HTML.
   python side verifies (`../ai_layer`).
 - ❌ "Tests are theatre" → see §A1/A19: the log contains the vacuous tests I found and
   killed, and the exact assertions that pin each behaviour.
+
+### NG-F02 — contact configuration limitations (2026-11-04)
+
+The public contact is published only when both existing environment variables pass
+syntactic validation; otherwise both pages explain that the contact is unpublished. This
+does not appoint an officer, verify a mailbox, guarantee delivery, provide a recovery
+channel to people unable to sign in, or establish legal compliance. The owner must supply
+and monitor the values. Validation deliberately accepts a conservative subset of mailbox
+syntax. Changes require deployment-environment access and may require a restart/redeploy
+on the hosting platform. No production configuration was changed. The DB-backed desk
+regression passed in an isolated synthetic PostgreSQL 17 environment; see the implementation
+ledger for evidence and remaining audit-atomicity limitations.

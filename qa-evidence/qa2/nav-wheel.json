@@ -1,0 +1,98 @@
+{
+  "en": {
+    "320": {
+      "client": 288,
+      "scroll": 557,
+      "position": 269
+    },
+    "375": {
+      "client": 343,
+      "scroll": 557,
+      "position": 214
+    },
+    "390": {
+      "client": 358,
+      "scroll": 557,
+      "position": 199
+    },
+    "414": {
+      "client": 382,
+      "scroll": 557,
+      "position": 175
+    },
+    "768": {
+      "client": 736,
+      "scroll": 736,
+      "position": 0
+    },
+    "1280": {
+      "client": 1120,
+      "scroll": 1120,
+      "position": 0
+    }
+  },
+  "hi": {
+    "320": {
+      "client": 288,
+      "scroll": 475,
+      "position": 187
+    },
+    "375": {
+      "client": 343,
+      "scroll": 475,
+      "position": 132
+    },
+    "390": {
+      "client": 358,
+      "scroll": 475,
+      "position": 117
+    },
+    "414": {
+      "client": 382,
+      "scroll": 475,
+      "position": 93
+    },
+    "768": {
+      "client": 736,
+      "scroll": 736,
+      "position": 0
+    },
+    "1280": {
+      "client": 1120,
+      "scroll": 1120,
+      "position": 0
+    }
+  },
+  "mr": {
+    "320": {
+      "client": 288,
+      "scroll": 478,
+      "position": 190
+    },
+    "375": {
+      "client": 343,
+      "scroll": 478,
+      "position": 135
+    },
+    "390": {
+      "client": 358,
+      "scroll": 478,
+      "position": 120
+    },
+    "414": {
+      "client": 382,
+      "scroll": 478,
+      "position": 96
+    },
+    "768": {
+      "client": 736,
+      "scroll": 736,
+      "position": 0
+    },
+    "1280": {
+      "client": 1120,
+      "scroll": 1120,
+      "position": 0
+    }
+  }
+}

@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DATA_INVENTORY, DEMO_MODE, DEMO_RETENTION_DAYS, GRIEVANCE, NEGATIVE_ASSURANCES, PRIVACY_NOTICE_VERSION, PROCESSORS } from "@/lib/legal";
-import { LEGAL_LANGS, LEGAL_SUMMARY, pickLang, howLongBody } from "@/lib/legal-i18n";
+import { GrievanceContact } from "@/components/grievance-contact";
+import { PrivacySummary } from "@/components/privacy-summary";
 import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Privacy notice" };
 
@@ -12,45 +15,24 @@ export const metadata: Metadata = { title: "Privacy notice" };
  * Everything stated here is enforced in code; the section headers cite the section it satisfies.
  */
 export default async function PrivacyNotice({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
-  const lang = pickLang((await searchParams).lang);
-  const t = LEGAL_SUMMARY[lang];
-  // NG-S15 — the retention copy must state what this deployment ACTUALLY does: the same
-  // policy decision the cron and /api/health use (sweep armed only for an explicit,
-  // consistent RETENTION_POLICY=demo).
+  const requestedLang = (await searchParams).lang;
+  // Use the same server-side retention policy as the cron; never derive it from locale.
   const retention = evaluateRetentionPolicy(process.env);
-  const points =
-    lang === "en"
-      ? t.points.map((pt) => (pt.heading === "How long" ? { ...pt, body: howLongBody(retention.enabled, DEMO_RETENTION_DAYS) } : pt))
-      : t.points;
   return (
     <article>
       <h1>Privacy notice</h1>
       <p className="meta">Version {PRIVACY_NOTICE_VERSION} · Applies to citycare-xi.vercel.app and any deployment of this code by the CityCare team · Written for the Digital Personal Data Protection Act 2023 and the DPDP Rules 2025 (India).</p>
 
-      {/* L-G2 — DPDP s.5(3): key points in English, Hindi and Marathi; English full text is operative */}
-      <div className="callout" lang={lang}>
-        <div className="flex flex-wrap items-center gap-2 mb-2" lang="en">
-          <span className="text-xs text-muted">Read the key points in:</span>
-          {LEGAL_LANGS.map((l) => (
-            <Link key={l} href={l === "en" ? "/legal/privacy" : `/legal/privacy?lang=${l}`} className={`kbd ${l === lang ? "font-bold" : ""}`} hrefLang={l}>{LEGAL_SUMMARY[l].langName}</Link>
-          ))}
-        </div>
-        <strong>{t.title}</strong>
-        <p className="text-sm">{t.operativeNote}{t.reviewNote ? ` ${t.reviewNote}` : ""}</p>
-        <ul>
-          {points.map((pt) => <li key={pt.heading}><strong>{pt.heading}:</strong> {pt.body}</li>)}
-          <li>{t.rights}</li>
-          <li>{t.grievance}</li>
-          <li>{t.children}</li>
-        </ul>
-      </div>
+      {/* Explicit language links override the saved preference; the English notice remains operative. */}
+      <PrivacySummary requestedLang={requestedLang} retentionEnabled={retention.enabled} retentionDays={DEMO_RETENTION_DAYS} />
 
       <div className="callout">
         <strong>In one paragraph.</strong> CityCare stores the health record <em>you</em> choose to keep and shows it to a doctor only while a consent you granted is live (or during a logged, time-boxed emergency access that you are told about and can revoke). We do not sell, share or analyse your data for anyone else&apos;s benefit, we run no trackers, and you can export or erase everything yourself, without asking us.
       </div>
 
       <h2>1. Who is responsible (the &ldquo;Data Fiduciary&rdquo;)</h2>
-      <p>CityCare is a final-year academic project built by a student team at G H Raisoni College (Pune). It is operated on a non-commercial basis. For any request about your data, use the <Link href="/legal/grievance">grievance &amp; rights</Link> page. Named contact: {GRIEVANCE.officer}.</p>
+      <p>CityCare is a final-year academic project built by a student team at G H Raisoni College (Pune). It is operated on a non-commercial basis. For any request about your data, use the <Link href="/legal/grievance">grievance &amp; rights</Link> page.</p>
+      <GrievanceContact />
       {DEMO_MODE && (
         <p>
           <strong>Public demo notice.</strong> This deployment is a demonstration. All seeded patients and doctors are synthetic. Please do not enter real personal or health data about yourself or anyone else.{" "}

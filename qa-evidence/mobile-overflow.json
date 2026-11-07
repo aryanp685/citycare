@@ -1,0 +1,94 @@
+{
+  "client": 390,
+  "scroll": 411,
+  "els": [
+    {
+      "tag": "DIV",
+      "cls": "grid gap-4 content-start md:col-span-2",
+      "width": 395,
+      "right": 411,
+      "scroll": 395,
+      "outer": "<div class=\"grid gap-4 content-start md:col-span-2\"><div lang=\"mr\" class=\"grid gap-4\"><p class=\"text-[11px] leading-relaxed text-muted border border-dashed border-line rounded-lg p"
+    },
+    {
+      "tag": "DIV",
+      "cls": "grid gap-4",
+      "width": 395,
+      "right": 411,
+      "scroll": 395,
+      "outer": "<div lang=\"mr\" class=\"grid gap-4\"><p class=\"text-[11px] leading-relaxed text-muted border border-dashed border-line rounded-lg px-3 py-2 mb-4\">येथे तुमची नोंद आणि नियमांवर आधारित स"
+    },
+    {
+      "tag": "P",
+      "cls": "text-[11px] leading-relaxed text-muted border border-dashed border-line rounded-lg px-3 py-2 mb-4",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<p class=\"text-[11px] leading-relaxed text-muted border border-dashed border-line rounded-lg px-3 py-2 mb-4\">येथे तुमची नोंद आणि नियमांवर आधारित सुरक्षा माहिती आहे — निदान किंवा वै"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  flex flex-wrap items-center justify-between gap-3",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  flex flex-wrap items-center justify-between gap-3\"><div><div class=\"font-bold\">तुमची नोंद तुम्ही सोबत घेऊ शकता</div><p class=\"text-sm text-muted mt-0.5\">FHIR R4 ब"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  border-teal-200",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  border-teal-200\"><section lang=\"mr\" class=\"grid gap-3\"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppercase tracking-wide te"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  md:col-span-2",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  md:col-span-2\"><section lang=\"mr\" class=\"grid gap-3\" aria-labelledby=\"patient-documents-heading\"><div class=\"flex flex-wrap items-center justify-between gap-2\"><h"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  md:col-span-2",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  md:col-span-2\"><div lang=\"mr\"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppercase tracking-wide text-muted\">कल — कालानुसार "
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  md:col-span-1",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  md:col-span-1\"><section lang=\"mr\" aria-labelledby=\"records-timeline-heading\"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppe"
+    },
+    {
+      "tag": "DIV",
+      "cls": "grid gap-4 content-start",
+      "width": 395,
+      "right": 411,
+      "scroll": 395,
+      "outer": "<div lang=\"mr\" class=\"grid gap-4 content-start\"><div class=\"card  \"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppercase tracking-wide text-mu"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  ",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  \"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppercase tracking-wide text-muted\">औषधे<!-- --> </h2></div><ul class=\"grid gap"
+    },
+    {
+      "tag": "DIV",
+      "cls": "card  ",
+      "width": 395,
+      "right": 411,
+      "scroll": 393,
+      "outer": "<div class=\"card  \"><div class=\"flex items-center justify-between mb-2\"><h2 class=\"text-sm font-bold uppercase tracking-wide text-muted\">अॅलर्जी आणि आजार</h2></div><div class=\"flex"
+    }
+  ]
+}

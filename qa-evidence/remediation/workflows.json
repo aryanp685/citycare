@@ -1,0 +1,97 @@
+[
+  {
+    "name": "en heading, landmark, persistence",
+    "status": "PASS",
+    "detail": "{\"lang\":\"en\",\"h1\":[\"Records\"],\"region\":\"Notices and language preference\"}"
+  },
+  {
+    "name": "en documents upload / signed link / delete",
+    "status": "PASS",
+    "detail": "201 upload; signed read %PDF 200; delete 200"
+  },
+  {
+    "name": "en trend save",
+    "status": "PASS",
+    "detail": "201 with localized status"
+  },
+  {
+    "name": "en FHIR export",
+    "status": "PASS",
+    "detail": "200 and localized download status"
+  },
+  {
+    "name": "en print UI",
+    "status": "PASS",
+    "detail": "audit 200, beforeprint observed"
+  },
+  {
+    "name": "hi heading, landmark, persistence",
+    "status": "PASS",
+    "detail": "{\"lang\":\"hi\",\"h1\":[\"रिकॉर्ड\"],\"region\":\"सूचनाएँ और भाषा की पसंद\"}"
+  },
+  {
+    "name": "hi documents upload / signed link / delete",
+    "status": "PASS",
+    "detail": "201 upload; signed read %PDF 200; delete 200"
+  },
+  {
+    "name": "hi trend save",
+    "status": "PASS",
+    "detail": "201 with localized status"
+  },
+  {
+    "name": "hi FHIR export",
+    "status": "PASS",
+    "detail": "200 and localized download status"
+  },
+  {
+    "name": "hi print UI",
+    "status": "PASS",
+    "detail": "audit 200, beforeprint observed"
+  },
+  {
+    "name": "mr heading, landmark, persistence",
+    "status": "PASS",
+    "detail": "{\"lang\":\"mr\",\"h1\":[\"नोंदी\"],\"region\":\"सूचना आणि भाषेची पसंती\"}"
+  },
+  {
+    "name": "mr documents upload / signed link / delete",
+    "status": "PASS",
+    "detail": "201 upload; signed read %PDF 200; delete 200"
+  },
+  {
+    "name": "mr trend save",
+    "status": "PASS",
+    "detail": "201 with localized status"
+  },
+  {
+    "name": "mr FHIR export",
+    "status": "PASS",
+    "detail": "200 and localized download status"
+  },
+  {
+    "name": "mr print UI",
+    "status": "PASS",
+    "detail": "audit 200, beforeprint observed"
+  },
+  {
+    "name": "en prescription sample preview/save/confirm",
+    "status": "PASS",
+    "detail": "preview / POST 200 / PATCH 200"
+  },
+  {
+    "name": "long synthetic patient print",
+    "status": "PASS",
+    "detail": "100 synthetic markers added in browser DOM, A4 PDF generated"
+  },
+  {
+    "name": "doctor authorized print and scoped CSS regression",
+    "status": "PASS",
+    "detail": "doctor summary identical in DOM with 5 patient-only rules removed; absolute position retained"
+  },
+  {
+    "name": "doctor denied summary for non-consented patient",
+    "status": "PASS",
+    "detail": "summary absent, record 403"
+  }
+]
