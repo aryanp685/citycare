@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { callApi } from "./api-client";
 
 const REGISTERS: [string, string, string][] = [
   ["NMC_IMR", "NMC Indian Medical Register", "https://www.nmc.org.in/information-desk/indian-medical-register/"],
@@ -20,10 +21,9 @@ export function VerifyButtons({ doctorId, registrationNo }: { doctorId: string; 
 
   async function send(body: Record<string, unknown>, which: "APPROVE" | "REJECT") {
     setBusy(which); setErr(null);
-    const r = await fetch(`/api/admin/doctors/${doctorId}/verify`, { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    const j = await r.json().catch(() => ({}));
+    const r = await callApi(`/api/admin/doctors/${doctorId}/verify`, { method: "POST", body });
     setBusy(null);
-    if (!r.ok) { setErr(j.error ?? `failed (${r.status})`); return; }
+    if (!r.ok) { setErr(r.error); return; }
     setOpen(false); router.refresh();
   }
   function reject() {
@@ -37,7 +37,7 @@ export function VerifyButtons({ doctorId, registrationNo }: { doctorId: string; 
       <div className="flex gap-2 items-center">
         <button className="btn btn-primary" disabled={!!busy} onClick={() => setOpen((o) => !o)}>Approve…</button>
         <button className="btn btn-danger" disabled={!!busy} onClick={reject}>{busy === "REJECT" ? "…" : "Reject"}</button>
-        {err && <span className="text-xs text-[var(--danger)]">{err}</span>}
+        {err && <span role="alert" className="text-xs text-[var(--danger)]">{err}</span>}
       </div>
       {open && (
         <div className="p-3 border border-line rounded-xl grid gap-2 text-sm bg-wash">

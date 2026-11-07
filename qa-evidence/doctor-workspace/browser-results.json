@@ -1,0 +1,303 @@
+{
+  "browser": "Chromium 153, synthetic local DB",
+  "widths": [
+    320,
+    375,
+    390,
+    414,
+    768,
+    1024,
+    1280,
+    1440
+  ],
+  "results": [
+    {
+      "route": "/doctor",
+      "width": 320,
+      "scroll": 320,
+      "client": 320,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 375,
+      "scroll": 375,
+      "client": 375,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 390,
+      "scroll": 390,
+      "client": 390,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 414,
+      "scroll": 414,
+      "client": 414,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 768,
+      "scroll": 768,
+      "client": 768,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 1024,
+      "scroll": 1024,
+      "client": 1024,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 1280,
+      "scroll": 1280,
+      "client": 1280,
+      "overflow": false
+    },
+    {
+      "route": "/doctor",
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 320,
+      "scroll": 320,
+      "client": 320,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 375,
+      "scroll": 375,
+      "client": 375,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 390,
+      "scroll": 390,
+      "client": 390,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 414,
+      "scroll": 414,
+      "client": 414,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 768,
+      "scroll": 768,
+      "client": 768,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 1024,
+      "scroll": 1024,
+      "client": 1024,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 1280,
+      "scroll": 1280,
+      "client": 1280,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/patients",
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 320,
+      "scroll": 320,
+      "client": 320,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 375,
+      "scroll": 375,
+      "client": 375,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 390,
+      "scroll": 390,
+      "client": 390,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 414,
+      "scroll": 414,
+      "client": 414,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 768,
+      "scroll": 768,
+      "client": 768,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 1024,
+      "scroll": 1024,
+      "client": 1024,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 1280,
+      "scroll": 1280,
+      "client": 1280,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/profile",
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 320,
+      "scroll": 320,
+      "client": 320,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 375,
+      "scroll": 375,
+      "client": 375,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 390,
+      "scroll": 390,
+      "client": 390,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 414,
+      "scroll": 414,
+      "client": 414,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 768,
+      "scroll": 768,
+      "client": 768,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 1024,
+      "scroll": 1024,
+      "client": 1024,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 1280,
+      "scroll": 1280,
+      "client": 1280,
+      "overflow": false
+    },
+    {
+      "route": "/doctor/activity",
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 320,
+      "scroll": 320,
+      "client": 320,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 375,
+      "scroll": 375,
+      "client": 375,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 390,
+      "scroll": 390,
+      "client": 390,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 414,
+      "scroll": 414,
+      "client": 414,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 768,
+      "scroll": 768,
+      "client": 768,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 1024,
+      "scroll": 1024,
+      "client": 1024,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 1280,
+      "scroll": 1280,
+      "client": 1280,
+      "overflow": false
+    },
+    {
+      "route": "/patient/access",
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440,
+      "overflow": false
+    }
+  ],
+  "workflow": [
+    "request",
+    "patient approval",
+    "open scoped record",
+    "open existing encounter form",
+    "revoke",
+    "doctor reload denied"
+  ]
+}

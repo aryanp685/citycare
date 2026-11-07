@@ -29,6 +29,27 @@ export type ConsentVerdict =
   | { allowed: true; consent: ConsentRow }
   | { allowed: false; reason: string };
 
+/** Stored rows are untrusted too. Preserve the existing null LAST_N default of three. */
+export function validClinicalScope(consent: Pick<ConsentRow, "scope" | "lastNEncounters" | "conditionName">): boolean {
+  if (consent.lastNEncounters !== null &&
+      (!Number.isInteger(consent.lastNEncounters) || consent.lastNEncounters < 1 || consent.lastNEncounters > 50)) return false;
+  if (consent.conditionName !== null &&
+      (typeof consent.conditionName !== "string" || consent.conditionName.trim().length < 2 || consent.conditionName.trim().length > 80)) return false;
+  switch (consent.scope) {
+    case "FULL_RECORD":
+    case "SUMMARY_ONLY":
+      return true;
+    case "LAST_N_ENCOUNTERS":
+      return consent.lastNEncounters === null ||
+        (Number.isInteger(consent.lastNEncounters) && consent.lastNEncounters >= 1 && consent.lastNEncounters <= 50);
+    case "SPECIFIC_CONDITION":
+      return typeof consent.conditionName === "string" && consent.conditionName.trim().length >= 2 && consent.conditionName.trim().length <= 80;
+    default:
+      // Includes unsupported SPECIFIC_DOCUMENTS and unknown legacy values.
+      return false;
+  }
+}
+
 export function evaluateConsent(consent: ConsentRow | null, now: Date): ConsentVerdict {
   if (!consent) return { allowed: false, reason: "no consent has ever been granted for this doctor" };
   if (consent.status === "REVOKED") {
@@ -41,6 +62,7 @@ export function evaluateConsent(consent: ConsentRow | null, now: Date): ConsentV
   if (consent.status !== "APPROVED") {
     return { allowed: false, reason: `consent is ${consent.status.toLowerCase()}, not approved` };
   }
+  if (!validClinicalScope(consent)) return { allowed: false, reason: "consent scope is invalid or unsupported" };
   return { allowed: true, consent };
 }
 

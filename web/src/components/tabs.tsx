@@ -24,7 +24,7 @@ export function Tabs({ tabs, ariaLabel = "Sections" }: { tabs: TabDef[]; ariaLab
   const reduce = useReducedMotion();
   const active = activeTab(path, tabs);
   return (
-    <nav className="flex gap-1 -mb-px overflow-x-auto" aria-label={ariaLabel}>
+    <nav className="workspace-nav flex gap-1 -mb-px overflow-x-auto" aria-label={ariaLabel} tabIndex={0}>
       {tabs.map((t) => {
         const isActive = active === t.href;
         return (

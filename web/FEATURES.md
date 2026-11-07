@@ -87,3 +87,9 @@ no in-app configuration endpoint. The owner must appoint an officer and provide 
 monitored mailbox; validation cannot establish identity, mailbox ownership or delivery.
 HTTP notice checks and the database-backed grievance workflow regression passed locally
 with synthetic values; see the implementation ledger. No claim of regulatory approval is made.
+
+## Doctor workspace slice — partial (2026-11-07, not production-accepted)
+
+The doctor home now shows database-backed appointment and consent-request counts, today's schedule and upcoming appointments; connected-patient cards support search and access requests for patients with an existing appointment. A read-only professional profile reports CityCare admin review (not official registry verification). A doctor activity view uses the existing ledger. A patient can review the purpose/scope, approve a specific pending request, deny it, or revoke an approved consent. Invitation delivery is in-app only. See `CITYCARE_IMPLEMENTATION_LEDGER.md` and `qa-evidence/doctor-workspace/README.md` for synthetic tests and limitations.
+
+This is **not** the complete requested doctor workspace: registration/invitation of unconnected patients, editable profile, clinic permissions, consultation draft/sign/amend, in-flight revocation concurrency and multilingual support remain open. No real clinical deployment is claimed.

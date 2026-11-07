@@ -1,0 +1,26 @@
+PASS anonymous denied
+PASS patient role denied
+PASS unverified doctor denied
+PASS other doctor without appointment denied
+PASS unconnected patient denied
+PASS invalid scope rejected
+PASS record denied before consent
+PASS duplicate concurrent invitations
+PASS request details recorded
+PASS another patient cannot deny
+PASS patient denies request
+PASS denial stored distinctly
+PASS stale request cannot be approved
+PASS new request after denial
+PASS patient grants selected scope
+PASS approved doctor reads
+PASS scope applied
+PASS other doctor cannot use consent
+PASS patient revokes
+PASS new read denied after revocation
+PASS unrelated patient page hides identifiers (streamed not-found may be HTTP 200)
+PASS request created for expiry test
+PASS expired request cannot be approved
+PASS expired request grants no access
+PASS ledger verifies
+25 checks passed

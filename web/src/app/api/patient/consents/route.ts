@@ -56,14 +56,15 @@ export const POST = handler(async (req) => {
 
     const pending = await one<{ id: string }>(
       `SELECT id FROM "Consent"
-        WHERE "patientId"=$1 AND "doctorId"=$2 AND status='REQUESTED'
+        WHERE "patientId"=$1 AND "doctorId"=$2 AND status='REQUESTED' AND ($3::text IS NULL OR id=$3)
         ORDER BY "requestedAt" DESC LIMIT 1 FOR UPDATE`,
-      [v.profileId, body.doctorId], c,
+      [v.profileId, body.doctorId, body.consentId ?? null], c,
     );
+    if (body.consentId && !pending) fail(409, "request_closed", "This request is no longer pending. Refresh and review the current request.");
     if (pending) {
       await run(
         `UPDATE "Consent" SET status='APPROVED', "approvedAt"=now(), scope=$2,
-                purpose='TREATMENT', "lastNEncounters"=$3, "conditionName"=$4,
+                "lastNEncounters"=$3, "conditionName"=$4,
                 "expiresAt" = now() + ($5 || ' days')::interval
           WHERE id=$1`,
          [pending.id, body.scope, body.lastNEncounters ?? (body.scope === "LAST_N_ENCOUNTERS" ? 3 : null),
@@ -118,17 +119,21 @@ export const PATCH = handler(async (req) => {
   const consentId = new URL(req.url).searchParams.get("id") ?? "";
   if (!consentId) fail(400, "missing_id", "pass ?id=<consentId>");
 
+  const deny = body.decision === "DENY";
   await tx(async (c) => {
     const n = await run(
-      `UPDATE "Consent" SET status='REVOKED', "revokedAt"=now(), "revocationReason"=$2
-        WHERE id=$1 AND "patientId"=$3 AND status IN ('REQUESTED','APPROVED')`,
-      [consentId, body.reason ?? "revoked by patient", v.profileId], c,
+      `UPDATE "Consent" SET status=CASE WHEN $4::boolean THEN 'DENIED'::"ConsentStatus" ELSE 'REVOKED'::"ConsentStatus" END,
+              "revokedAt"=now(), "revocationReason"=$2
+        WHERE id=$1 AND "patientId"=$3 AND
+              (($4::boolean AND status='REQUESTED' AND "expiresAt">now()) OR
+               (NOT $4::boolean AND status IN ('REQUESTED','APPROVED')))`,
+      [consentId, body.reason ?? (deny ? "denied by patient" : "revoked by patient"), v.profileId, deny], c,
     );
     if (n === 0) fail(409, "nothing_to_revoke", "This consent is already closed (revoked, denied or expired).");
     // NG-D05-1: the revocation receipt commits atomically with the state change.
-    await appendAudit(v.uid, "REVOKE_CONSENT", "Consent", consentId, {
-      consentId, meta: { reason: body.reason ?? "revoked by patient" }, q: c,
+    await appendAudit(v.uid, deny ? "DENY_CONSENT" : "REVOKE_CONSENT", "Consent", consentId, {
+      consentId, meta: { reason: body.reason ?? (deny ? "denied by patient" : "revoked by patient") }, q: c,
     });
   });
-  return ok({ revoked: true });
+  return ok(deny ? { denied: true } : { revoked: true });
 });

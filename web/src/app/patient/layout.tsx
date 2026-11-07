@@ -25,7 +25,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
   );
 
   return (
-    <div className="patient-shell">
+    <div className="patient-shell workspace-shell">
       {!consent.current && <PatientReacceptBanner current={PRIVACY_NOTICE_VERSION} accepted={consent.accepted} />}
       <PatientHeader name={shell?.name ?? null} actingFor={!!viewer.actingFor} pending={shell?.pending ?? 0} drafts={shell?.drafts ?? 0} unread={shell?.unread ?? 0} />
       <main className="max-w-6xl mx-auto px-4 py-6"><PageTransition>{children}</PageTransition></main>

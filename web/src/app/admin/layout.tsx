@@ -23,13 +23,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   );
   const consent = await consentStatus(v.uid); // L2
   return (
-    <div>
+    <div className="workspace-shell">
       {!consent.current && <ReacceptBanner current={PRIVACY_NOTICE_VERSION} accepted={consent.accepted} />}
-      <header className="bg-white border-b border-line">
+      <header className="workspace-header">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-4">
-              <Link href="/" className="font-black tracking-tight no-underline text-ink">City<span className="text-brand">Care</span></Link>
+              <Link href="/" className="workspace-brand"><span className="workspace-brand-mark" aria-hidden="true">+</span><span>City<span className="text-brand">Care</span></span></Link>
               <Badge tone="warn">admin</Badge>
             </div>
             <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { one, fail } from "@/lib/db";
 import { handler, ok } from "@/lib/api";
-import { requireRole, guardSameOrigin } from "@/lib/session";
+import { requireRole, requireVerifiedDoctor, guardSameOrigin } from "@/lib/session";
 import { liveConsent } from "@/lib/consent";
 import { appendAudit } from "@/lib/ledger";
 import { LINK_TTL_S, signDownload } from "@/lib/storage";
@@ -15,6 +15,7 @@ import { LINK_TTL_S, signDownload } from "@/lib/storage";
 export const POST = handler(async (req, { params }) => {
   await guardSameOrigin(req);
   const v = await requireRole(["PATIENT", "DOCTOR"]);
+  if (v.role === "DOCTOR") await requireVerifiedDoctor(v);
   const { id } = await params;
   const d = await one<{ id: string; patientId: string }>(`SELECT id, "patientId" FROM "Document" WHERE id = $1 AND NOT "isDeleted"`, [id]);
   if (!d) fail(404, "not_found", "no such document");
@@ -25,9 +26,9 @@ export const POST = handler(async (req, { params }) => {
     const { verdict } = await liveConsent(d.patientId, v.profileId);
     if (!verdict.allowed) {
       await appendAudit(v.uid, "VIEW_DENIED", "Patient", d.patientId, { meta: { what: "document", documentId: id, reason: verdict.reason } }).catch(() => null);
-      fail(403, "no_consent", `No live consent: ${verdict.reason}`);
+      fail(404, "not_found", "no such document");
     }
-    if (verdict.consent.scope !== "FULL_RECORD") fail(403, "scope_excludes_documents", `Consent scope ${verdict.consent.scope} does not include documents`);
+    if (verdict.consent.scope !== "FULL_RECORD") fail(404, "not_found", "no such document");
     consentId = verdict.consent.id;
   }
   const exp = Math.floor(Date.now() / 1000) + LINK_TTL_S;

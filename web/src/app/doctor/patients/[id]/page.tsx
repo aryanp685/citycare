@@ -8,10 +8,20 @@ import { PatientWorkspace } from "@/components/patient-workspace";
 import { ClinicalDisclaimer } from "@/components/clinical-disclaimer";
 import { PrintSummary } from "@/components/print-summary";
 import { PrintButton } from "@/components/print-button";
+import { appendAudit } from "@/lib/ledger";
+import { z } from "zod";
 
 export default async function DoctorPatientPage({ params }: { params: Promise<{ id: string }> }) {
   const v = await viewerForPage("DOCTOR");
   const { id } = await params;
+  if (!z.string().uuid().safeParse(id).success) notFound();
+  // Do not render patient identifiers or server-side print content to an unapproved doctor,
+  // or for a guessed patient without an existing relationship.
+  const allowed = await one<{ ok: boolean }>(`SELECT d."isVerified" AND (
+    EXISTS (SELECT 1 FROM "Appointment" a WHERE a."patientId"=$2 AND a."doctorId"=d.id) OR
+    EXISTS (SELECT 1 FROM "Consent" c WHERE c."patientId"=$2 AND c."doctorId"=d.id)
+  ) AS ok FROM "Doctor" d WHERE d.id=$1`, [v.profileId, id]);
+  if (!allowed?.ok) notFound();
   const p = await one<{ id: string; fullName: string; guardian: string | null; relation: string | null }>(
     `SELECT p.id, p."fullName", g."fullName" AS guardian, p."guardianRelation" AS relation
        FROM "Patient" p LEFT JOIN "Patient" g ON g.id = p."guardianPatientId" WHERE p.id=$1`,
@@ -19,16 +29,16 @@ export default async function DoctorPatientPage({ params }: { params: Promise<{ 
   );
   if (!p) notFound();
 
-  // F18: printable visit summary, server-side and consent-gated EXACTLY like the API —
-  // liveConsentFor re-checks the DB clock; denied/absent consent → no print block at all
-  // (the workspace below shows the refusal + break-glass path as usual). No extra ledger
-  // row: every read of the record already logs VIEW_RECORD with the consent scope.
+  // Printable summary checks consent on the DB clock and is separately audited below.
+  // This check and the subsequent read are not yet serialized with revocation (DW-P0-01).
   let printData = null;
   const full = await patientById(p.id);
   if (full) {
     const { verdict } = await liveConsentFor(p.id, v.profileId);
     if (verdict.allowed) {
       const { sections, scopeNote } = await scopedRecord(p.id, verdict);
+      // The printable server-rendered copy is a separate record read from the API.
+      await appendAudit(v.uid, "VIEW_RECORD", "Patient", p.id, { consentId: verdict.consent.id, meta: { scope: verdict.consent.scope, surface: "print_summary" } });
       const series = buildSeries(
         sections.observations.map((o) => ({ name: o.name, valueNum: o.valueNum, unit: o.unit, refLow: o.refLow, refHigh: o.refHigh, takenOn: o.takenOn })),
       );

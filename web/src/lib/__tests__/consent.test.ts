@@ -68,3 +68,30 @@ describe("password hashing", () => {
     expect(passwordLooksUsable("allletters")).toBe(false);
   });
 });
+
+describe("stored scope authorization", () => {
+  const live = { ...base, expiresAt: at("2027-01-01") };
+  const now = at("2026-11-01");
+  it.each([
+    { scope: "UNKNOWN" }, { scope: "SPECIFIC_DOCUMENTS" },
+    { scope: "SPECIFIC_CONDITION", conditionName: null },
+    { scope: "SPECIFIC_CONDITION", conditionName: "  " },
+    { scope: "SPECIFIC_CONDITION", conditionName: "x".repeat(81) },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: 0 },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: 51 },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: 1.5 },
+    { scope: "FULL_RECORD", lastNEncounters: -1 },
+    { scope: "FULL_RECORD", conditionName: " " },
+  ])("denies malformed or unsupported legacy value %j", (patch) => {
+    expect(evaluateConsent({ ...live, ...patch } as ConsentRow, now).allowed).toBe(false);
+  });
+  it.each([
+    { scope: "FULL_RECORD" }, { scope: "SUMMARY_ONLY" },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: null },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: 1 },
+    { scope: "LAST_N_ENCOUNTERS", lastNEncounters: 50 },
+    { scope: "SPECIFIC_CONDITION", conditionName: "diabetes" },
+  ])("preserves valid scope %j", (patch) => {
+    expect(evaluateConsent({ ...live, ...patch } as ConsentRow, now).allowed).toBe(true);
+  });
+});

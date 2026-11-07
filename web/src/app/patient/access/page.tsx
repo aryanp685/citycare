@@ -17,7 +17,7 @@ export default async function AccessPage() {
   const pid = v.profileId;
 
   const consents = await all<Record<string, unknown>>(
-    `SELECT c.id, c.status, c.scope, c."expiresAt", c."revokedAt", c."revocationReason", c."doctorId",
+    `SELECT c.id, CASE WHEN c.status IN ('REQUESTED','APPROVED') AND c."expiresAt" <= now() THEN 'EXPIRED' ELSE c.status::text END AS status, c.scope, c.purpose, c."expiresAt", c."revokedAt", c."revocationReason", c."doctorId",
             c."isEmergencyOverride", c."emergencyReason",
             d."fullName" AS "doctorName",
             (SELECT count(*)::int FROM "AuditLog" al WHERE al."consentId"=c.id) AS "accessCount"
@@ -28,65 +28,30 @@ export default async function AccessPage() {
   );
 
   return (
-    <div className="grid gap-4">
-      <Card>
-        <SectionTitle right={<Badge tone="off">server re-checks every request</Badge>}>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 min-w-0">
+      <Card className="min-w-0">
+        <SectionTitle right={<Badge tone="off">Server checked</Badge>}>
           Who can see my record
         </SectionTitle>
         {consents.length === 0 ? (
-          <EmptyNote>No one. Not the hospital, not a doctor, not an admin — this page is the whole truth.</EmptyNote>
+          <EmptyNote>No sharing requests or consents found.</EmptyNote>
         ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Doctor</th><th>Status</th><th>Scope</th><th>Valid until</th><th>Accesses</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {consents.map((cc) => (
-                <tr key={String(cc.id)}>
-                  <td className="font-semibold">{String(cc.doctorName)}</td>
-                  <td>
-                    <Badge tone={cc.status === "APPROVED" ? "live" : cc.status === "REQUESTED" ? "warn" : "off"}>
-                      {String(cc.status)}
-                    </Badge>
-                    {cc.isEmergencyOverride ? (
-                      <div className="mt-1">
-                        <Badge tone="crit">EMERGENCY · break-glass</Badge>
-                        {cc.emergencyReason ? <div className="text-[11px] text-muted mt-1 max-w-[16rem]">reason: {String(cc.emergencyReason)}</div> : null}
-                      </div>
-                    ) : null}
-                    {cc.status === "REVOKED" && cc.revokedAt ? (
-                      <div className="text-[11px] text-muted mt-1">closed {fmtIstDateTime(String(cc.revokedAt))}</div>
-                    ) : null}
-                  </td>
-                  <td className="text-xs">{String(cc.scope)}</td>
-                  <td className="text-xs">{cc.expiresAt ? fmtIstDateTime(String(cc.expiresAt)) : "—"}</td>
-                  <td>{Number(cc.accessCount)}</td>
-                  <td>
-                    {(cc.status === "REQUESTED" || cc.status === "APPROVED") && (
-                      <ConsentActions
-                        compact
-                        consent={{
-                          id: String(cc.id),
-                          doctorId: String(cc.doctorId),
-                          doctorName: String(cc.doctorName),
-                          status: String(cc.status),
-                          scope: String(cc.scope),
-                          expiresAt: cc.expiresAt ? String(cc.expiresAt) : null,
-                        }}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid gap-3">
+            {consents.map((cc) => <div key={String(cc.id)} className="rounded-xl border border-line p-4 min-w-0">
+              <div className="flex flex-wrap justify-between items-start gap-2">
+                <div><h3 className="font-semibold break-words">{String(cc.doctorName)}</h3><p className="text-xs text-muted mt-1">{String(cc.purpose).replaceAll("_", " ").toLowerCase()}</p></div>
+                <Badge tone={cc.status === "APPROVED" ? "live" : cc.status === "REQUESTED" ? "warn" : "off"}>{String(cc.status)}</Badge>
+              </div>
+              {cc.isEmergencyOverride ? <div className="mt-2"><Badge tone="crit">EMERGENCY · break-glass</Badge>{cc.emergencyReason ? <p className="text-xs text-muted mt-1 break-words">Reason: {String(cc.emergencyReason)}</p> : null}</div> : null}
+              <dl className="grid sm:grid-cols-3 gap-2 mt-3 text-sm"><div><dt className="text-xs text-muted">Scope</dt><dd>{String(cc.scope).replaceAll("_", " ").toLowerCase()}</dd></div><div><dt className="text-xs text-muted">Valid until</dt><dd>{cc.expiresAt ? fmtIstDateTime(String(cc.expiresAt)) : "—"}</dd></div><div><dt className="text-xs text-muted">Logged events</dt><dd>{Number(cc.accessCount)}</dd></div></dl>
+              {(cc.status === "REQUESTED" || cc.status === "APPROVED") && <ConsentActions compact consent={{ id: String(cc.id), doctorId: String(cc.doctorId), doctorName: String(cc.doctorName), status: String(cc.status), scope: String(cc.scope), expiresAt: cc.expiresAt ? String(cc.expiresAt) : null }} />}
+            </div>)}
+          </div>
         )}
       </Card>
 
-      <Card>
-        <SectionTitle right={<Badge tone="live">append-only in the database itself</Badge>}>
+      <Card className="min-w-0">
+        <SectionTitle right={<Badge tone="live">DB append-only</Badge>}>
           Who touched my data — and can I prove it?
         </SectionTitle>
         <p className="text-sm text-muted mb-3">
@@ -97,7 +62,7 @@ export default async function AccessPage() {
         <LedgerPanel />
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <SectionTitle>Your rights &amp; nominee</SectionTitle>
         <p className="text-sm text-muted mb-3">
           Access, correction, erasure and grievance are buttons on this account, not emails to send — see the{" "}
@@ -107,7 +72,7 @@ export default async function AccessPage() {
         <NomineeForm />
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <SectionTitle right={<Badge tone="off">recovery · email · devices</Badge>}>Account security</SectionTitle>
         <SecurityPanel />
       </Card>

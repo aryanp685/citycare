@@ -8,12 +8,14 @@ import { runAllRules } from "@/lib/rules";
 import { minimumViableProfile, dayOneValue } from "@/lib/onboard";
 import { ConsentActions } from "@/components/consent-actions";
 import { liveConsent } from "@/lib/consent";
+import { WorkspaceHeading } from "@/components/workspace-heading";
+import { CancelAppointment } from "@/components/cancel-appointment";
 
 export default async function PatientDashboard() {
   const v = await viewerForPage("PATIENT");
   const pid = v.profileId;
 
-  const [p, allergies, conditions, meds, appts, consents, drafts, rec] = await Promise.all([
+  const [p, allergies, conditions, meds, appts, consents, drafts, rec, pastAppts] = await Promise.all([
     one<Record<string, unknown>>(`SELECT "fullName", "bloodGroup", "dateOfBirth" FROM "Patient" WHERE id=$1`, [pid]),
     all<{ allergen: string }>(`SELECT allergen FROM "Allergy" WHERE "patientId"=$1 AND "isActive"`, [pid]),
     all<{ name: string }>(`SELECT name FROM "Condition" WHERE "patientId"=$1 AND status='ACTIVE'`, [pid]),
@@ -27,15 +29,21 @@ export default async function PatientDashboard() {
       [pid],
     ),
     all<Record<string, unknown>>(
-      `SELECT c.id, c.status, c.scope, c."expiresAt", c."requestedAt", d."fullName" AS "doctorName", c."doctorId",
+      `SELECT c.id, c.status, c.scope, c.purpose, c."expiresAt", c."requestedAt", d."fullName" AS "doctorName", c."doctorId",
               (SELECT count(*)::int FROM "AuditLog" al WHERE al."consentId"=c.id) AS "accessCount"
          FROM "Consent" c JOIN "Doctor" d ON d.id=c."doctorId"
-        WHERE c."patientId"=$1 AND c.status IN ('REQUESTED','APPROVED')
+        WHERE c."patientId"=$1 AND c.status IN ('REQUESTED','APPROVED') AND c."expiresAt" > now()
         ORDER BY c."requestedAt" DESC LIMIT 10`,
       [pid],
     ),
     one<{ n: string }>(`SELECT count(*)::text AS n FROM "Medication" WHERE "patientId"=$1 AND "isActive" AND notes LIKE 'DRAFT:%'`, [pid]),
     recordSections(pid),
+    all<{ id: string; scheduledAt: Date; status: string; doctorName: string }>(
+      `SELECT a.id, a."scheduledAt", a.status, d."fullName" AS "doctorName"
+         FROM "Appointment" a JOIN "Doctor" d ON d.id=a."doctorId"
+        WHERE a."patientId"=$1 AND (a."scheduledAt" <= now() OR a.status IN ('COMPLETED','CANCELLED_BY_PATIENT','CANCELLED_BY_DOCTOR','NO_SHOW'))
+        ORDER BY a."scheduledAt" DESC, a.id DESC LIMIT 5`, [pid],
+    ),
   ]);
 
   const answers = {
@@ -57,7 +65,9 @@ export default async function PatientDashboard() {
   );
 
   return (
-    <div className="grid md:grid-cols-3 gap-4">
+    <div className="space-y-6">
+      <WorkspaceHeading eyebrow="Patient workspace" title={p?.fullName && p.fullName !== "[REDACTED]" ? `Welcome, ${String(p.fullName)}` : "Your care, in one place"} description="Keep track of your appointments, health records and who can access them." actions={<><Link className="btn btn-primary" href="/patient/doctors">Find a doctor</Link><Link className="btn btn-ghost" href="/patient/records">View records</Link></>} />
+      <div className="grid md:grid-cols-3 gap-4">
       <div className="md:col-span-2 grid gap-4 content-start">
         {mvp.completenessPct < 100 && (
           <Card className="border-amber-200 bg-amber-50/60">
@@ -75,7 +85,7 @@ export default async function PatientDashboard() {
         )}
 
         <Card>
-          <SectionTitle right={<Link className="text-sm text-brand font-semibold" href="/patient/doctors">Find a doctor →</Link>}>
+          <SectionTitle right={<Link className="text-sm text-brand font-semibold" href="/patient/appointments">All appointments →</Link>}>
             Upcoming appointments
           </SectionTitle>
           {apptVerdicts.length === 0 ? (
@@ -104,23 +114,25 @@ export default async function PatientDashboard() {
                       {verdict.allowed ? "record: shared" : "record: not shared"}
                     </Badge>
                   </div>
-                  {!!a.consentId && (
-                    <ConsentActions
-                      compact
-                      consent={{
-                        id: String(a.consentId),
-                        doctorId: String(a.doctorId),
-                        doctorName: String(a.doctorName),
-                        status: verdict.allowed ? "APPROVED" : "REQUESTED",
-                        scope: "",
-                        expiresAt: null,
-                      }}
-                    />
-                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+                    {!!a.consentId && <Link href="/patient/access" className="text-sm text-brand font-semibold">Review sharing →</Link>}
+                    {["PENDING", "CONFIRMED"].includes(String(a.status)) && <CancelAppointment id={String(a.id)} />}
+                  </div>
                 </div>
               ))}
             </div>
           )}
+        </Card>
+
+        <Card>
+          <SectionTitle>Recent appointments</SectionTitle>
+          {pastAppts.length === 0 ? <EmptyNote>No past appointments yet.</EmptyNote> : <ul className="divide-y divide-line">
+            {pastAppts.map((a) => <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+              <div><p className="text-sm font-semibold">{a.doctorName}</p><p className="text-xs text-muted mt-1">{fmtIstDateTime(String(a.scheduledAt))}</p></div>
+              <Badge tone="off">{a.status.replaceAll("_", " ").toLowerCase()}</Badge>
+            </li>)}
+          </ul>}
+          <p className="text-xs text-muted mt-2">Showing up to five recent appointments.</p>
         </Card>
 
         <Card>
@@ -134,7 +146,7 @@ export default async function PatientDashboard() {
                   <div>
                     <div className="font-semibold text-sm">{String(cc.doctorName)}</div>
                     <div className="text-xs text-muted">
-                      {String(cc.status)} · scope {String(cc.scope)} · {Number(cc.accessCount)} logged access(es)
+                      {String(cc.status)} · scope {String(cc.scope)} · purpose {String(cc.purpose).replaceAll("_", " ")} · {Number(cc.accessCount)} logged access(es)
                     </div>
                   </div>
                   <ConsentActions
@@ -196,6 +208,7 @@ export default async function PatientDashboard() {
             verifiable from your <Link className="text-brand font-semibold" href="/patient/access">Access & trust</Link> screen.
           </p>
         </Card>
+      </div>
       </div>
     </div>
   );
