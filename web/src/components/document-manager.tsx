@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/components/use-locale";
-import { DOCUMENT_TYPES, documentDate, documentErrorKey, documentSize, documentTypeKey, interpolate } from "@/lib/document-i18n";
+import { DOCUMENT_TYPES, documentDate, documentErrorKey, documentSize, documentTypeKey, documentSourceKey, interpolate } from "@/lib/document-i18n";
 import type { Locale, MessageKey } from "@/lib/i18n";
 
-type Doc = { id: string; title: string; type: string; mimeType: string; sizeBytes: number; issuedOn: string | null; createdAt: string; sha: string };
+type Doc = { id: string; title: string; type: string; source: string; mimeType: string; sizeBytes: number; issuedOn: string | null; createdAt: string; sha: string };
 type Message = { key: MessageKey<"documents">; values?: Record<string, string>; error?: boolean };
 
 /** Opens a 60-second signed link in a new tab (also used by doctors). */
@@ -32,16 +32,41 @@ export function DocumentManager() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Message | null>(null);
   const [loadError, setLoadError] = useState<MessageKey<"documents"> | null>(null);
+  const [query, setQuery] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filters, setFilters] = useState({ query: "", type: "" });
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const filtered = Boolean(filters.query.trim() || filters.type);
 
-  async function load() {
-    try {
-      const r = await fetch("/api/patient/documents");
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setLoadError(documentErrorKey(j.code)); return; }
-      setDocs(j.documents ?? []); setQuota(j.quota ?? null); setLoadError(null);
-    } catch { setLoadError("errorNetwork"); }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let current = true;
+    const params = new URLSearchParams({ type: filters.type, page: String(page), limit: "20" });
+    void (async () => {
+      try {
+        const r = await fetch(`/api/patient/documents?${params}`, { signal: controller.signal, headers: { "X-Document-Search": encodeURIComponent(filters.query) }, cache: "no-store" });
+        const j = await r.json().catch(() => ({}));
+        if (!current) return;
+        if (!r.ok) { setLoadError(documentErrorKey(j.code)); return; }
+        setDocs(j.documents ?? []); setQuota(j.quota ?? null); setHasMore(Boolean(j.hasMore));
+      } catch {
+        if (current) setLoadError("errorNetwork");
+      }
+    })();
+    return () => { current = false; controller.abort(); };
+  }, [filters.query, filters.type, page, reload]);
+
+  function startLoading() { setDocs(null); setLoadError(null); }
+  function applyFilters(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); startLoading(); setPage(1); setFilters({ query: query.trim(), type: filterType }); setReload((v) => v + 1);
   }
-  useEffect(() => { void (async () => { await load(); })(); }, []);
+  function clearFilters() {
+    startLoading(); setQuery(""); setFilterType(""); setFilters({ query: "", type: "" }); setPage(1); setReload((v) => v + 1);
+  }
 
   async function upload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,19 +81,20 @@ export function DocumentManager() {
       if (!r.ok) { setMsg({ key: documentErrorKey(j.code), error: true }); return; }
       setMsg({ key: "uploaded", values: { hash: String(j.sha256 ?? "").slice(0, 16) } });
       setF({ title: "", type: "LAB_REPORT", issuedOn: "" }); setFile(null); form.reset();
-      await load();
+      clearFilters();
     } catch { setMsg({ key: "errorNetwork", error: true }); }
     finally { setBusy(false); }
   }
   async function del(id: string) {
-    if (!confirm(t("documents", "confirmDelete"))) return;
-    setMsg(null);
+    if (deleting || !confirm(t("documents", "confirmDelete"))) return;
+    setDeleting(id); setMsg(null);
     try {
       const r = await fetch(`/api/documents/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "content-type": "application/json" } });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ key: documentErrorKey(j.code), error: true }); return; }
-      setMsg({ key: "deleted" }); await load();
+      setMsg({ key: "deleted" }); startLoading(); setReload((v) => v + 1);
     } catch { setMsg({ key: "errorNetwork", error: true }); }
+    finally { setDeleting(null); }
   }
   async function open(id: string) {
     setMsg(null);
@@ -100,23 +126,37 @@ export function DocumentManager() {
         </p>
         {msg && <p role={msg.error ? "alert" : "status"} className={`text-sm ${msg.error ? "text-red-700" : "text-ink"}`}>{interpolate(t("documents", msg.key), msg.values ?? {})}</p>}
       </form>
-      {loadError ? <div role="alert" className="text-sm text-red-700">{t("documents", loadError)} <button type="button" className="btn btn-ghost" onClick={() => void load()}>{t("documents", "retry")}</button></div>
+      <form onSubmit={applyFilters} className="grid gap-2 border-t border-line pt-4" role="search">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="field min-w-0"><span>{t("documents", "searchLabel")}</span><input value={query} maxLength={140} placeholder={t("documents", "searchPlaceholder")} onChange={(e) => setQuery(e.target.value)} /></label>
+          <label className="field min-w-0"><span>{t("documents", "filterLabel")}</span><select value={filterType} onChange={(e) => setFilterType(e.target.value)}><option value="">{t("documents", "allTypes")}</option>{DOCUMENT_TYPES.map(({ value, label }) => <option key={value} value={value}>{t("documents", label)}</option>)}</select></label>
+        </div>
+        <div className="flex flex-wrap gap-2"><button type="submit" className="btn btn-primary">{t("documents", "search")}</button>{(filtered || query || filterType) && <button type="button" className="btn btn-ghost" onClick={clearFilters}>{t("documents", "clear")}</button>}</div>
+      </form>
+      {loadError ? <div role="alert" className="text-sm text-red-700">{t("documents", loadError)} <button type="button" className="btn btn-ghost" onClick={() => { startLoading(); setReload((v) => v + 1); }}>{t("documents", "retry")}</button></div>
         : docs === null ? <p role="status" className="text-sm text-muted">{t("documents", "loading")}</p>
-        : docs.length === 0 ? <p className="text-sm text-muted">{t("documents", "empty")}</p> : (
+        : docs.length === 0 ? <p className="text-sm text-muted">{t("documents", page > 1 ? "emptyPage" : filtered ? "noMatches" : "empty")}</p> : (
         <ul className="divide-y divide-line text-sm">
           {docs.map((d) => (
             <li key={d.id} className="py-2 flex flex-wrap items-center gap-2">
               <span className="kbd">{t("documents", documentTypeKey(d.type))}</span>
               <span className="font-semibold break-all" dir="auto">{d.title}</span>
-              <span className="text-xs text-muted">{documentDate(d.issuedOn ?? d.createdAt, locale)} · {documentSize(d.sizeBytes, locale)} · {d.mimeType.split("/")[1]} · sha {d.sha}…</span>
+              <span className="text-xs text-muted break-words">{t("documents", d.issuedOn ? "reportDate" : "addedDate")}: {documentDate(d.issuedOn ?? d.createdAt, locale)} · {documentSize(d.sizeBytes, locale)} · {d.mimeType.split("/")[1]} · sha {d.sha}…</span>
+              <span className="text-xs text-muted">{t("documents", documentSourceKey(d.source))} · {t("documents", "verificationUnknown")}</span>
               <span className="ml-auto flex gap-2">
                 <button type="button" className="btn btn-ghost" onClick={() => void open(d.id)} aria-label={`${t("documents", "open")}: ${d.title}`}>{t("documents", "open")}</button>
-                <button type="button" className="btn btn-ghost text-red-700" onClick={() => void del(d.id)} aria-label={`${t("documents", "delete")}: ${d.title}`}>{t("documents", "delete")}</button>
+                <button type="button" className="btn btn-ghost text-red-700" disabled={deleting !== null} onClick={() => void del(d.id)} aria-label={`${t("documents", "delete")}: ${d.title}`}>{t("documents", "delete")}</button>
               </span>
             </li>
           ))}
         </ul>
       )}
+      {!loadError && docs !== null && (page > 1 || hasMore) && <nav className="flex flex-wrap gap-2 items-center" aria-label={t("documents", "page").replace("{page}", String(page))}>
+        <span className="text-sm text-muted">{interpolate(t("documents", "page"), { page: String(page) })}</span>
+        {page > 1 && <button type="button" className="btn btn-ghost" onClick={() => { startLoading(); setPage((p) => p - 1); }}>{t("documents", "previous")}</button>}
+        {hasMore && page < 500 && <button type="button" className="btn btn-ghost" onClick={() => { startLoading(); setPage((p) => p + 1); }}>{t("documents", "next")}</button>}
+        {hasMore && page === 500 && <span className="text-sm text-muted">{t("documents", "limit")}</span>}
+      </nav>}
     </section>
   );
 }

@@ -12,7 +12,7 @@ export default function Licenses() {
     <article>
       <h1>Open-source licences</h1>
       <p className="meta">{data.count} production packages · list generated {data.generatedAt.slice(0, 10)} by <code>scripts/licenses.mjs</code>, which refuses GPL/AGPL/unknown licences so the site can never ship code it is not allowed to.</p>
-      <p>CityCare also uses the <strong>Inter</strong> typeface (SIL Open Font License 1.1, self-hosted) and <strong>GSAP</strong> (Standard &ldquo;No Charge&rdquo; licence, permitted for this use). Full licence texts live in each package&apos;s <code>LICENSE</code> file in the source tree.</p>
+      <p>CityCare also uses the <strong>Inter</strong> typeface (SIL Open Font License 1.1, self-hosted), <strong>Noto Sans Devanagari</strong> (SIL Open Font License 1.1, self-hosted; <a href="/licenses/NotoSansDevanagari-OFL.txt">licence and attribution</a>), and <strong>GSAP</strong> (Standard &ldquo;No Charge&rdquo; licence, permitted for this use). Full licence texts live in each package&apos;s <code>LICENSE</code> file in the source tree.</p>
       <table>
         <thead><tr><th>Package</th><th>Version</th><th>Licence</th></tr></thead>
         <tbody>

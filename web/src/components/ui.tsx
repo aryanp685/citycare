@@ -46,23 +46,18 @@ export function EmptyNote({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted py-3">{children}</p>;
 }
 
-export function DoctorCardMini({ d }: { d: { id: string; fullName: string; qualification: string; consultationFee: string | number; rating: number | null; isVerified: boolean; specialties: string[]; hospital: string | null } }) {
-  const fee = Number(d.consultationFee).toFixed(0);
+export function DoctorCardMini({ d, approvedLabel, ratingUnavailable, locale }: { d: { id: string; fullName: string; qualification: string; consultationFee: string | number; rating: number | null; isVerified: boolean; specialties: string[]; hospital: string | null; city: string | null }; approvedLabel: string; ratingUnavailable: string; locale: string }) {
+  const fee = new Intl.NumberFormat(`${locale}-IN`, { style: "currency", currency: "INR" }).format(Number(d.consultationFee));
   return (
-    <Link href={`/patient/doctors/${d.id}`} className="card card-hover block no-underline text-inherit">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-bold">
-            Dr. {d.fullName.replace(/^Dr\.?\s+/i, "")}
-            {d.isVerified && <span className="ml-2 text-teal-700" title="Registration number on file">✓</span>}
-          </div>
-          <div className="text-sm text-muted">{d.qualification} · {Array.isArray(d.specialties) ? d.specialties.join(", ") : d.specialties}</div>
-          {d.hospital && <div className="text-xs text-muted mt-0.5">{d.hospital}</div>}
+    <Link href={`/patient/doctors/${encodeURIComponent(d.id)}`} className="card card-hover block no-underline text-inherit h-full">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-40">
+          <div className="font-bold break-words"><bdi lang="">{d.fullName}</bdi></div>
+          <div className="text-sm text-muted break-words"><bdi lang="">{d.qualification}</bdi>{d.specialties.length > 0 && <> · <bdi lang="">{d.specialties.join(", ")}</bdi></>}</div>
+          {(d.hospital || d.city) && <div className="text-xs text-muted mt-1 break-words"><bdi lang="">{[d.hospital, d.city].filter(Boolean).join(" · ")}</bdi></div>}
+          {d.isVerified && <div className="mt-2"><Badge tone="live">{approvedLabel}</Badge></div>}
         </div>
-        <div className="text-right shrink-0">
-          <div className="font-bold">₹{fee}</div>
-          {d.rating ? <Badge tone="live">★ {d.rating.toFixed(1)}</Badge> : <Badge tone="off">new</Badge>}
-        </div>
+        <div className="text-right"><div className="font-bold">{fee}</div><Badge tone="off">{d.rating !== null && Number.isFinite(d.rating) ? `★ ${d.rating.toFixed(1)}` : ratingUnavailable}</Badge></div>
       </div>
     </Link>
   );

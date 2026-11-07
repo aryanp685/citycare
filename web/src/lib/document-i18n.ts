@@ -21,6 +21,10 @@ export function documentErrorKey(code: unknown): Key {
 export function documentTypeKey(type: string): Key {
   return DOCUMENT_TYPES.find((item) => item.value === type)?.label ?? "typeOther";
 }
+const SOURCES: Record<string, Key> = { PATIENT_UPLOAD: "sourcePatient", DOCTOR_UPLOAD: "sourceDoctor", LAB_UPLOAD: "sourceLab", SCANNED_PAPER: "sourceScan", IMPORTED_FHIR: "sourceImported" };
+export function documentSourceKey(source: string): Key {
+  return Object.hasOwn(SOURCES, source) ? SOURCES[source] : "sourceUnknown";
+}
 export function documentSize(bytes: number, locale: Locale): string {
   const large = bytes >= 1024 * 1024;
   const number = large ? bytes / (1024 * 1024) : Math.ceil(bytes / 1024);

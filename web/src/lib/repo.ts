@@ -60,8 +60,11 @@ export type DoctorCard = {
   languages: string[];
 };
 
-export async function searchDoctors(q: string): Promise<DoctorCard[]> {
-  const like = `%${q.trim().toLowerCase()}%`;
+export type DoctorSearch = { q: string; city: string; specialty: string };
+
+/** Literal, case-insensitive substring search; optional filters combine with AND. */
+export async function searchDoctors({ q, city, specialty }: DoctorSearch): Promise<DoctorCard[]> {
+  const values = [q, city, specialty].map((value) => value.trim().slice(0, 120).toLowerCase());
   return all<DoctorCard>(
     `SELECT d.id, d."fullName", d.qualification, d."experienceYrs", d."consultationFee",
             d.rating, d."isVerified", h.name AS hospital, h.city,
@@ -71,12 +74,18 @@ export async function searchDoctors(q: string): Promise<DoctorCard[]> {
        LEFT JOIN "Hospital" h ON h.id = d."hospitalId"
        LEFT JOIN "DoctorSpecialty" ds ON ds."doctorId" = d.id
        LEFT JOIN "Specialty" s ON s.id = ds."specialtyId"
-      WHERE d."isVerified"  -- F1: unverified registrations are invisible to patients
-        AND (lower(d."fullName") LIKE $1 OR lower(COALESCE(s.name,'')) LIKE $1 OR lower(COALESCE(h.name,'')) LIKE $1)
+      WHERE d."isVerified"
+        AND ($1 = '' OR strpos(lower(d."fullName"), $1) > 0 OR strpos(lower(COALESCE(h.name, '')), $1) > 0 OR EXISTS (
+          SELECT 1 FROM "DoctorSpecialty" qs JOIN "Specialty" st ON st.id = qs."specialtyId"
+           WHERE qs."doctorId" = d.id AND strpos(lower(st.name), $1) > 0))
+        AND ($2 = '' OR strpos(lower(COALESCE(h.city, '')), $2) > 0)
+        AND ($3 = '' OR EXISTS (
+          SELECT 1 FROM "DoctorSpecialty" fs JOIN "Specialty" ft ON ft.id = fs."specialtyId"
+           WHERE fs."doctorId" = d.id AND strpos(lower(ft.name), $3) > 0))
       GROUP BY d.id, h.name, h.city
-      ORDER BY d."isVerified" DESC, d.rating DESC NULLS LAST, d."fullName"
+      ORDER BY d."isVerified" DESC, d.rating DESC NULLS LAST, d."fullName", d.id
       LIMIT 40`,
-    [like],
+    values,
   );
 }
 

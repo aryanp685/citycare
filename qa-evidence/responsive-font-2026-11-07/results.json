@@ -1,0 +1,128 @@
+{
+  "browser": "153.0.8010.0",
+  "database": "isolated synthetic PostgreSQL 18.6",
+  "flags": [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage"
+  ],
+  "results": [
+    {
+      "name": "admin 320 viewport overflow",
+      "pass": true,
+      "sizes": {
+        "client": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "admin 320 table region",
+      "pass": true,
+      "dimensions": {
+        "scroll": 768,
+        "client": 246,
+        "tabindex": "0"
+      }
+    },
+    {
+      "name": "admin table keyboard scroll",
+      "pass": true,
+      "scrollLeft": 40
+    },
+    {
+      "name": "admin 375 viewport overflow",
+      "pass": true,
+      "sizes": {
+        "client": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "admin 375 table region",
+      "pass": true,
+      "dimensions": {
+        "scroll": 768,
+        "client": 301,
+        "tabindex": "0"
+      }
+    },
+    {
+      "name": "admin 768 viewport overflow",
+      "pass": true,
+      "sizes": {
+        "client": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "admin 768 table region",
+      "pass": true,
+      "dimensions": {
+        "scroll": 768,
+        "client": 694,
+        "tabindex": "0"
+      }
+    },
+    {
+      "name": "admin 1280 viewport overflow",
+      "pass": true,
+      "sizes": {
+        "client": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "admin 1280 table region",
+      "pass": true,
+      "dimensions": {
+        "scroll": 1078,
+        "client": 1078,
+        "tabindex": "0"
+      }
+    },
+    {
+      "name": "hi local font loaded",
+      "pass": true,
+      "faces": [
+        {
+          "family": "CityCare Devanagari",
+          "status": "loaded"
+        }
+      ],
+      "check": true,
+      "resource": [
+        "http://127.0.0.1:3010/_next/static/media/NotoSansDevanagariVariable.2bu8ps5hz175j.woff2"
+      ],
+      "width": 375,
+      "scroll": 375
+    },
+    {
+      "name": "hi mobile overflow",
+      "pass": true,
+      "width": 375,
+      "scroll": 375
+    },
+    {
+      "name": "mr local font loaded",
+      "pass": true,
+      "faces": [
+        {
+          "family": "CityCare Devanagari",
+          "status": "loaded"
+        }
+      ],
+      "check": true,
+      "resource": [
+        "http://127.0.0.1:3010/_next/static/media/NotoSansDevanagariVariable.2bu8ps5hz175j.woff2"
+      ],
+      "width": 375,
+      "scroll": 375
+    },
+    {
+      "name": "mr mobile overflow",
+      "pass": true,
+      "width": 375,
+      "scroll": 375
+    }
+  ]
+}

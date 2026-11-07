@@ -7,19 +7,39 @@ import { MAX_FILE_BYTES, PATIENT_QUOTA_BYTES, encryptBlob, sniffMime } from "@/l
 
 const TYPES = new Set(["PRESCRIPTION", "LAB_REPORT", "DISCHARGE_SUMMARY", "XRAY", "MRI", "CT_SCAN", "ULTRASOUND", "ECG", "VACCINATION_CARD", "BILL", "OTHER"]);
 
-/** GET /api/patient/documents — my files (or my dependent's, while acting for them). */
-export const GET = handler(async () => {
+/** Patient-owned document list, with bounded filters and quota across all active files. */
+export const GET = handler(async (req) => {
   const v = await requireRole("PATIENT");
-  const rows = await all<{ id: string; title: string; type: string; mimeType: string; sizeBytes: number; issuedOn: Date | null; createdAt: Date; sha: string }>(
-    `SELECT id, title, type::text AS type, "mimeType", "sizeBytes", "issuedOn", "createdAt", "checksumSha256" AS sha
-       FROM "Document" WHERE "patientId" = $1 AND NOT "isDeleted" ORDER BY "createdAt" DESC LIMIT 100`,
-    [v.profileId],
-  );
-  const used = rows.reduce((n, r) => n + r.sizeBytes, 0);
-  return ok({
-    documents: rows.map((r) => ({ ...r, issuedOn: r.issuedOn?.toISOString().slice(0, 10) ?? null, createdAt: r.createdAt.toISOString(), sha: r.sha.slice(0, 16) })),
-    quota: { usedBytes: used, maxBytes: PATIENT_QUOTA_BYTES, maxFileBytes: MAX_FILE_BYTES },
+  const sp = new URL(req.url).searchParams;
+  let q = sp.get("q") ?? "";
+  const searchHeader = req.headers.get("X-Document-Search");
+  if (searchHeader !== null) {
+    try { q = decodeURIComponent(searchHeader); } catch { fail(400, "bad_filter", "Invalid document filters."); }
+  }
+  const type = sp.get("type") ?? "";
+  const pageRaw = sp.get("page") ?? "1";
+  const limitRaw = sp.get("limit") ?? "100"; // preserve the previous default limit
+  if (q.length > 140 || (type && !TYPES.has(type)) || !/^[1-9]\d*$/.test(pageRaw) || !/^[1-9]\d*$/.test(limitRaw)) fail(400, "bad_filter", "Invalid document filters.");
+  const page = Number(pageRaw), limit = Number(limitRaw);
+  if (!Number.isSafeInteger(page) || page > 500 || !Number.isSafeInteger(limit) || limit > 100) fail(400, "bad_filter", "Invalid document filters.");
+  const [rows, quota] = await Promise.all([
+    all<{ id: string; title: string; type: string; source: string; mimeType: string; sizeBytes: number; issuedOn: Date | null; createdAt: Date; sha: string }>(
+      `SELECT id, title, type::text AS type, source::text AS source, "mimeType", "sizeBytes", "issuedOn", "createdAt", "checksumSha256" AS sha
+         FROM "Document" WHERE "patientId"=$1 AND NOT "isDeleted"
+          AND ($2 = '' OR strpos(lower(title), lower($2)) > 0)
+          AND ($3 = '' OR type::text = $3)
+        ORDER BY "createdAt" DESC, id DESC LIMIT $4 OFFSET $5`,
+      [v.profileId, q.trim(), type, limit + 1, (page - 1) * limit],
+    ),
+    one<{ used: string }>(`SELECT COALESCE(sum("sizeBytes"), 0)::text AS used FROM "Document" WHERE "patientId"=$1 AND NOT "isDeleted"`, [v.profileId]),
+  ]);
+  const response = ok({
+    documents: rows.slice(0, limit).map((r) => ({ ...r, issuedOn: r.issuedOn?.toISOString().slice(0, 10) ?? null, createdAt: r.createdAt.toISOString(), sha: r.sha.slice(0, 16) })),
+    page, hasMore: rows.length > limit,
+    quota: { usedBytes: Number(quota?.used ?? 0), maxBytes: PATIENT_QUOTA_BYTES, maxFileBytes: MAX_FILE_BYTES },
   });
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 });
 
 /**

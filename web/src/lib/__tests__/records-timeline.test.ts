@@ -38,3 +38,25 @@ describe("records timeline translations", () => {
     expect(formatTimelineDate("bad", "hi")).toBe("bad");
   });
 });
+
+describe("patient timeline chronology and honest provenance", () => {
+  const visit = (id: string, date: string, type = "OUTPATIENT", doctor: string | null = null) => ({ id, date, type, doctor, diagnosis: id, complaint: null, code: null, advice: null, followUp: null });
+  const lab = (id: string, takenOn: string | null) => ({ id, takenOn, name: id, value: 0, unit: null, low: null, high: null });
+  it("interleaves newest-first, keeps ties deterministic, and puts undated and invalid dates last without mutating inputs", async () => {
+    const { buildTimeline } = await import("@/components/records-timeline");
+    const encounters = [visit("older visit", "2026-01-01T00:00:00Z"), visit("tie visit", "2026-02-01T00:00:00Z"), visit("bad visit", "not-a-date")];
+    const labs = [lab("newest lab", "2026-03-01T00:00:00Z"), lab("tie lab", "2026-02-01T00:00:00Z"), lab("undated lab", null)];
+    const before = structuredClone({ encounters, labs });
+    expect(buildTimeline(encounters, labs).map(e => e.data.id)).toEqual(["newest lab", "tie visit", "tie lab", "older visit", "bad visit", "undated lab"]);
+    expect({ encounters, labs }).toEqual(before);
+  });
+  it.each(LOCALES)("%s renders all supplied labs, unknown dates and truthful source labels", locale => {
+    state.locale = locale;
+    const labs = Array.from({ length: 8 }, (_, i) => lab(`Synthetic lab ${i}`, i === 7 ? null : `2026-01-${String(i + 1).padStart(2, "0")}T00:00:00Z`));
+    const html = renderToStaticMarkup(createElement(RecordsTimeline, { encounters: [visit("Unknown clinician", "2026-01-01T00:00:00Z"), visit("Self report", "invalid", "SELF_REPORTED")], labs }));
+    expect(html).toContain("Synthetic lab 7");
+    for (const key of ["timelineLimit", "sourceUnknown", "selfReported", "linkedDocument", "labResult", "dateUnknown"] as const) expect(html).toContain(translate(locale, "records", key));
+    expect(html.indexOf("Synthetic lab 6")).toBeLessThan(html.indexOf("Synthetic lab 0"));
+    expect(html).toContain("<ol"); expect(html).not.toContain('dateTime="invalid"');
+  });
+});

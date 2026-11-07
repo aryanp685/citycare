@@ -9,6 +9,9 @@ describe("admin workspace", () => {
   it("uses the separately queried totals and labels the bounded list", async () => {
     state.role = "SUPER_ADMIN"; const html = renderToStaticMarkup(await AdminHome());
     expect(html).toContain("Awaiting review"); expect(html).toContain(">7<"); expect(html).toContain("1 pending in this list"); expect(html).toContain("Approve");
+    expect(html).toContain('class="grid grid-cols-1 gap-5"');
+    expect(html).toContain('class="card  min-w-0"');
+    expect(html).toContain('aria-label="Registrations awaiting verification" tabindex="0"');
   });
   it("does not show verification controls to hospital admins", async () => {
     state.role = "HOSPITAL_ADMIN"; const html = renderToStaticMarkup(await AdminHome()); expect(html).not.toContain("Approve…"); expect(html).toContain("Super admin decision required");
