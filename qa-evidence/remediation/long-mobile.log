@@ -1,0 +1,5 @@
+med {"scroll":320,"outer":"<span class=\"font-semibold\">SyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongL"}
+badge {"scroll":320,"outer":"<span class=\"badge badge-crit\">SyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLo"}
+chart {"scroll":320,"outer":"<span class=\"font-semibold text-sm\">SyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSynthe"}
+recent {"scroll":320,"outer":"<span class=\"max-md:min-w-0 max-md:[overflow-wrap:anywhere]\">SyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabe"}
+document {"scroll":320,"outer":"<span class=\"font-semibold break-all\" dir=\"auto\">SyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLongLabelSyntheticLo"}

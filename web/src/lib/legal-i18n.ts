@@ -5,8 +5,10 @@
  * summaries are marked "pending legal-cell review" until the college's legal cell signs them off.
  * Keys are identical across languages — a unit test enforces completeness.
  */
-export const LEGAL_LANGS = ["en", "hi", "mr"] as const;
-export type LegalLang = (typeof LEGAL_LANGS)[number];
+import { LOCALES, resolveLocale, type Locale } from "./i18n";
+
+export const LEGAL_LANGS = LOCALES;
+export type LegalLang = Locale;
 
 export type LegalSummary = {
   langName: string;
@@ -20,22 +22,22 @@ export type LegalSummary = {
 };
 
 export function pickLang(raw: string | null | undefined): LegalLang {
-  return (LEGAL_LANGS as readonly string[]).includes(raw ?? "") ? (raw as LegalLang) : "en";
+  return resolveLocale(raw);
 }
 
-/**
- * NG-S15 — the operative English "How long" sentence for the summary box. The static
- * `LEGAL_SUMMARY.en.points` entry is overridden at render time with this so the summary
- * states what THIS deployment actually does (sweep armed ⇔ RETENTION_POLICY=demo + banner on).
- * The Hindi/Marathi summaries stay static: they are marked "pending legal-cell review" and
- * subordinate to the English operative text (see `operativeNote`).
+/** Retention summary must reflect the same deployment policy in every language.
+ * Hindi and Marathi remain unreviewed summaries, not approved legal translations.
  */
-export function howLongBody(sweepEnabled: boolean, demoRetentionDays: number): string {
-  return `While your account is active. ${
-    sweepEnabled
-      ? `Demo accounts are erased ${demoRetentionDays} days after creation.`
-      : "This deployment does not auto-erase accounts."
-  } Access logs are kept at least one year.`;
+export function howLongBody(sweepEnabled: boolean, demoRetentionDays: number, lang: LegalLang = "en"): string {
+  if (lang === "hi") return `जब तक आपका खाता सक्रिय है। ${sweepEnabled
+    ? `डेमो खाते बनने के ${demoRetentionDays} दिन बाद मिटाए जाते हैं।`
+    : "इस तैनाती में खाते अपने आप नहीं मिटाए जाते।"} पहुँच-लॉग कम से कम एक वर्ष रखे जाते हैं।`;
+  if (lang === "mr") return `तुमचे खाते सक्रिय असेपर्यंत. ${sweepEnabled
+    ? `डेमो खाती तयार झाल्यानंतर ${demoRetentionDays} दिवसांनी पुसली जातात.`
+    : "या प्रणालीमध्ये खाती आपोआप पुसली जात नाहीत."} प्रवेश-नोंदी किमान एक वर्ष ठेवल्या जातात.`;
+  return `While your account is active. ${sweepEnabled
+    ? `Demo accounts are erased ${demoRetentionDays} days after creation.`
+    : "This deployment does not auto-erase accounts."} Access logs are kept at least one year.`;
 }
 
 export const LEGAL_SUMMARY: Record<LegalLang, LegalSummary> = {

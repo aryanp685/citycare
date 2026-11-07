@@ -1,0 +1,476 @@
+{
+  "en": {
+    "320": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "375": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "390": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "414": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "768": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 263,
+        "client": 263,
+        "width": 262.703125,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "1280": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 455,
+        "client": 455,
+        "width": 454.703125,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    }
+  },
+  "hi": {
+    "320": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "375": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "390": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "414": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "768": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 283,
+        "client": 283,
+        "width": 282.828125,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "1280": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 475,
+        "client": 475,
+        "width": 474.828125,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    }
+  },
+  "mr": {
+    "320": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 220,
+        "client": 220,
+        "width": 220,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "375": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 275,
+        "client": 275,
+        "width": 275,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "390": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 290,
+        "client": 290,
+        "width": 290,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "414": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 314,
+        "client": 314,
+        "width": 314,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "768": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 313,
+        "client": 313,
+        "width": 313,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 283,
+        "client": 283,
+        "width": 282.796875,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    },
+    "1280": {
+      "pick": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "chart": {
+        "textComplete": true,
+        "scroll": 505,
+        "client": 505,
+        "width": 505,
+        "wrap": "anywhere",
+        "rects": 1
+      },
+      "recent": {
+        "textComplete": true,
+        "scroll": 475,
+        "client": 475,
+        "width": 474.796875,
+        "wrap": "anywhere",
+        "rects": 1
+      }
+    }
+  }
+}

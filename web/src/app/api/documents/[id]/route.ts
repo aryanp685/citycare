@@ -1,5 +1,7 @@
+import { LOCALES } from "@/lib/i18n";
+import { documentDownloadError } from "@/lib/document-download-error";
 import { one, run, tx, fail } from "@/lib/db";
-import { handler, ok, err } from "@/lib/api";
+import { handler, ok } from "@/lib/api";
 import { getViewer, requireRole, guardSameOrigin } from "@/lib/session";
 import { liveConsent } from "@/lib/consent";
 import { appendAudit } from "@/lib/ledger";
@@ -10,11 +12,13 @@ import { decryptBlob, safeFilename, verifyDownload, type AllowedMime } from "@/l
  * session must belong to the user the link was minted for, and a doctor's consent is re-checked
  * at download time (a consent revoked 10 s after the link was issued means 403).
  */
-export const GET = handler(async (req, { params }) => {
+const download = handler(async (req, { params }) => {
+  const url = new URL(req.url);
+  const err = (status: number, code: string, message: string) => documentDownloadError(status, code, message, url);
   const v = await getViewer();
   if (!v) return err(401, "auth_required", "sign in to download");
   const { id } = await params;
-  const sp = new URL(req.url).searchParams;
+  const sp = url.searchParams;
   const exp = Number(sp.get("exp"));
   const sig = sp.get("sig") ?? "";
   if (!verifyDownload(id, v.uid, exp, sig)) return err(403, "bad_link", "this download link is invalid or has expired — request a new one");
@@ -48,6 +52,17 @@ export const GET = handler(async (req, { params }) => {
     },
   });
 });
+
+
+/** Localize only the generic unexpected-error response for an opted-in patient tab.
+ * All status codes, successful downloads and default API/doctor responses are unchanged. */
+export async function GET(req: Request, ctx: { params: Promise<Record<string, string>> }) {
+  const response = await download(req, ctx);
+  const url = new URL(req.url);
+  const locale = url.searchParams.get("ui_lang");
+  if (response.status < 500 || !locale || !(LOCALES as readonly string[]).includes(locale) || !response.headers.get("content-type")?.includes("application/json")) return response;
+  return documentDownloadError(response.status, "internal", "Something broke on our side. Try again.", url);
+}
 
 /** DELETE /api/documents/[id] — owner only; bytes go immediately, the row is tombstoned for the ledger. */
 export const DELETE = handler(async (req, { params }) => {

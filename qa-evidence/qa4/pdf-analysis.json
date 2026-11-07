@@ -1,0 +1,524 @@
+{
+  "print-ambient-en-A4": {
+    "pages": [
+      {
+        "image": "print-ambient-en-A4-page-1.png",
+        "chars": 1130,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-en-A4-page-2.png",
+        "chars": 1403,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-en-A4-page-3.png",
+        "chars": 1279,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-ambient-en-Letter": {
+    "pages": [
+      {
+        "image": "print-ambient-en-Letter-page-1.png",
+        "chars": 1026,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-en-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-en-Letter-page-3.png",
+        "chars": 1488,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-ambient-hi-A4": {
+    "pages": [
+      {
+        "image": "print-ambient-hi-A4-page-1.png",
+        "chars": 1132,
+        "pypdf_nul": 226
+      },
+      {
+        "image": "print-ambient-hi-A4-page-2.png",
+        "chars": 1404,
+        "pypdf_nul": 42
+      },
+      {
+        "image": "print-ambient-hi-A4-page-3.png",
+        "chars": 1245,
+        "pypdf_nul": 534
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुलाका का सारांश\r\nनाया गया 6 नव॰ 2026, 11:50 pm IST · आपके अपने CityCare रिकॉर्ड से\r\nमरीज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेतावनी\r\nALL-QA-002 — चेतावनी\r\nALL-QA-003 — चेतावनी\r\nALL-QA-004 — चेतावनी\r\nALL-QA-005 — चेतावनी\r\nALL-QA-006 — चेतावनी\r\nALL-QA-007 — चेतावनी\r\nALL-QA-008 — चेतावनी\r\nALL-QA-009 — चेतावनी\r\nALL-QA-010 — चेतावनी\r\nALL-QA-011 — चेतावनी\r\nALL-QA-012 — चेतावनी\r\nALL-QA-013 — चेतावनी\r\nALL-QA-014 —",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000 6 \u0000\u0000\u0000 2026, 11:50 pm IST · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nPenicill"
+  },
+  "print-ambient-hi-Letter": {
+    "pages": [
+      {
+        "image": "print-ambient-hi-Letter-page-1.png",
+        "chars": 1028,
+        "pypdf_nul": 226
+      },
+      {
+        "image": "print-ambient-hi-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-hi-Letter-page-3.png",
+        "chars": 1455,
+        "pypdf_nul": 576
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुलाका का सारांश\r\nनाया गया 6 नव॰ 2026, 11:50 pm IST · आपके अपने CityCare रिकॉर्ड से\r\nमरीज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेतावनी\r\nALL-QA-002 — चेतावनी\r\nALL-QA-003 — चेतावनी\r\nALL-QA-004 — चेतावनी\r\nALL-QA-005 — चेतावनी\r\nALL-QA-006 — चेतावनी\r\nALL-QA-007 — चेतावनी\r\nALL-QA-008 — चेतावनी\r\nALL-QA-009 — चेतावनी\r\nALL-QA-010 — चेतावनी\r\nALL-QA-011 — चेतावनी\r\nALL-QA-012 — चेतावनी\r\nALL-QA-013 — चेतावनी\r\nALL-QA-014 —",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000 6 \u0000\u0000\u0000 2026, 11:50 pm IST · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nPenicill"
+  },
+  "print-ambient-mr-A4": {
+    "pages": [
+      {
+        "image": "print-ambient-mr-A4-page-1.png",
+        "chars": 1109,
+        "pypdf_nul": 213
+      },
+      {
+        "image": "print-ambient-mr-A4-page-2.png",
+        "chars": 1394,
+        "pypdf_nul": 35
+      },
+      {
+        "image": "print-ambient-mr-A4-page-3.png",
+        "chars": 1307,
+        "pypdf_nul": 678
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीचा सारां\r\nयार केले ६ नोव्हें, २०२६, ११:५० PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्गट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅलर्जी\r\nALL-QA-001 — इशारा\r\nALL-QA-002 — इशारा\r\nALL-QA-003 — इशारा\r\nALL-QA-004 — इशारा\r\nALL-QA-005 — इशारा\r\nALL-QA-006 — इशारा\r\nALL-QA-007 — इशारा\r\nALL-QA-008 — इशारा\r\nALL-QA-009 — इशारा\r\nALL-QA-010 — इशारा\r\nALL-QA-011 — इशारा\r\nALL-QA-012 — इशारा\r\nALL-QA-013 — इशारा\r\nALL-QA-014 — इशारा\r\nPenicillin — ",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 \u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000, \u0000\u0000\u0000\u0000, \u0000\u0000:\u0000\u0000 PM IST · \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\nPenicillin — \u0000\u0000\u0000\u0000\u0000\nSulfa drug "
+  },
+  "print-ambient-mr-Letter": {
+    "pages": [
+      {
+        "image": "print-ambient-mr-Letter-page-1.png",
+        "chars": 1005,
+        "pypdf_nul": 213
+      },
+      {
+        "image": "print-ambient-mr-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-ambient-mr-Letter-page-3.png",
+        "chars": 1507,
+        "pypdf_nul": 713
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीचा सारां\r\nयार केले ६ नोव्हें, २०२६, ११:५० PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्गट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅलर्जी\r\nALL-QA-001 — इशारा\r\nALL-QA-002 — इशारा\r\nALL-QA-003 — इशारा\r\nALL-QA-004 — इशारा\r\nALL-QA-005 — इशारा\r\nALL-QA-006 — इशारा\r\nALL-QA-007 — इशारा\r\nALL-QA-008 — इशारा\r\nALL-QA-009 — इशारा\r\nALL-QA-010 — इशारा\r\nALL-QA-011 — इशारा\r\nALL-QA-012 — इशारा\r\nALL-QA-013 — इशारा\r\nALL-QA-014 — इशारा\r\nPenicillin — ",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 \u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000, \u0000\u0000\u0000\u0000, \u0000\u0000:\u0000\u0000 PM IST · \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\nPenicillin — \u0000\u0000\u0000\u0000\u0000\nSulfa drug "
+  },
+  "print-no-deva-en-A4": {
+    "pages": [
+      {
+        "image": "print-no-deva-en-A4-page-1.png",
+        "chars": 1130,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-en-A4-page-2.png",
+        "chars": 1403,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-en-A4-page-3.png",
+        "chars": 1279,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:51 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:51 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-no-deva-en-Letter": {
+    "pages": [
+      {
+        "image": "print-no-deva-en-Letter-page-1.png",
+        "chars": 1026,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-en-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-en-Letter-page-3.png",
+        "chars": 1488,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:51 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:51 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-no-deva-hi-A4": {
+    "pages": [
+      {
+        "image": "print-no-deva-hi-A4-page-1.png",
+        "chars": 1132,
+        "pypdf_nul": 226
+      },
+      {
+        "image": "print-no-deva-hi-A4-page-2.png",
+        "chars": 1404,
+        "pypdf_nul": 42
+      },
+      {
+        "image": "print-no-deva-hi-A4-page-3.png",
+        "chars": 1245,
+        "pypdf_nul": 534
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुलाका का सारांश\r\nनाया गया 6 नव॰ 2026, 11:51 pm IST · आपके अपने CityCare रिकॉर्ड से\r\nमरीज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेतावनी\r\nALL-QA-002 — चेतावनी\r\nALL-QA-003 — चेतावनी\r\nALL-QA-004 — चेतावनी\r\nALL-QA-005 — चेतावनी\r\nALL-QA-006 — चेतावनी\r\nALL-QA-007 — चेतावनी\r\nALL-QA-008 — चेतावनी\r\nALL-QA-009 — चेतावनी\r\nALL-QA-010 — चेतावनी\r\nALL-QA-011 — चेतावनी\r\nALL-QA-012 — चेतावनी\r\nALL-QA-013 — चेतावनी\r\nALL-QA-014 —",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000 6 \u0000\u0000\u0000 2026, 11:51 pm IST · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nPenicill"
+  },
+  "print-no-deva-hi-Letter": {
+    "pages": [
+      {
+        "image": "print-no-deva-hi-Letter-page-1.png",
+        "chars": 1028,
+        "pypdf_nul": 226
+      },
+      {
+        "image": "print-no-deva-hi-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-hi-Letter-page-3.png",
+        "chars": 1455,
+        "pypdf_nul": 576
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुलाका का सारांश\r\nनाया गया 6 नव॰ 2026, 11:51 pm IST · आपके अपने CityCare रिकॉर्ड से\r\nमरीज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेतावनी\r\nALL-QA-002 — चेतावनी\r\nALL-QA-003 — चेतावनी\r\nALL-QA-004 — चेतावनी\r\nALL-QA-005 — चेतावनी\r\nALL-QA-006 — चेतावनी\r\nALL-QA-007 — चेतावनी\r\nALL-QA-008 — चेतावनी\r\nALL-QA-009 — चेतावनी\r\nALL-QA-010 — चेतावनी\r\nALL-QA-011 — चेतावनी\r\nALL-QA-012 — चेतावनी\r\nALL-QA-013 — चेतावनी\r\nALL-QA-014 —",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000 6 \u0000\u0000\u0000 2026, 11:51 pm IST · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\u0000\u0000\nPenicill"
+  },
+  "print-no-deva-mr-A4": {
+    "pages": [
+      {
+        "image": "print-no-deva-mr-A4-page-1.png",
+        "chars": 1109,
+        "pypdf_nul": 213
+      },
+      {
+        "image": "print-no-deva-mr-A4-page-2.png",
+        "chars": 1394,
+        "pypdf_nul": 35
+      },
+      {
+        "image": "print-no-deva-mr-A4-page-3.png",
+        "chars": 1307,
+        "pypdf_nul": 678
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीचा सारां\r\nयार केले ६ नोव्हें, २०२६, ११:५१ PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्गट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅलर्जी\r\nALL-QA-001 — इशारा\r\nALL-QA-002 — इशारा\r\nALL-QA-003 — इशारा\r\nALL-QA-004 — इशारा\r\nALL-QA-005 — इशारा\r\nALL-QA-006 — इशारा\r\nALL-QA-007 — इशारा\r\nALL-QA-008 — इशारा\r\nALL-QA-009 — इशारा\r\nALL-QA-010 — इशारा\r\nALL-QA-011 — इशारा\r\nALL-QA-012 — इशारा\r\nALL-QA-013 — इशारा\r\nALL-QA-014 — इशारा\r\nPenicillin — ",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 \u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000, \u0000\u0000\u0000\u0000, \u0000\u0000:\u0000\u0000 PM IST · \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\nPenicillin — \u0000\u0000\u0000\u0000\u0000\nSulfa drug "
+  },
+  "print-no-deva-mr-Letter": {
+    "pages": [
+      {
+        "image": "print-no-deva-mr-Letter-page-1.png",
+        "chars": 1005,
+        "pypdf_nul": 213
+      },
+      {
+        "image": "print-no-deva-mr-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-no-deva-mr-Letter-page-3.png",
+        "chars": 1507,
+        "pypdf_nul": 713
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीचा सारां\r\nयार केले ६ नोव्हें, २०२६, ११:५१ PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्गट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅलर्जी\r\nALL-QA-001 — इशारा\r\nALL-QA-002 — इशारा\r\nALL-QA-003 — इशारा\r\nALL-QA-004 — इशारा\r\nALL-QA-005 — इशारा\r\nALL-QA-006 — इशारा\r\nALL-QA-007 — इशारा\r\nALL-QA-008 — इशारा\r\nALL-QA-009 — इशारा\r\nALL-QA-010 — इशारा\r\nALL-QA-011 — इशारा\r\nALL-QA-012 — इशारा\r\nALL-QA-013 — इशारा\r\nALL-QA-014 — इशारा\r\nPenicillin — ",
+    "extraction_preview_pypdf": "CityCare — \u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000 \u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000, \u0000\u0000\u0000\u0000, \u0000\u0000:\u0000\u0000 PM IST · \u0000\u0000\u0000\u0000\u0000\u0000\u0000 \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000 CityCare \u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\u0000\u0000\u0000\u0000\u0000\nRamesh Shelar · 58 \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000 · \u0000\u0000\u0000\u0000\u0000\u0000 B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\n\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nALL-QA-001 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-002 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-003 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-004 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-005 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-006 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-007 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-008 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-009 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-010 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-011 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-012 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-013 — \u0000\u0000\u0000\u0000\u0000\nALL-QA-014 — \u0000\u0000\u0000\u0000\u0000\nPenicillin — \u0000\u0000\u0000\u0000\u0000\nSulfa drug "
+  },
+  "print-noto-en-A4": {
+    "pages": [
+      {
+        "image": "print-noto-en-A4-page-1.png",
+        "chars": 1130,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-en-A4-page-2.png",
+        "chars": 1403,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-en-A4-page-3.png",
+        "chars": 1279,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-noto-en-Letter": {
+    "pages": [
+      {
+        "image": "print-noto-en-Letter-page-1.png",
+        "chars": 1026,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-en-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-en-Letter-page-3.png",
+        "chars": 1487,
+        "pypdf_nul": 0
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — visit summary\r\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\r\nPatient\r\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nAllergies\r\nALL-QA-001 — warning\r\nALL-QA-002 — warning\r\nALL-QA-003 — warning\r\nALL-QA-004 — warning\r\nALL-QA-005 — warning\r\nALL-QA-006 — warning\r\nALL-QA-007 — warning\r\nALL-QA-008 — warning\r\nALL-QA-009 — warning\r\nALL-QA-010 — warning\r\nALL-QA-011 — warning\r\nALL-QA-012 — warning\r\nALL-QA-013 — warning\r\nALL-QA-014 — warn",
+    "extraction_preview_pypdf": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:50 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — cr"
+  },
+  "print-noto-hi-A4": {
+    "pages": [
+      {
+        "image": "print-noto-hi-A4-page-1.png",
+        "chars": 1165,
+        "pypdf_nul": 9
+      },
+      {
+        "image": "print-noto-hi-A4-page-2.png",
+        "chars": 1421,
+        "pypdf_nul": 4
+      },
+      {
+        "image": "print-noto-hi-A4-page-3.png",
+        "chars": 1329,
+        "pypdf_nul": 49
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुला का त का सा रां श\r\nबना या गया 6 नव॰ 2026, 11:50 pm IST · आपके अपने CityCare रि कॉ र्ड से\r\nमरी ज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेता वनी\r\nALL-QA-002 — चेता वनी\r\nALL-QA-003 — चेता वनी\r\nALL-QA-004 — चेता वनी\r\nALL-QA-005 — चेता वनी\r\nALL-QA-006 — चेता वनी\r\nALL-QA-007 — चेता वनी\r\nALL-QA-008 — चेता वनी\r\nALL-QA-009 — चेता वनी\r\nALL-QA-010 — चेता वनी\r\nALL-QA-011 — चेता वनी\r\nALL-QA-012 — चेता वनी\r\nALL-QA-013 —",
+    "extraction_preview_pypdf": "CityCare — मुलाकात का सारांश\nबनाया गया 6 नव॰ 2026, 11:50 pm IST · आपके  अपने CityCare \u0000रकॉड\u0000 से\nमरीज़\nRamesh Shelar · 58 वष\u0000 · पुरुष · रक्त समूह B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nएलज\u0000\nALL-QA-001 — चेतावनी\nALL-QA-002 — चेतावनी\nALL-QA-003 — चेतावनी\nALL-QA-004 — चेतावनी\nALL-QA-005 — चेतावनी\nALL-QA-006 — चेतावनी\nALL-QA-007 — चेतावनी\nALL-QA-008 — चेतावनी\nALL-QA-009 — चेतावनी\nALL-QA-010 — चेतावनी\nALL-QA-011 — चेतावनी\nALL-QA-012 — चेतावनी\nALL-QA-013 — चेतावनी\nALL-QA-014 — चेतावनी\nPenicillin —"
+  },
+  "print-noto-hi-Letter": {
+    "pages": [
+      {
+        "image": "print-noto-hi-Letter-page-1.png",
+        "chars": 1061,
+        "pypdf_nul": 9
+      },
+      {
+        "image": "print-noto-hi-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-hi-Letter-page-3.png",
+        "chars": 1556,
+        "pypdf_nul": 53
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — मुला का त का सा रां श\r\nबना या गया 6 नव॰ 2026, 11:50 pm IST · आपके अपने CityCare रि कॉ र्ड से\r\nमरी ज़\r\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nएलर्जी\r\nALL-QA-001 — चेता वनी\r\nALL-QA-002 — चेता वनी\r\nALL-QA-003 — चेता वनी\r\nALL-QA-004 — चेता वनी\r\nALL-QA-005 — चेता वनी\r\nALL-QA-006 — चेता वनी\r\nALL-QA-007 — चेता वनी\r\nALL-QA-008 — चेता वनी\r\nALL-QA-009 — चेता वनी\r\nALL-QA-010 — चेता वनी\r\nALL-QA-011 — चेता वनी\r\nALL-QA-012 — चेता वनी\r\nALL-QA-013 —",
+    "extraction_preview_pypdf": "CityCare — मुलाकात का सारांश\nबनाया गया 6 नव॰ 2026, 11:50 pm IST · आपके  अपने CityCare \u0000रकॉड\u0000 से\nमरीज़\nRamesh Shelar · 58 वष\u0000 · पुरुष · रक्त समूह B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nएलज\u0000\nALL-QA-001 — चेतावनी\nALL-QA-002 — चेतावनी\nALL-QA-003 — चेतावनी\nALL-QA-004 — चेतावनी\nALL-QA-005 — चेतावनी\nALL-QA-006 — चेतावनी\nALL-QA-007 — चेतावनी\nALL-QA-008 — चेतावनी\nALL-QA-009 — चेतावनी\nALL-QA-010 — चेतावनी\nALL-QA-011 — चेतावनी\nALL-QA-012 — चेतावनी\nALL-QA-013 — चेतावनी\nALL-QA-014 — चेतावनी\nPenicillin —"
+  },
+  "print-noto-mr-A4": {
+    "pages": [
+      {
+        "image": "print-noto-mr-A4-page-1.png",
+        "chars": 1156,
+        "pypdf_nul": 9
+      },
+      {
+        "image": "print-noto-mr-A4-page-2.png",
+        "chars": 1404,
+        "pypdf_nul": 1
+      },
+      {
+        "image": "print-noto-mr-A4-page-3.png",
+        "chars": 1462,
+        "pypdf_nul": 65
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीभे टीचा सा रां श\r\nतया र केले ६ नो व्हें,हें२०२६, ११:५० PM IST · तुमतु च्या स्वतः च्या CityCare नों दी तूनतू\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅ लअॅ र्जी\r\nALL-QA-001 — इशा रा\r\nALL-QA-002 — इशा रा\r\nALL-QA-003 — इशा रा\r\nALL-QA-004 — इशा रा\r\nALL-QA-005 — इशा रा\r\nALL-QA-006 — इशा रा\r\nALL-QA-007 — इशा रा\r\nALL-QA-008 — इशा रा\r\nALL-QA-009 — इशा रा\r\nALL-QA-010 — इशा रा\r\nALL-QA-011 — इशा रा\r\nALL-QA-012 — इशा रा\r\nALL-QA-013 — इश",
+    "extraction_preview_pypdf": "CityCare — भेटीचा सारांश\nतयार के ले ६ नोव्ह\u0000, २०२६, ११:५० PM IST · तुमच्या स्वतःच्या CityCare ना\u0000दीतून\nरुग्ण\nRamesh Shelar · 58 वष\u0000 · पुरुष · रक्तगट B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nअ◌ॅलज\u0000\nALL-QA-001 — इशारा\nALL-QA-002 — इशारा\nALL-QA-003 — इशारा\nALL-QA-004 — इशारा\nALL-QA-005 — इशारा\nALL-QA-006 — इशारा\nALL-QA-007 — इशारा\nALL-QA-008 — इशारा\nALL-QA-009 — इशारा\nALL-QA-010 — इशारा\nALL-QA-011 — इशारा\nALL-QA-012 — इशारा\nALL-QA-013 — इशारा\nALL-QA-014 — इशारा\nPenicillin — गंभीर\nSulfa drug — इ"
+  },
+  "print-noto-mr-Letter": {
+    "pages": [
+      {
+        "image": "print-noto-mr-Letter-page-1.png",
+        "chars": 1052,
+        "pypdf_nul": 9
+      },
+      {
+        "image": "print-noto-mr-Letter-page-2.png",
+        "chars": 1298,
+        "pypdf_nul": 0
+      },
+      {
+        "image": "print-noto-mr-Letter-page-3.png",
+        "chars": 1672,
+        "pypdf_nul": 66
+      }
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    },
+    "extraction_preview_pdfium": "CityCare — भेटीभे टीचा सा रां श\r\nतया र केले ६ नो व्हें,हें२०२६, ११:५० PM IST · तुमतु च्या स्वतः च्या CityCare नों दी तूनतू\r\nरुग्ण\r\nRamesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune\r\nABHA ID: 12-3456-7890-1234\r\nअॅ लअॅ र्जी\r\nALL-QA-001 — इशा रा\r\nALL-QA-002 — इशा रा\r\nALL-QA-003 — इशा रा\r\nALL-QA-004 — इशा रा\r\nALL-QA-005 — इशा रा\r\nALL-QA-006 — इशा रा\r\nALL-QA-007 — इशा रा\r\nALL-QA-008 — इशा रा\r\nALL-QA-009 — इशा रा\r\nALL-QA-010 — इशा रा\r\nALL-QA-011 — इशा रा\r\nALL-QA-012 — इशा रा\r\nALL-QA-013 — इश",
+    "extraction_preview_pypdf": "CityCare — भेटीचा सारांश\nतयार के ले ६ नोव्ह\u0000, २०२६, ११:५० PM IST · तुमच्या स्वतःच्या CityCare ना\u0000दीतून\nरुग्ण\nRamesh Shelar · 58 वष\u0000 · पुरुष · रक्तगट B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nअ◌ॅलज\u0000\nALL-QA-001 — इशारा\nALL-QA-002 — इशारा\nALL-QA-003 — इशारा\nALL-QA-004 — इशारा\nALL-QA-005 — इशारा\nALL-QA-006 — इशारा\nALL-QA-007 — इशारा\nALL-QA-008 — इशारा\nALL-QA-009 — इशारा\nALL-QA-010 — इशारा\nALL-QA-011 — इशारा\nALL-QA-012 — इशारा\nALL-QA-013 — इशारा\nALL-QA-014 — इशारा\nPenicillin — गंभीर\nSulfa drug — इ"
+  }
+}

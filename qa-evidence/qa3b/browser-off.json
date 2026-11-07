@@ -1,0 +1,890 @@
+{
+  "mode": "off",
+  "patient": {
+    "en": {
+      "bodyTags": [
+        "DIV",
+        "SECTION",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": {
+        "label": "Notices and language preference",
+        "lang": "en",
+        "note": false,
+        "switcher": true
+      },
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "en",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "role": null,
+          "name": "Notices and language preference",
+          "text": "Language preference\nEnglish\nहिन्दी\nमराठी\nLanguage support is being built. Most pages are still in En"
+        },
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nSign out\nDashboard1\nFind doctors\nRecords3\nAccess & trust\nInbox1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "Sections",
+          "text": "Dashboard1\nFind doctors\nRecords3\nAccess & trust\nInbox1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "Records\n\nWhat you see here is your record and rule-based safety information — not a diagnosis or med"
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+        }
+      ],
+      "h1": [
+        "Records"
+      ],
+      "htmlLang": "en",
+      "stored": "en",
+      "rootWidths": {
+        "scroll": 800,
+        "client": 800
+      },
+      "axe": [],
+      "widths": {
+        "320": {
+          "scroll": 320,
+          "client": 320
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414
+        },
+        "768": {
+          "scroll": 768,
+          "client": 768
+        },
+        "1280": {
+          "scroll": 1280,
+          "client": 1280
+        }
+      },
+      "longText": {
+        "320": {
+          "scroll": 320,
+          "client": 320,
+          "complete": true
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375,
+          "complete": true
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390,
+          "complete": true
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414,
+          "complete": true
+        },
+        "768": {
+          "scroll": 2415,
+          "client": 768,
+          "complete": true
+        },
+        "1280": {
+          "scroll": 2671,
+          "client": 1280,
+          "complete": true
+        }
+      },
+      "print": {
+        "screen": "none",
+        "pos": "static",
+        "vis": [
+          {
+            "text": "CityCare — visit summary",
+            "print": true
+          }
+        ]
+      }
+    },
+    "hi": {
+      "bodyTags": [
+        "DIV",
+        "SECTION",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": {
+        "label": "सूचनाएँ और भाषा की पसंद",
+        "lang": "hi",
+        "note": false,
+        "switcher": true
+      },
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "hi",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "role": null,
+          "name": "सूचनाएँ और भाषा की पसंद",
+          "text": "भाषा की पसंद\nEnglish\nहिन्दी\nमराठी\nभाषा सहायता पर काम चल रहा है। ज़्यादातर पृष्ठ अभी अंग्रेज़ी में है"
+        },
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nसाइन आउट\nडैशबोर्ड1\nडॉक्टर खोजें\nरिकॉर्ड3\nपहुँच और भरोसा\nइनबॉक्स1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "अनुभाग",
+          "text": "डैशबोर्ड1\nडॉक्टर खोजें\nरिकॉर्ड3\nपहुँच और भरोसा\nइनबॉक्स1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "रिकॉर्ड\n\nयह आपका रिकॉर्ड और नियम-आधारित सुरक्षा जानकारी है — निदान या चिकित्सा सलाह नहीं। दवाओं में "
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · छात्र परियोजना, गैर-व्यावसायिक\nगोपनीयता सूचना v2026-09-29\nनियम\nशिकायत और आपके अधिक"
+        }
+      ],
+      "h1": [
+        "रिकॉर्ड"
+      ],
+      "htmlLang": "hi",
+      "stored": "hi",
+      "rootWidths": {
+        "scroll": 1280,
+        "client": 1280
+      },
+      "axe": [],
+      "widths": {
+        "320": {
+          "scroll": 320,
+          "client": 320
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414
+        },
+        "768": {
+          "scroll": 768,
+          "client": 768
+        },
+        "1280": {
+          "scroll": 1280,
+          "client": 1280
+        }
+      },
+      "longText": {
+        "320": {
+          "scroll": 320,
+          "client": 320,
+          "complete": true
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375,
+          "complete": true
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390,
+          "complete": true
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414,
+          "complete": true
+        },
+        "768": {
+          "scroll": 2415,
+          "client": 768,
+          "complete": true
+        },
+        "1280": {
+          "scroll": 2671,
+          "client": 1280,
+          "complete": true
+        }
+      },
+      "print": {
+        "screen": "none",
+        "pos": "static",
+        "vis": [
+          {
+            "text": "CityCare — मुलाकात का सारांश",
+            "print": true
+          }
+        ]
+      }
+    },
+    "mr": {
+      "bodyTags": [
+        "DIV",
+        "SECTION",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": {
+        "label": "सूचना आणि भाषेची पसंती",
+        "lang": "mr",
+        "note": false,
+        "switcher": true
+      },
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "mr",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "role": null,
+          "name": "सूचना आणि भाषेची पसंती",
+          "text": "भाषेची पसंती\nEnglish\nहिन्दी\nमराठी\nभाषा सुविधा तयार होत आहे. बहुतेक पाने अजून इंग्रजीत आहेत; या पसंती"
+        },
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nसाइन आउट\nडॅशबोर्ड1\nडॉक्टर शोधा\nनोंदी3\nप्रवेश आणि विश्वास\nइनबॉक्स1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "विभाग",
+          "text": "डॅशबोर्ड1\nडॉक्टर शोधा\nनोंदी3\nप्रवेश आणि विश्वास\nइनबॉक्स1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "नोंदी\n\nयेथे तुमची नोंद आणि नियमांवर आधारित सुरक्षा माहिती आहे — निदान किंवा वैद्यकीय सल्ला नाही. औषध"
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · विद्यार्थी प्रकल्प, अव्यावसायिक\nगोपनीयता सूचना v2026-09-29\nअटी\nतक्रार आणि तुमचे हक"
+        }
+      ],
+      "h1": [
+        "नोंदी"
+      ],
+      "htmlLang": "mr",
+      "stored": "mr",
+      "rootWidths": {
+        "scroll": 1280,
+        "client": 1280
+      },
+      "axe": [],
+      "widths": {
+        "320": {
+          "scroll": 320,
+          "client": 320
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414
+        },
+        "768": {
+          "scroll": 768,
+          "client": 768
+        },
+        "1280": {
+          "scroll": 1280,
+          "client": 1280
+        }
+      },
+      "longText": {
+        "320": {
+          "scroll": 320,
+          "client": 320,
+          "complete": true
+        },
+        "375": {
+          "scroll": 375,
+          "client": 375,
+          "complete": true
+        },
+        "390": {
+          "scroll": 390,
+          "client": 390,
+          "complete": true
+        },
+        "414": {
+          "scroll": 414,
+          "client": 414,
+          "complete": true
+        },
+        "768": {
+          "scroll": 2415,
+          "client": 768,
+          "complete": true
+        },
+        "1280": {
+          "scroll": 2671,
+          "client": 1280,
+          "complete": true
+        }
+      },
+      "print": {
+        "screen": "none",
+        "pos": "static",
+        "vis": [
+          {
+            "text": "CityCare — भेटीचा सारांश",
+            "print": true
+          }
+        ]
+      }
+    }
+  },
+  "baseline": {
+    "en": {
+      "bodyTags": [
+        "DIV",
+        "DIV",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": null,
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "en",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nSign out\nDashboard1\nFind doctors\nRecords3\nAccess & trust\nInbox1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "Sections",
+          "text": "Dashboard1\nFind doctors\nRecords3\nAccess & trust\nInbox1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "Records\n\nWhat you see here is your record and rule-based safety information — not a diagnosis or med"
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+        }
+      ],
+      "h1": [
+        "Records"
+      ],
+      "htmlLang": "en",
+      "stored": "en",
+      "rootWidths": {
+        "scroll": 800,
+        "client": 800
+      },
+      "axe": [
+        {
+          "id": "region",
+          "nodes": [
+            {
+              "target": [
+                ".border-b.bg-white.px-4"
+              ],
+              "html": "<div lang=\"en\" class=\"border-b border-line bg-white px-4 py-2 text-sm\">"
+            }
+          ]
+        }
+      ]
+    },
+    "hi": {
+      "bodyTags": [
+        "DIV",
+        "DIV",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": null,
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "hi",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nसाइन आउट\nडैशबोर्ड1\nडॉक्टर खोजें\nरिकॉर्ड3\nपहुँच और भरोसा\nइनबॉक्स1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "अनुभाग",
+          "text": "डैशबोर्ड1\nडॉक्टर खोजें\nरिकॉर्ड3\nपहुँच और भरोसा\nइनबॉक्स1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "रिकॉर्ड\n\nयह आपका रिकॉर्ड और नियम-आधारित सुरक्षा जानकारी है — निदान या चिकित्सा सलाह नहीं। दवाओं में "
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · छात्र परियोजना, गैर-व्यावसायिक\nगोपनीयता सूचना v2026-09-29\nनियम\nशिकायत और आपके अधिक"
+        }
+      ],
+      "h1": [
+        "रिकॉर्ड"
+      ],
+      "htmlLang": "hi",
+      "stored": "hi",
+      "rootWidths": {
+        "scroll": 800,
+        "client": 800
+      },
+      "axe": [
+        {
+          "id": "region",
+          "nodes": [
+            {
+              "target": [
+                ".border-b.bg-white.px-4"
+              ],
+              "html": "<div lang=\"hi\" class=\"border-b border-line bg-white px-4 py-2 text-sm\">"
+            }
+          ]
+        }
+      ]
+    },
+    "mr": {
+      "bodyTags": [
+        "DIV",
+        "DIV",
+        "DIV",
+        "NEXT-ROUTE-ANNOUNCER"
+      ],
+      "region": null,
+      "noteCount": 0,
+      "selectCount": 1,
+      "selectValue": "mr",
+      "description": "citycare-language-status",
+      "descriptionExists": true,
+      "landmarks": [
+        {
+          "tag": "HEADER",
+          "role": null,
+          "name": null,
+          "text": "CityCare\nRamesh Shelar\n1\nसाइन आउट\nडॅशबोर्ड1\nडॉक्टर शोधा\nनोंदी3\nप्रवेश आणि विश्वास\nइनबॉक्स1"
+        },
+        {
+          "tag": "NAV",
+          "role": null,
+          "name": "विभाग",
+          "text": "डॅशबोर्ड1\nडॉक्टर शोधा\nनोंदी3\nप्रवेश आणि विश्वास\nइनबॉक्स1"
+        },
+        {
+          "tag": "MAIN",
+          "role": null,
+          "name": null,
+          "text": "नोंदी\n\nयेथे तुमची नोंद आणि नियमांवर आधारित सुरक्षा माहिती आहे — निदान किंवा वैद्यकीय सल्ला नाही. औषध"
+        },
+        {
+          "tag": "FOOTER",
+          "role": null,
+          "name": null,
+          "text": "© 2026 CityCare · विद्यार्थी प्रकल्प, अव्यावसायिक\nगोपनीयता सूचना v2026-09-29\nअटी\nतक्रार आणि तुमचे हक"
+        }
+      ],
+      "h1": [
+        "नोंदी"
+      ],
+      "htmlLang": "mr",
+      "stored": "mr",
+      "rootWidths": {
+        "scroll": 800,
+        "client": 800
+      },
+      "axe": [
+        {
+          "id": "region",
+          "nodes": [
+            {
+              "target": [
+                ".border-b.bg-white.px-4"
+              ],
+              "html": "<div lang=\"mr\" class=\"border-b border-line bg-white px-4 py-2 text-sm\">"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "routes": {
+    "public": {
+      "current": {
+        "bodyTags": [
+          "DIV",
+          "DIV",
+          "DIV",
+          "NEXT-ROUTE-ANNOUNCER"
+        ],
+        "region": null,
+        "noteCount": 0,
+        "selectCount": 1,
+        "selectValue": "hi",
+        "description": "citycare-language-status",
+        "descriptionExists": true,
+        "landmarks": [
+          {
+            "tag": "HEADER",
+            "role": null,
+            "name": null,
+            "text": "CityCare\nPrivacy notice\nTerms of use\nGrievance & rights\nLedger transparency\nOpen-source licences"
+          },
+          {
+            "tag": "NAV",
+            "role": null,
+            "name": null,
+            "text": "Privacy notice\nTerms of use\nGrievance & rights\nLedger transparency\nOpen-source licences"
+          },
+          {
+            "tag": "MAIN",
+            "role": null,
+            "name": null,
+            "text": "Privacy notice\n\nVersion 2026-09-29 · Applies to citycare-xi.vercel.app and any deployment of this co"
+          },
+          {
+            "tag": "FOOTER",
+            "role": null,
+            "name": null,
+            "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+          }
+        ],
+        "h1": [
+          "Privacy notice"
+        ],
+        "htmlLang": "hi",
+        "stored": "hi",
+        "rootWidths": {
+          "scroll": 800,
+          "client": 800
+        }
+      },
+      "baseline": {
+        "info": {
+          "bodyTags": [
+            "DIV",
+            "DIV",
+            "DIV",
+            "NEXT-ROUTE-ANNOUNCER"
+          ],
+          "region": null,
+          "noteCount": 0,
+          "selectCount": 1,
+          "selectValue": "hi",
+          "description": "citycare-language-status",
+          "descriptionExists": true,
+          "landmarks": [
+            {
+              "tag": "HEADER",
+              "role": null,
+              "name": null,
+              "text": "CityCare\nPrivacy notice\nTerms of use\nGrievance & rights\nLedger transparency\nOpen-source licences"
+            },
+            {
+              "tag": "NAV",
+              "role": null,
+              "name": null,
+              "text": "Privacy notice\nTerms of use\nGrievance & rights\nLedger transparency\nOpen-source licences"
+            },
+            {
+              "tag": "MAIN",
+              "role": null,
+              "name": null,
+              "text": "Privacy notice\n\nVersion 2026-09-29 · Applies to citycare-xi.vercel.app and any deployment of this co"
+            },
+            {
+              "tag": "FOOTER",
+              "role": null,
+              "name": null,
+              "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+            }
+          ],
+          "h1": [
+            "Privacy notice"
+          ],
+          "htmlLang": "hi",
+          "stored": "hi",
+          "rootWidths": {
+            "scroll": 800,
+            "client": 800
+          }
+        },
+        "sameBody": true,
+        "currentBytes": 16386,
+        "priorBytes": 16386
+      }
+    },
+    "doctor": {
+      "current": {
+        "bodyTags": [
+          "DIV",
+          "DIV",
+          "DIV",
+          "NEXT-ROUTE-ANNOUNCER"
+        ],
+        "region": null,
+        "noteCount": 0,
+        "selectCount": 1,
+        "selectValue": "hi",
+        "description": "citycare-language-status",
+        "descriptionExists": true,
+        "landmarks": [
+          {
+            "tag": "HEADER",
+            "role": null,
+            "name": null,
+            "text": "CityCare\nDr. Farhan Sheikh\nverified\nSign out\nToday\nPatients\nInbox"
+          },
+          {
+            "tag": "NAV",
+            "role": null,
+            "name": "Sections",
+            "text": "Today\nPatients\nInbox"
+          },
+          {
+            "tag": "MAIN",
+            "role": null,
+            "name": null,
+            "text": "TODAY'S LIST\ndate window is in Asia/Kolkata, server-side\n\nNo appointments today. Bookings from patie"
+          },
+          {
+            "tag": "FOOTER",
+            "role": null,
+            "name": null,
+            "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+          }
+        ],
+        "h1": [],
+        "htmlLang": "hi",
+        "stored": "hi",
+        "rootWidths": {
+          "scroll": 800,
+          "client": 800
+        }
+      },
+      "baseline": {
+        "info": {
+          "bodyTags": [
+            "DIV",
+            "DIV",
+            "DIV",
+            "NEXT-ROUTE-ANNOUNCER"
+          ],
+          "region": null,
+          "noteCount": 0,
+          "selectCount": 1,
+          "selectValue": "hi",
+          "description": "citycare-language-status",
+          "descriptionExists": true,
+          "landmarks": [
+            {
+              "tag": "HEADER",
+              "role": null,
+              "name": null,
+              "text": "CityCare\nDr. Farhan Sheikh\nverified\nSign out\nToday\nPatients\nInbox"
+            },
+            {
+              "tag": "NAV",
+              "role": null,
+              "name": "Sections",
+              "text": "Today\nPatients\nInbox"
+            },
+            {
+              "tag": "MAIN",
+              "role": null,
+              "name": null,
+              "text": "TODAY'S LIST\ndate window is in Asia/Kolkata, server-side\n\nNo appointments today. Bookings from patie"
+            },
+            {
+              "tag": "FOOTER",
+              "role": null,
+              "name": null,
+              "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+            }
+          ],
+          "h1": [],
+          "htmlLang": "hi",
+          "stored": "hi",
+          "rootWidths": {
+            "scroll": 800,
+            "client": 800
+          }
+        },
+        "sameBody": true,
+        "currentBytes": 6762,
+        "priorBytes": 6762
+      }
+    },
+    "admin": {
+      "current": {
+        "bodyTags": [
+          "DIV",
+          "DIV",
+          "DIV",
+          "NEXT-ROUTE-ANNOUNCER"
+        ],
+        "region": null,
+        "noteCount": 0,
+        "selectCount": 1,
+        "selectValue": "hi",
+        "description": "citycare-language-status",
+        "descriptionExists": true,
+        "landmarks": [
+          {
+            "tag": "HEADER",
+            "role": null,
+            "name": null,
+            "text": "CityCare\nadmin\nSign out\nDoctor verification2\nBreak-glass review\nGrievances\nIncidents\nSystem\nInbox"
+          },
+          {
+            "tag": "NAV",
+            "role": null,
+            "name": "Sections",
+            "text": "Doctor verification2\nBreak-glass review\nGrievances\nIncidents\nSystem\nInbox"
+          },
+          {
+            "tag": "MAIN",
+            "role": null,
+            "name": null,
+            "text": "REGISTRATIONS AWAITING VERIFICATION\n2 pending\n\nCheck the number on the State Medical Council / NMC I"
+          },
+          {
+            "tag": "FOOTER",
+            "role": null,
+            "name": null,
+            "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+          }
+        ],
+        "h1": [],
+        "htmlLang": "hi",
+        "stored": "hi",
+        "rootWidths": {
+          "scroll": 800,
+          "client": 800
+        }
+      },
+      "baseline": {
+        "info": {
+          "bodyTags": [
+            "DIV",
+            "DIV",
+            "DIV",
+            "NEXT-ROUTE-ANNOUNCER"
+          ],
+          "region": null,
+          "noteCount": 0,
+          "selectCount": 1,
+          "selectValue": "hi",
+          "description": "citycare-language-status",
+          "descriptionExists": true,
+          "landmarks": [
+            {
+              "tag": "HEADER",
+              "role": null,
+              "name": null,
+              "text": "CityCare\nadmin\nSign out\nDoctor verification2\nBreak-glass review\nGrievances\nIncidents\nSystem\nInbox"
+            },
+            {
+              "tag": "NAV",
+              "role": null,
+              "name": "Sections",
+              "text": "Doctor verification2\nBreak-glass review\nGrievances\nIncidents\nSystem\nInbox"
+            },
+            {
+              "tag": "MAIN",
+              "role": null,
+              "name": null,
+              "text": "REGISTRATIONS AWAITING VERIFICATION\n2 pending\n\nCheck the number on the State Medical Council / NMC I"
+            },
+            {
+              "tag": "FOOTER",
+              "role": null,
+              "name": null,
+              "text": "© 2026 CityCare · student project, non-commercial\nPrivacy notice v2026-09-29\nTerms\nGrievance & your "
+            }
+          ],
+          "h1": [],
+          "htmlLang": "hi",
+          "stored": "hi",
+          "rootWidths": {
+            "scroll": 800,
+            "client": 800
+          }
+        },
+        "sameBody": true,
+        "currentBytes": 6609,
+        "priorBytes": 6609
+      }
+    }
+  },
+  "errors": []
+}

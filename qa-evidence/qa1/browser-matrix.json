@@ -1,0 +1,777 @@
+{
+  "short": {
+    "en": {
+      "locale": "en",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:03 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nPenicillin — critical\nSulfa drug — warning\nActive conditions\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nCurrent medicines (confirmed only)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nSelf-reported readings — latest values\nBP systolic — latest 141 mmHg · improving, above target range\nFasting glucose — latest 149 mg/dL · improving, above target range\nHbA1c — latest 7.9 % · improving, above target range\nLatest lab values\nHbA1c 9.2 % (ref 4.0–5.6) · 06 Nov 2026\nLDL 96 mg/dL (ref 0–100) · 06 Nov 2026\nCreatinine 1.0 mg/dL (ref 0.7–1.3) · 06 Nov 2026\nLast visit\n07 Sept 2026 · Dr. Asha Kulkarni\nBP stable, sugar improving\nAdvice: Continue current medicines; low-sugar diet.\nFollow-up: 22 Oct 2026\n\nThis summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.\n\nYou can share it with any doctor. Your CityCare record keeps the full history.\n\nCityCare — consent-first personal health record · citycare (demo build)",
+      "sections": [
+        {
+          "heading": "Patient",
+          "lines": [
+            "Ramesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Allergies",
+          "lines": [
+            "Penicillin — critical",
+            "Sulfa drug — warning"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Active conditions",
+          "lines": [
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Current medicines (confirmed only)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Self-reported readings — latest values",
+          "lines": [
+            "BP systolic — latest 141 mmHg · improving, above target range",
+            "Fasting glucose — latest 149 mg/dL · improving, above target range",
+            "HbA1c — latest 7.9 % · improving, above target range"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Latest lab values",
+          "lines": [
+            "HbA1c 9.2 % (ref 4.0–5.6) · 06 Nov 2026",
+            "LDL 96 mg/dL (ref 0–100) · 06 Nov 2026",
+            "Creatinine 1.0 mg/dL (ref 0.7–1.3) · 06 Nov 2026"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Last visit",
+          "lines": [
+            "07 Sept 2026 · Dr. Asha Kulkarni",
+            "BP stable, sugar improving",
+            "Advice: Continue current medicines; low-sugar diet.",
+            "Follow-up: 22 Oct 2026"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+        "You can share it with any doctor. Your CityCare record keeps the full history.",
+        "CityCare — consent-first personal health record · citycare (demo build)"
+      ]
+    },
+    "hi": {
+      "locale": "hi",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — मुलाकात का सारांश\nबनाया गया 6 नव॰ 2026, 11:03 pm IST · आपके अपने CityCare रिकॉर्ड से\nमरीज़\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nएलर्जी\nPenicillin — गंभीर\nSulfa drug — चेतावनी\nसक्रिय स्वास्थ्य स्थितियाँ\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nवर्तमान दवाएँ (केवल पुष्ट)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nस्वयं दर्ज रीडिंग — नवीनतम मान\nBP systolic — नवीनतम 141 mmHg · सुधर रहा है, लक्ष्य सीमा से ऊपर\nFasting glucose — नवीनतम 149 mg/dL · सुधर रहा है, लक्ष्य सीमा से ऊपर\nHbA1c — नवीनतम 7.9 % · सुधर रहा है, लक्ष्य सीमा से ऊपर\nनवीनतम लैब मान\nHbA1c 9.2 % (संदर्भ 4.0–5.6) · 06 नव॰ 2026\nLDL 96 mg/dL (संदर्भ 0–100) · 06 नव॰ 2026\nCreatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · 06 नव॰ 2026\nपिछली मुलाकात\n07 सित॰ 2026 · Dr. Asha Kulkarni\nBP stable, sugar improving\nसलाह: Continue current medicines; low-sugar diet.\nअगली मुलाक़ात: 22 अक्टू॰ 2026\n\nयह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।\n\nआप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।\n\nCityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)",
+      "sections": [
+        {
+          "heading": "मरीज़",
+          "lines": [
+            "Ramesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "एलर्जी",
+          "lines": [
+            "Penicillin — गंभीर",
+            "Sulfa drug — चेतावनी"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सक्रिय स्वास्थ्य स्थितियाँ",
+          "lines": [
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "वर्तमान दवाएँ (केवल पुष्ट)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": null
+        },
+        {
+          "heading": "स्वयं दर्ज रीडिंग — नवीनतम मान",
+          "lines": [
+            "BP systolic — नवीनतम 141 mmHg · सुधर रहा है, लक्ष्य सीमा से ऊपर",
+            "Fasting glucose — नवीनतम 149 mg/dL · सुधर रहा है, लक्ष्य सीमा से ऊपर",
+            "HbA1c — नवीनतम 7.9 % · सुधर रहा है, लक्ष्य सीमा से ऊपर"
+          ],
+          "note": null
+        },
+        {
+          "heading": "नवीनतम लैब मान",
+          "lines": [
+            "HbA1c 9.2 % (संदर्भ 4.0–5.6) · 06 नव॰ 2026",
+            "LDL 96 mg/dL (संदर्भ 0–100) · 06 नव॰ 2026",
+            "Creatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · 06 नव॰ 2026"
+          ],
+          "note": null
+        },
+        {
+          "heading": "पिछली मुलाकात",
+          "lines": [
+            "07 सित॰ 2026 · Dr. Asha Kulkarni",
+            "BP stable, sugar improving",
+            "सलाह: Continue current medicines; low-sugar diet.",
+            "अगली मुलाक़ात: 22 अक्टू॰ 2026"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+        "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+        "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+      ]
+    },
+    "mr": {
+      "locale": "mr",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — भेटीचा सारांश\nतयार केले ६ नोव्हें, २०२६, ११:०३ PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\nरुग्ण\nRamesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nअॅलर्जी\nPenicillin — गंभीर\nSulfa drug — इशारा\nसक्रिय आरोग्य स्थिती\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nसध्याची औषधे (फक्त पुष्टी केलेली)\nAtorvastatin 10 mg · 0-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nस्वतः नोंदवलेली रीडिंग — नवीनतम मूल्ये\nBP systolic — नवीनतम 141 mmHg · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nFasting glucose — नवीनतम 149 mg/dL · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nHbA1c — नवीनतम 7.9 % · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nनवीनतम लॅब मूल्ये\nHbA1c 9.2 % (संदर्भ 4.0–5.6) · ०६ नोव्हें, २०२६\nLDL 96 mg/dL (संदर्भ 0–100) · ०६ नोव्हें, २०२६\nCreatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · ०६ नोव्हें, २०२६\nमागील भेट\n०७ सप्टें, २०२६ · Dr. Asha Kulkarni\nBP stable, sugar improving\nसल्ला: Continue current medicines; low-sugar diet.\nपुढील भेट: २२ ऑक्टो, २०२६\n\nहा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.\n\nतुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.\n\nCityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)",
+      "sections": [
+        {
+          "heading": "रुग्ण",
+          "lines": [
+            "Ramesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "अॅलर्जी",
+          "lines": [
+            "Penicillin — गंभीर",
+            "Sulfa drug — इशारा"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सक्रिय आरोग्य स्थिती",
+          "lines": [
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सध्याची औषधे (फक्त पुष्टी केलेली)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": null
+        },
+        {
+          "heading": "स्वतः नोंदवलेली रीडिंग — नवीनतम मूल्ये",
+          "lines": [
+            "BP systolic — नवीनतम 141 mmHg · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त",
+            "Fasting glucose — नवीनतम 149 mg/dL · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त",
+            "HbA1c — नवीनतम 7.9 % · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त"
+          ],
+          "note": null
+        },
+        {
+          "heading": "नवीनतम लॅब मूल्ये",
+          "lines": [
+            "HbA1c 9.2 % (संदर्भ 4.0–5.6) · ०६ नोव्हें, २०२६",
+            "LDL 96 mg/dL (संदर्भ 0–100) · ०६ नोव्हें, २०२६",
+            "Creatinine 1.0 mg/dL (संदर्भ 0.7–1.3) · ०६ नोव्हें, २०२६"
+          ],
+          "note": null
+        },
+        {
+          "heading": "मागील भेट",
+          "lines": [
+            "०७ सप्टें, २०२६ · Dr. Asha Kulkarni",
+            "BP stable, sugar improving",
+            "सल्ला: Continue current medicines; low-sugar diet.",
+            "पुढील भेट: २२ ऑक्टो, २०२६"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+        "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+        "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+      ]
+    }
+  },
+  "long": {
+    "en": {
+      "locale": "en",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:03 pm IST · from your own CityCare record\nPatient\nRamesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nAllergies\nALL-QA-001 — warning\nALL-QA-002 — warning\nALL-QA-003 — warning\nALL-QA-004 — warning\nALL-QA-005 — warning\nALL-QA-006 — warning\nALL-QA-007 — warning\nALL-QA-008 — warning\nALL-QA-009 — warning\nALL-QA-010 — warning\nALL-QA-011 — warning\nALL-QA-012 — warning\nALL-QA-013 — warning\nALL-QA-014 — warning\nPenicillin — critical\nSulfa drug — warning\nActive conditions\nCOND-QA-001\nCOND-QA-002\nCOND-QA-003\nCOND-QA-004\nCOND-QA-005\nCOND-QA-006\nCOND-QA-007\nCOND-QA-008\nCOND-QA-009\nCOND-QA-010\nCOND-QA-011\nCOND-QA-012\nCOND-QA-013\nCOND-QA-014\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nCurrent medicines (confirmed only)\nAtorvastatin 10 mg · 0-0-1\nMED-QA-001 10 mg · 1-0-1\nMED-QA-002 10 mg · 1-0-1\nMED-QA-003 10 mg · 1-0-1\nMED-QA-004 10 mg · 1-0-1\nMED-QA-005 10 mg · 1-0-1\nMED-QA-006 10 mg · 1-0-1\nMED-QA-007 10 mg · 1-0-1\nMED-QA-008 10 mg · 1-0-1\nMED-QA-009 10 mg · 1-0-1\nMED-QA-010 10 mg · 1-0-1\nMED-QA-011 10 mg · 1-0-1\nMED-QA-012 10 mg · 1-0-1\nMED-QA-013 10 mg · 1-0-1\nMED-QA-014 10 mg · 1-0-1\nMED-QA-015 10 mg · 1-0-1\nMED-QA-016 10 mg · 1-0-1\nMED-QA-017 10 mg · 1-0-1\nMED-QA-018 10 mg · 1-0-1\nMED-QA-019 10 mg · 1-0-1\nMED-QA-020 10 mg · 1-0-1\nMED-QA-021 10 mg · 1-0-1\nMED-QA-022 10 mg · 1-0-1\nMED-QA-023 10 mg · 1-0-1\nMED-QA-024 10 mg · 1-0-1\nMED-QA-025 10 mg · 1-0-1\nMED-QA-026 10 mg · 1-0-1\nMED-QA-027 10 mg · 1-0-1\nMED-QA-028 10 mg · 1-0-1\nMED-QA-029 10 mg · 1-0-1\nMED-QA-030 10 mg · 1-0-1\nMED-QA-031 10 mg · 1-0-1\nMED-QA-032 10 mg · 1-0-1\nMED-QA-033 10 mg · 1-0-1\nMED-QA-034 10 mg · 1-0-1\nMED-QA-035 10 mg · 1-0-1\nMED-QA-036 10 mg · 1-0-1\nMED-QA-037 10 mg · 1-0-1\nMED-QA-038 10 mg · 1-0-1\nMED-QA-039 10 mg · 1-0-1\nMED-QA-040 10 mg · 1-0-1\nMED-QA-041 10 mg · 1-0-1\nMED-QA-042 10 mg · 1-0-1\nMED-QA-043 10 mg · 1-0-1\nMED-QA-044 10 mg · 1-0-1\nMED-QA-045 10 mg · 1-0-1\nMED-QA-046 10 mg · 1-0-1\nMED-QA-047 10 mg · 1-0-1\nMED-QA-048 10 mg · 1-0-1\nMED-QA-049 10 mg · 1-0-1\nMED-QA-050 10 mg · 1-0-1\nMED-QA-051 10 mg · 1-0-1\nMED-QA-052 10 mg · 1-0-1\nMED-QA-053 10 mg · 1-0-1\nMED-QA-054 10 mg · 1-0-1\nMED-QA-055 10 mg · 1-0-1\nMED-QA-056 10 mg · 1-0-1\nMED-QA-057 10 mg · 1-0-1\nMED-QA-058 10 mg · 1-0-1\nMED-QA-059 10 mg · 1-0-1\nMED-QA-060 10 mg · 1-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\n3 unconfirmed draft(s) from old paperwork excluded\nSelf-reported readings — latest values\nBP systolic — latest 141 mmHg · improving, above target range\nFasting glucose — latest 149 mg/dL · improving, above target range\nHbA1c — latest 7.9 % · improving, above target range\nOBS-QA-001 — one reading so far (1 mg)\nOBS-QA-002 — one reading so far (2 mg)\nOBS-QA-003 — one reading so far (3 mg)\nOBS-QA-004 — one reading so far (4 mg)\nOBS-QA-005 — one reading so far (5 mg)\nOBS-QA-006 — one reading so far (6 mg)\nOBS-QA-007 — one reading so far (7 mg)\nOBS-QA-008 — one reading so far (8 mg)\nOBS-QA-009 — one reading so far (9 mg)\nOBS-QA-010 — one reading so far (10 mg)\nOBS-QA-011 — one reading so far (11 mg)\nOBS-QA-012 — one reading so far (12 mg)\nLatest lab values\nLAB-QA-005 5 mg · 06 Nov 2026\nLAB-QA-004 4 mg · 06 Nov 2026\nLAB-QA-003 3 mg · 06 Nov 2026\nLAB-QA-002 2 mg · 06 Nov 2026\nLAB-QA-001 1 mg · 06 Nov 2026\nLast visit\n06 Nov 2026\nENCOUNTER-QA-DIAGNOSIS\nAdvice: ENCOUNTER-QA-ADVICE\nFollow-up: 06 Dec 2026\n\nThis summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.\n\nYou can share it with any doctor. Your CityCare record keeps the full history.\n\nCityCare — consent-first personal health record · citycare (demo build)",
+      "sections": [
+        {
+          "heading": "Patient",
+          "lines": [
+            "Ramesh Shelar · 58 y · MALE · Blood B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Allergies",
+          "lines": [
+            "ALL-QA-001 — warning",
+            "ALL-QA-002 — warning",
+            "ALL-QA-003 — warning",
+            "ALL-QA-004 — warning",
+            "ALL-QA-005 — warning",
+            "ALL-QA-006 — warning",
+            "ALL-QA-007 — warning",
+            "ALL-QA-008 — warning",
+            "ALL-QA-009 — warning",
+            "ALL-QA-010 — warning",
+            "ALL-QA-011 — warning",
+            "ALL-QA-012 — warning",
+            "ALL-QA-013 — warning",
+            "ALL-QA-014 — warning",
+            "Penicillin — critical",
+            "Sulfa drug — warning"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Active conditions",
+          "lines": [
+            "COND-QA-001",
+            "COND-QA-002",
+            "COND-QA-003",
+            "COND-QA-004",
+            "COND-QA-005",
+            "COND-QA-006",
+            "COND-QA-007",
+            "COND-QA-008",
+            "COND-QA-009",
+            "COND-QA-010",
+            "COND-QA-011",
+            "COND-QA-012",
+            "COND-QA-013",
+            "COND-QA-014",
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Current medicines (confirmed only)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "MED-QA-001 10 mg · 1-0-1",
+            "MED-QA-002 10 mg · 1-0-1",
+            "MED-QA-003 10 mg · 1-0-1",
+            "MED-QA-004 10 mg · 1-0-1",
+            "MED-QA-005 10 mg · 1-0-1",
+            "MED-QA-006 10 mg · 1-0-1",
+            "MED-QA-007 10 mg · 1-0-1",
+            "MED-QA-008 10 mg · 1-0-1",
+            "MED-QA-009 10 mg · 1-0-1",
+            "MED-QA-010 10 mg · 1-0-1",
+            "MED-QA-011 10 mg · 1-0-1",
+            "MED-QA-012 10 mg · 1-0-1",
+            "MED-QA-013 10 mg · 1-0-1",
+            "MED-QA-014 10 mg · 1-0-1",
+            "MED-QA-015 10 mg · 1-0-1",
+            "MED-QA-016 10 mg · 1-0-1",
+            "MED-QA-017 10 mg · 1-0-1",
+            "MED-QA-018 10 mg · 1-0-1",
+            "MED-QA-019 10 mg · 1-0-1",
+            "MED-QA-020 10 mg · 1-0-1",
+            "MED-QA-021 10 mg · 1-0-1",
+            "MED-QA-022 10 mg · 1-0-1",
+            "MED-QA-023 10 mg · 1-0-1",
+            "MED-QA-024 10 mg · 1-0-1",
+            "MED-QA-025 10 mg · 1-0-1",
+            "MED-QA-026 10 mg · 1-0-1",
+            "MED-QA-027 10 mg · 1-0-1",
+            "MED-QA-028 10 mg · 1-0-1",
+            "MED-QA-029 10 mg · 1-0-1",
+            "MED-QA-030 10 mg · 1-0-1",
+            "MED-QA-031 10 mg · 1-0-1",
+            "MED-QA-032 10 mg · 1-0-1",
+            "MED-QA-033 10 mg · 1-0-1",
+            "MED-QA-034 10 mg · 1-0-1",
+            "MED-QA-035 10 mg · 1-0-1",
+            "MED-QA-036 10 mg · 1-0-1",
+            "MED-QA-037 10 mg · 1-0-1",
+            "MED-QA-038 10 mg · 1-0-1",
+            "MED-QA-039 10 mg · 1-0-1",
+            "MED-QA-040 10 mg · 1-0-1",
+            "MED-QA-041 10 mg · 1-0-1",
+            "MED-QA-042 10 mg · 1-0-1",
+            "MED-QA-043 10 mg · 1-0-1",
+            "MED-QA-044 10 mg · 1-0-1",
+            "MED-QA-045 10 mg · 1-0-1",
+            "MED-QA-046 10 mg · 1-0-1",
+            "MED-QA-047 10 mg · 1-0-1",
+            "MED-QA-048 10 mg · 1-0-1",
+            "MED-QA-049 10 mg · 1-0-1",
+            "MED-QA-050 10 mg · 1-0-1",
+            "MED-QA-051 10 mg · 1-0-1",
+            "MED-QA-052 10 mg · 1-0-1",
+            "MED-QA-053 10 mg · 1-0-1",
+            "MED-QA-054 10 mg · 1-0-1",
+            "MED-QA-055 10 mg · 1-0-1",
+            "MED-QA-056 10 mg · 1-0-1",
+            "MED-QA-057 10 mg · 1-0-1",
+            "MED-QA-058 10 mg · 1-0-1",
+            "MED-QA-059 10 mg · 1-0-1",
+            "MED-QA-060 10 mg · 1-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": "3 unconfirmed draft(s) from old paperwork excluded"
+        },
+        {
+          "heading": "Self-reported readings — latest values",
+          "lines": [
+            "BP systolic — latest 141 mmHg · improving, above target range",
+            "Fasting glucose — latest 149 mg/dL · improving, above target range",
+            "HbA1c — latest 7.9 % · improving, above target range",
+            "OBS-QA-001 — one reading so far (1 mg)",
+            "OBS-QA-002 — one reading so far (2 mg)",
+            "OBS-QA-003 — one reading so far (3 mg)",
+            "OBS-QA-004 — one reading so far (4 mg)",
+            "OBS-QA-005 — one reading so far (5 mg)",
+            "OBS-QA-006 — one reading so far (6 mg)",
+            "OBS-QA-007 — one reading so far (7 mg)",
+            "OBS-QA-008 — one reading so far (8 mg)",
+            "OBS-QA-009 — one reading so far (9 mg)",
+            "OBS-QA-010 — one reading so far (10 mg)",
+            "OBS-QA-011 — one reading so far (11 mg)",
+            "OBS-QA-012 — one reading so far (12 mg)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Latest lab values",
+          "lines": [
+            "LAB-QA-005 5 mg · 06 Nov 2026",
+            "LAB-QA-004 4 mg · 06 Nov 2026",
+            "LAB-QA-003 3 mg · 06 Nov 2026",
+            "LAB-QA-002 2 mg · 06 Nov 2026",
+            "LAB-QA-001 1 mg · 06 Nov 2026"
+          ],
+          "note": null
+        },
+        {
+          "heading": "Last visit",
+          "lines": [
+            "06 Nov 2026",
+            "ENCOUNTER-QA-DIAGNOSIS",
+            "Advice: ENCOUNTER-QA-ADVICE",
+            "Follow-up: 06 Dec 2026"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "This summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.",
+        "You can share it with any doctor. Your CityCare record keeps the full history.",
+        "CityCare — consent-first personal health record · citycare (demo build)"
+      ]
+    },
+    "hi": {
+      "locale": "hi",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — मुलाकात का सारांश\nबनाया गया 6 नव॰ 2026, 11:03 pm IST · आपके अपने CityCare रिकॉर्ड से\nमरीज़\nRamesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nएलर्जी\nALL-QA-001 — चेतावनी\nALL-QA-002 — चेतावनी\nALL-QA-003 — चेतावनी\nALL-QA-004 — चेतावनी\nALL-QA-005 — चेतावनी\nALL-QA-006 — चेतावनी\nALL-QA-007 — चेतावनी\nALL-QA-008 — चेतावनी\nALL-QA-009 — चेतावनी\nALL-QA-010 — चेतावनी\nALL-QA-011 — चेतावनी\nALL-QA-012 — चेतावनी\nALL-QA-013 — चेतावनी\nALL-QA-014 — चेतावनी\nPenicillin — गंभीर\nSulfa drug — चेतावनी\nसक्रिय स्वास्थ्य स्थितियाँ\nCOND-QA-001\nCOND-QA-002\nCOND-QA-003\nCOND-QA-004\nCOND-QA-005\nCOND-QA-006\nCOND-QA-007\nCOND-QA-008\nCOND-QA-009\nCOND-QA-010\nCOND-QA-011\nCOND-QA-012\nCOND-QA-013\nCOND-QA-014\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nवर्तमान दवाएँ (केवल पुष्ट)\nAtorvastatin 10 mg · 0-0-1\nMED-QA-001 10 mg · 1-0-1\nMED-QA-002 10 mg · 1-0-1\nMED-QA-003 10 mg · 1-0-1\nMED-QA-004 10 mg · 1-0-1\nMED-QA-005 10 mg · 1-0-1\nMED-QA-006 10 mg · 1-0-1\nMED-QA-007 10 mg · 1-0-1\nMED-QA-008 10 mg · 1-0-1\nMED-QA-009 10 mg · 1-0-1\nMED-QA-010 10 mg · 1-0-1\nMED-QA-011 10 mg · 1-0-1\nMED-QA-012 10 mg · 1-0-1\nMED-QA-013 10 mg · 1-0-1\nMED-QA-014 10 mg · 1-0-1\nMED-QA-015 10 mg · 1-0-1\nMED-QA-016 10 mg · 1-0-1\nMED-QA-017 10 mg · 1-0-1\nMED-QA-018 10 mg · 1-0-1\nMED-QA-019 10 mg · 1-0-1\nMED-QA-020 10 mg · 1-0-1\nMED-QA-021 10 mg · 1-0-1\nMED-QA-022 10 mg · 1-0-1\nMED-QA-023 10 mg · 1-0-1\nMED-QA-024 10 mg · 1-0-1\nMED-QA-025 10 mg · 1-0-1\nMED-QA-026 10 mg · 1-0-1\nMED-QA-027 10 mg · 1-0-1\nMED-QA-028 10 mg · 1-0-1\nMED-QA-029 10 mg · 1-0-1\nMED-QA-030 10 mg · 1-0-1\nMED-QA-031 10 mg · 1-0-1\nMED-QA-032 10 mg · 1-0-1\nMED-QA-033 10 mg · 1-0-1\nMED-QA-034 10 mg · 1-0-1\nMED-QA-035 10 mg · 1-0-1\nMED-QA-036 10 mg · 1-0-1\nMED-QA-037 10 mg · 1-0-1\nMED-QA-038 10 mg · 1-0-1\nMED-QA-039 10 mg · 1-0-1\nMED-QA-040 10 mg · 1-0-1\nMED-QA-041 10 mg · 1-0-1\nMED-QA-042 10 mg · 1-0-1\nMED-QA-043 10 mg · 1-0-1\nMED-QA-044 10 mg · 1-0-1\nMED-QA-045 10 mg · 1-0-1\nMED-QA-046 10 mg · 1-0-1\nMED-QA-047 10 mg · 1-0-1\nMED-QA-048 10 mg · 1-0-1\nMED-QA-049 10 mg · 1-0-1\nMED-QA-050 10 mg · 1-0-1\nMED-QA-051 10 mg · 1-0-1\nMED-QA-052 10 mg · 1-0-1\nMED-QA-053 10 mg · 1-0-1\nMED-QA-054 10 mg · 1-0-1\nMED-QA-055 10 mg · 1-0-1\nMED-QA-056 10 mg · 1-0-1\nMED-QA-057 10 mg · 1-0-1\nMED-QA-058 10 mg · 1-0-1\nMED-QA-059 10 mg · 1-0-1\nMED-QA-060 10 mg · 1-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nपुराने दस्तावेज़ों से 3 अपुष्ट मसौदे शामिल नहीं हैं\nस्वयं दर्ज रीडिंग — नवीनतम मान\nBP systolic — नवीनतम 141 mmHg · सुधर रहा है, लक्ष्य सीमा से ऊपर\nFasting glucose — नवीनतम 149 mg/dL · सुधर रहा है, लक्ष्य सीमा से ऊपर\nHbA1c — नवीनतम 7.9 % · सुधर रहा है, लक्ष्य सीमा से ऊपर\nOBS-QA-001 — अभी तक एक रीडिंग (1 mg)\nOBS-QA-002 — अभी तक एक रीडिंग (2 mg)\nOBS-QA-003 — अभी तक एक रीडिंग (3 mg)\nOBS-QA-004 — अभी तक एक रीडिंग (4 mg)\nOBS-QA-005 — अभी तक एक रीडिंग (5 mg)\nOBS-QA-006 — अभी तक एक रीडिंग (6 mg)\nOBS-QA-007 — अभी तक एक रीडिंग (7 mg)\nOBS-QA-008 — अभी तक एक रीडिंग (8 mg)\nOBS-QA-009 — अभी तक एक रीडिंग (9 mg)\nOBS-QA-010 — अभी तक एक रीडिंग (10 mg)\nOBS-QA-011 — अभी तक एक रीडिंग (11 mg)\nOBS-QA-012 — अभी तक एक रीडिंग (12 mg)\nनवीनतम लैब मान\nLAB-QA-005 5 mg · 06 नव॰ 2026\nLAB-QA-004 4 mg · 06 नव॰ 2026\nLAB-QA-003 3 mg · 06 नव॰ 2026\nLAB-QA-002 2 mg · 06 नव॰ 2026\nLAB-QA-001 1 mg · 06 नव॰ 2026\nपिछली मुलाकात\n06 नव॰ 2026\nENCOUNTER-QA-DIAGNOSIS\nसलाह: ENCOUNTER-QA-ADVICE\nअगली मुलाक़ात: 06 दिस॰ 2026\n\nयह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।\n\nआप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।\n\nCityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)",
+      "sections": [
+        {
+          "heading": "मरीज़",
+          "lines": [
+            "Ramesh Shelar · 58 वर्ष · पुरुष · रक्त समूह B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "एलर्जी",
+          "lines": [
+            "ALL-QA-001 — चेतावनी",
+            "ALL-QA-002 — चेतावनी",
+            "ALL-QA-003 — चेतावनी",
+            "ALL-QA-004 — चेतावनी",
+            "ALL-QA-005 — चेतावनी",
+            "ALL-QA-006 — चेतावनी",
+            "ALL-QA-007 — चेतावनी",
+            "ALL-QA-008 — चेतावनी",
+            "ALL-QA-009 — चेतावनी",
+            "ALL-QA-010 — चेतावनी",
+            "ALL-QA-011 — चेतावनी",
+            "ALL-QA-012 — चेतावनी",
+            "ALL-QA-013 — चेतावनी",
+            "ALL-QA-014 — चेतावनी",
+            "Penicillin — गंभीर",
+            "Sulfa drug — चेतावनी"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सक्रिय स्वास्थ्य स्थितियाँ",
+          "lines": [
+            "COND-QA-001",
+            "COND-QA-002",
+            "COND-QA-003",
+            "COND-QA-004",
+            "COND-QA-005",
+            "COND-QA-006",
+            "COND-QA-007",
+            "COND-QA-008",
+            "COND-QA-009",
+            "COND-QA-010",
+            "COND-QA-011",
+            "COND-QA-012",
+            "COND-QA-013",
+            "COND-QA-014",
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "वर्तमान दवाएँ (केवल पुष्ट)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "MED-QA-001 10 mg · 1-0-1",
+            "MED-QA-002 10 mg · 1-0-1",
+            "MED-QA-003 10 mg · 1-0-1",
+            "MED-QA-004 10 mg · 1-0-1",
+            "MED-QA-005 10 mg · 1-0-1",
+            "MED-QA-006 10 mg · 1-0-1",
+            "MED-QA-007 10 mg · 1-0-1",
+            "MED-QA-008 10 mg · 1-0-1",
+            "MED-QA-009 10 mg · 1-0-1",
+            "MED-QA-010 10 mg · 1-0-1",
+            "MED-QA-011 10 mg · 1-0-1",
+            "MED-QA-012 10 mg · 1-0-1",
+            "MED-QA-013 10 mg · 1-0-1",
+            "MED-QA-014 10 mg · 1-0-1",
+            "MED-QA-015 10 mg · 1-0-1",
+            "MED-QA-016 10 mg · 1-0-1",
+            "MED-QA-017 10 mg · 1-0-1",
+            "MED-QA-018 10 mg · 1-0-1",
+            "MED-QA-019 10 mg · 1-0-1",
+            "MED-QA-020 10 mg · 1-0-1",
+            "MED-QA-021 10 mg · 1-0-1",
+            "MED-QA-022 10 mg · 1-0-1",
+            "MED-QA-023 10 mg · 1-0-1",
+            "MED-QA-024 10 mg · 1-0-1",
+            "MED-QA-025 10 mg · 1-0-1",
+            "MED-QA-026 10 mg · 1-0-1",
+            "MED-QA-027 10 mg · 1-0-1",
+            "MED-QA-028 10 mg · 1-0-1",
+            "MED-QA-029 10 mg · 1-0-1",
+            "MED-QA-030 10 mg · 1-0-1",
+            "MED-QA-031 10 mg · 1-0-1",
+            "MED-QA-032 10 mg · 1-0-1",
+            "MED-QA-033 10 mg · 1-0-1",
+            "MED-QA-034 10 mg · 1-0-1",
+            "MED-QA-035 10 mg · 1-0-1",
+            "MED-QA-036 10 mg · 1-0-1",
+            "MED-QA-037 10 mg · 1-0-1",
+            "MED-QA-038 10 mg · 1-0-1",
+            "MED-QA-039 10 mg · 1-0-1",
+            "MED-QA-040 10 mg · 1-0-1",
+            "MED-QA-041 10 mg · 1-0-1",
+            "MED-QA-042 10 mg · 1-0-1",
+            "MED-QA-043 10 mg · 1-0-1",
+            "MED-QA-044 10 mg · 1-0-1",
+            "MED-QA-045 10 mg · 1-0-1",
+            "MED-QA-046 10 mg · 1-0-1",
+            "MED-QA-047 10 mg · 1-0-1",
+            "MED-QA-048 10 mg · 1-0-1",
+            "MED-QA-049 10 mg · 1-0-1",
+            "MED-QA-050 10 mg · 1-0-1",
+            "MED-QA-051 10 mg · 1-0-1",
+            "MED-QA-052 10 mg · 1-0-1",
+            "MED-QA-053 10 mg · 1-0-1",
+            "MED-QA-054 10 mg · 1-0-1",
+            "MED-QA-055 10 mg · 1-0-1",
+            "MED-QA-056 10 mg · 1-0-1",
+            "MED-QA-057 10 mg · 1-0-1",
+            "MED-QA-058 10 mg · 1-0-1",
+            "MED-QA-059 10 mg · 1-0-1",
+            "MED-QA-060 10 mg · 1-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": "पुराने दस्तावेज़ों से 3 अपुष्ट मसौदे शामिल नहीं हैं"
+        },
+        {
+          "heading": "स्वयं दर्ज रीडिंग — नवीनतम मान",
+          "lines": [
+            "BP systolic — नवीनतम 141 mmHg · सुधर रहा है, लक्ष्य सीमा से ऊपर",
+            "Fasting glucose — नवीनतम 149 mg/dL · सुधर रहा है, लक्ष्य सीमा से ऊपर",
+            "HbA1c — नवीनतम 7.9 % · सुधर रहा है, लक्ष्य सीमा से ऊपर",
+            "OBS-QA-001 — अभी तक एक रीडिंग (1 mg)",
+            "OBS-QA-002 — अभी तक एक रीडिंग (2 mg)",
+            "OBS-QA-003 — अभी तक एक रीडिंग (3 mg)",
+            "OBS-QA-004 — अभी तक एक रीडिंग (4 mg)",
+            "OBS-QA-005 — अभी तक एक रीडिंग (5 mg)",
+            "OBS-QA-006 — अभी तक एक रीडिंग (6 mg)",
+            "OBS-QA-007 — अभी तक एक रीडिंग (7 mg)",
+            "OBS-QA-008 — अभी तक एक रीडिंग (8 mg)",
+            "OBS-QA-009 — अभी तक एक रीडिंग (9 mg)",
+            "OBS-QA-010 — अभी तक एक रीडिंग (10 mg)",
+            "OBS-QA-011 — अभी तक एक रीडिंग (11 mg)",
+            "OBS-QA-012 — अभी तक एक रीडिंग (12 mg)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "नवीनतम लैब मान",
+          "lines": [
+            "LAB-QA-005 5 mg · 06 नव॰ 2026",
+            "LAB-QA-004 4 mg · 06 नव॰ 2026",
+            "LAB-QA-003 3 mg · 06 नव॰ 2026",
+            "LAB-QA-002 2 mg · 06 नव॰ 2026",
+            "LAB-QA-001 1 mg · 06 नव॰ 2026"
+          ],
+          "note": null
+        },
+        {
+          "heading": "पिछली मुलाकात",
+          "lines": [
+            "06 नव॰ 2026",
+            "ENCOUNTER-QA-DIAGNOSIS",
+            "सलाह: ENCOUNTER-QA-ADVICE",
+            "अगली मुलाक़ात: 06 दिस॰ 2026"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "यह सारांश ऊपर दिए समय के रिकॉर्ड की एक झलक है — यह निदान नहीं है और डॉक्टर से परामर्श का विकल्प नहीं है।",
+        "आप इसे किसी भी डॉक्टर से साझा कर सकते हैं। आपका CityCare रिकॉर्ड पूरा इतिहास रखता है।",
+        "CityCare — सहमति को प्राथमिकता देने वाला व्यक्तिगत स्वास्थ्य रिकॉर्ड · citycare (डेमो संस्करण)"
+      ]
+    },
+    "mr": {
+      "locale": "mr",
+      "position": "static",
+      "display": "block",
+      "screenDisplay": "none",
+      "summaryText": "CityCare — भेटीचा सारांश\nतयार केले ६ नोव्हें, २०२६, ११:०३ PM IST · तुमच्या स्वतःच्या CityCare नोंदीतून\nरुग्ण\nRamesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune\nABHA ID: 12-3456-7890-1234\nअॅलर्जी\nALL-QA-001 — इशारा\nALL-QA-002 — इशारा\nALL-QA-003 — इशारा\nALL-QA-004 — इशारा\nALL-QA-005 — इशारा\nALL-QA-006 — इशारा\nALL-QA-007 — इशारा\nALL-QA-008 — इशारा\nALL-QA-009 — इशारा\nALL-QA-010 — इशारा\nALL-QA-011 — इशारा\nALL-QA-012 — इशारा\nALL-QA-013 — इशारा\nALL-QA-014 — इशारा\nPenicillin — गंभीर\nSulfa drug — इशारा\nसक्रिय आरोग्य स्थिती\nCOND-QA-001\nCOND-QA-002\nCOND-QA-003\nCOND-QA-004\nCOND-QA-005\nCOND-QA-006\nCOND-QA-007\nCOND-QA-008\nCOND-QA-009\nCOND-QA-010\nCOND-QA-011\nCOND-QA-012\nCOND-QA-013\nCOND-QA-014\nHypertension (ICD-10 I10)\nType 2 Diabetes (ICD-10 E11)\nसध्याची औषधे (फक्त पुष्टी केलेली)\nAtorvastatin 10 mg · 0-0-1\nMED-QA-001 10 mg · 1-0-1\nMED-QA-002 10 mg · 1-0-1\nMED-QA-003 10 mg · 1-0-1\nMED-QA-004 10 mg · 1-0-1\nMED-QA-005 10 mg · 1-0-1\nMED-QA-006 10 mg · 1-0-1\nMED-QA-007 10 mg · 1-0-1\nMED-QA-008 10 mg · 1-0-1\nMED-QA-009 10 mg · 1-0-1\nMED-QA-010 10 mg · 1-0-1\nMED-QA-011 10 mg · 1-0-1\nMED-QA-012 10 mg · 1-0-1\nMED-QA-013 10 mg · 1-0-1\nMED-QA-014 10 mg · 1-0-1\nMED-QA-015 10 mg · 1-0-1\nMED-QA-016 10 mg · 1-0-1\nMED-QA-017 10 mg · 1-0-1\nMED-QA-018 10 mg · 1-0-1\nMED-QA-019 10 mg · 1-0-1\nMED-QA-020 10 mg · 1-0-1\nMED-QA-021 10 mg · 1-0-1\nMED-QA-022 10 mg · 1-0-1\nMED-QA-023 10 mg · 1-0-1\nMED-QA-024 10 mg · 1-0-1\nMED-QA-025 10 mg · 1-0-1\nMED-QA-026 10 mg · 1-0-1\nMED-QA-027 10 mg · 1-0-1\nMED-QA-028 10 mg · 1-0-1\nMED-QA-029 10 mg · 1-0-1\nMED-QA-030 10 mg · 1-0-1\nMED-QA-031 10 mg · 1-0-1\nMED-QA-032 10 mg · 1-0-1\nMED-QA-033 10 mg · 1-0-1\nMED-QA-034 10 mg · 1-0-1\nMED-QA-035 10 mg · 1-0-1\nMED-QA-036 10 mg · 1-0-1\nMED-QA-037 10 mg · 1-0-1\nMED-QA-038 10 mg · 1-0-1\nMED-QA-039 10 mg · 1-0-1\nMED-QA-040 10 mg · 1-0-1\nMED-QA-041 10 mg · 1-0-1\nMED-QA-042 10 mg · 1-0-1\nMED-QA-043 10 mg · 1-0-1\nMED-QA-044 10 mg · 1-0-1\nMED-QA-045 10 mg · 1-0-1\nMED-QA-046 10 mg · 1-0-1\nMED-QA-047 10 mg · 1-0-1\nMED-QA-048 10 mg · 1-0-1\nMED-QA-049 10 mg · 1-0-1\nMED-QA-050 10 mg · 1-0-1\nMED-QA-051 10 mg · 1-0-1\nMED-QA-052 10 mg · 1-0-1\nMED-QA-053 10 mg · 1-0-1\nMED-QA-054 10 mg · 1-0-1\nMED-QA-055 10 mg · 1-0-1\nMED-QA-056 10 mg · 1-0-1\nMED-QA-057 10 mg · 1-0-1\nMED-QA-058 10 mg · 1-0-1\nMED-QA-059 10 mg · 1-0-1\nMED-QA-060 10 mg · 1-0-1\nMetformin 500 mg · 1-0-1\nTelmisartan 40 mg · 0-0-1\nजुन्या कागदपत्रांतील 3 अपुष्ट मसुदे वगळले\nस्वतः नोंदवलेली रीडिंग — नवीनतम मूल्ये\nBP systolic — नवीनतम 141 mmHg · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nFasting glucose — नवीनतम 149 mg/dL · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nHbA1c — नवीनतम 7.9 % · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त\nOBS-QA-001 — आतापर्यंत एक रीडिंग (1 mg)\nOBS-QA-002 — आतापर्यंत एक रीडिंग (2 mg)\nOBS-QA-003 — आतापर्यंत एक रीडिंग (3 mg)\nOBS-QA-004 — आतापर्यंत एक रीडिंग (4 mg)\nOBS-QA-005 — आतापर्यंत एक रीडिंग (5 mg)\nOBS-QA-006 — आतापर्यंत एक रीडिंग (6 mg)\nOBS-QA-007 — आतापर्यंत एक रीडिंग (7 mg)\nOBS-QA-008 — आतापर्यंत एक रीडिंग (8 mg)\nOBS-QA-009 — आतापर्यंत एक रीडिंग (9 mg)\nOBS-QA-010 — आतापर्यंत एक रीडिंग (10 mg)\nOBS-QA-011 — आतापर्यंत एक रीडिंग (11 mg)\nOBS-QA-012 — आतापर्यंत एक रीडिंग (12 mg)\nनवीनतम लॅब मूल्ये\nLAB-QA-005 5 mg · ०६ नोव्हें, २०२६\nLAB-QA-004 4 mg · ०६ नोव्हें, २०२६\nLAB-QA-003 3 mg · ०६ नोव्हें, २०२६\nLAB-QA-002 2 mg · ०६ नोव्हें, २०२६\nLAB-QA-001 1 mg · ०६ नोव्हें, २०२६\nमागील भेट\n०६ नोव्हें, २०२६\nENCOUNTER-QA-DIAGNOSIS\nसल्ला: ENCOUNTER-QA-ADVICE\nपुढील भेट: ०६ डिसें, २०२६\n\nहा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.\n\nतुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.\n\nCityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)",
+      "sections": [
+        {
+          "heading": "रुग्ण",
+          "lines": [
+            "Ramesh Shelar · 58 वर्षे · पुरुष · रक्तगट B_POSITIVE · Pune",
+            "ABHA ID: 12-3456-7890-1234"
+          ],
+          "note": null
+        },
+        {
+          "heading": "अॅलर्जी",
+          "lines": [
+            "ALL-QA-001 — इशारा",
+            "ALL-QA-002 — इशारा",
+            "ALL-QA-003 — इशारा",
+            "ALL-QA-004 — इशारा",
+            "ALL-QA-005 — इशारा",
+            "ALL-QA-006 — इशारा",
+            "ALL-QA-007 — इशारा",
+            "ALL-QA-008 — इशारा",
+            "ALL-QA-009 — इशारा",
+            "ALL-QA-010 — इशारा",
+            "ALL-QA-011 — इशारा",
+            "ALL-QA-012 — इशारा",
+            "ALL-QA-013 — इशारा",
+            "ALL-QA-014 — इशारा",
+            "Penicillin — गंभीर",
+            "Sulfa drug — इशारा"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सक्रिय आरोग्य स्थिती",
+          "lines": [
+            "COND-QA-001",
+            "COND-QA-002",
+            "COND-QA-003",
+            "COND-QA-004",
+            "COND-QA-005",
+            "COND-QA-006",
+            "COND-QA-007",
+            "COND-QA-008",
+            "COND-QA-009",
+            "COND-QA-010",
+            "COND-QA-011",
+            "COND-QA-012",
+            "COND-QA-013",
+            "COND-QA-014",
+            "Hypertension (ICD-10 I10)",
+            "Type 2 Diabetes (ICD-10 E11)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "सध्याची औषधे (फक्त पुष्टी केलेली)",
+          "lines": [
+            "Atorvastatin 10 mg · 0-0-1",
+            "MED-QA-001 10 mg · 1-0-1",
+            "MED-QA-002 10 mg · 1-0-1",
+            "MED-QA-003 10 mg · 1-0-1",
+            "MED-QA-004 10 mg · 1-0-1",
+            "MED-QA-005 10 mg · 1-0-1",
+            "MED-QA-006 10 mg · 1-0-1",
+            "MED-QA-007 10 mg · 1-0-1",
+            "MED-QA-008 10 mg · 1-0-1",
+            "MED-QA-009 10 mg · 1-0-1",
+            "MED-QA-010 10 mg · 1-0-1",
+            "MED-QA-011 10 mg · 1-0-1",
+            "MED-QA-012 10 mg · 1-0-1",
+            "MED-QA-013 10 mg · 1-0-1",
+            "MED-QA-014 10 mg · 1-0-1",
+            "MED-QA-015 10 mg · 1-0-1",
+            "MED-QA-016 10 mg · 1-0-1",
+            "MED-QA-017 10 mg · 1-0-1",
+            "MED-QA-018 10 mg · 1-0-1",
+            "MED-QA-019 10 mg · 1-0-1",
+            "MED-QA-020 10 mg · 1-0-1",
+            "MED-QA-021 10 mg · 1-0-1",
+            "MED-QA-022 10 mg · 1-0-1",
+            "MED-QA-023 10 mg · 1-0-1",
+            "MED-QA-024 10 mg · 1-0-1",
+            "MED-QA-025 10 mg · 1-0-1",
+            "MED-QA-026 10 mg · 1-0-1",
+            "MED-QA-027 10 mg · 1-0-1",
+            "MED-QA-028 10 mg · 1-0-1",
+            "MED-QA-029 10 mg · 1-0-1",
+            "MED-QA-030 10 mg · 1-0-1",
+            "MED-QA-031 10 mg · 1-0-1",
+            "MED-QA-032 10 mg · 1-0-1",
+            "MED-QA-033 10 mg · 1-0-1",
+            "MED-QA-034 10 mg · 1-0-1",
+            "MED-QA-035 10 mg · 1-0-1",
+            "MED-QA-036 10 mg · 1-0-1",
+            "MED-QA-037 10 mg · 1-0-1",
+            "MED-QA-038 10 mg · 1-0-1",
+            "MED-QA-039 10 mg · 1-0-1",
+            "MED-QA-040 10 mg · 1-0-1",
+            "MED-QA-041 10 mg · 1-0-1",
+            "MED-QA-042 10 mg · 1-0-1",
+            "MED-QA-043 10 mg · 1-0-1",
+            "MED-QA-044 10 mg · 1-0-1",
+            "MED-QA-045 10 mg · 1-0-1",
+            "MED-QA-046 10 mg · 1-0-1",
+            "MED-QA-047 10 mg · 1-0-1",
+            "MED-QA-048 10 mg · 1-0-1",
+            "MED-QA-049 10 mg · 1-0-1",
+            "MED-QA-050 10 mg · 1-0-1",
+            "MED-QA-051 10 mg · 1-0-1",
+            "MED-QA-052 10 mg · 1-0-1",
+            "MED-QA-053 10 mg · 1-0-1",
+            "MED-QA-054 10 mg · 1-0-1",
+            "MED-QA-055 10 mg · 1-0-1",
+            "MED-QA-056 10 mg · 1-0-1",
+            "MED-QA-057 10 mg · 1-0-1",
+            "MED-QA-058 10 mg · 1-0-1",
+            "MED-QA-059 10 mg · 1-0-1",
+            "MED-QA-060 10 mg · 1-0-1",
+            "Metformin 500 mg · 1-0-1",
+            "Telmisartan 40 mg · 0-0-1"
+          ],
+          "note": "जुन्या कागदपत्रांतील 3 अपुष्ट मसुदे वगळले"
+        },
+        {
+          "heading": "स्वतः नोंदवलेली रीडिंग — नवीनतम मूल्ये",
+          "lines": [
+            "BP systolic — नवीनतम 141 mmHg · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त",
+            "Fasting glucose — नवीनतम 149 mg/dL · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त",
+            "HbA1c — नवीनतम 7.9 % · सुधारत आहे, लक्ष्य मर्यादेपेक्षा जास्त",
+            "OBS-QA-001 — आतापर्यंत एक रीडिंग (1 mg)",
+            "OBS-QA-002 — आतापर्यंत एक रीडिंग (2 mg)",
+            "OBS-QA-003 — आतापर्यंत एक रीडिंग (3 mg)",
+            "OBS-QA-004 — आतापर्यंत एक रीडिंग (4 mg)",
+            "OBS-QA-005 — आतापर्यंत एक रीडिंग (5 mg)",
+            "OBS-QA-006 — आतापर्यंत एक रीडिंग (6 mg)",
+            "OBS-QA-007 — आतापर्यंत एक रीडिंग (7 mg)",
+            "OBS-QA-008 — आतापर्यंत एक रीडिंग (8 mg)",
+            "OBS-QA-009 — आतापर्यंत एक रीडिंग (9 mg)",
+            "OBS-QA-010 — आतापर्यंत एक रीडिंग (10 mg)",
+            "OBS-QA-011 — आतापर्यंत एक रीडिंग (11 mg)",
+            "OBS-QA-012 — आतापर्यंत एक रीडिंग (12 mg)"
+          ],
+          "note": null
+        },
+        {
+          "heading": "नवीनतम लॅब मूल्ये",
+          "lines": [
+            "LAB-QA-005 5 mg · ०६ नोव्हें, २०२६",
+            "LAB-QA-004 4 mg · ०६ नोव्हें, २०२६",
+            "LAB-QA-003 3 mg · ०६ नोव्हें, २०२६",
+            "LAB-QA-002 2 mg · ०६ नोव्हें, २०२६",
+            "LAB-QA-001 1 mg · ०६ नोव्हें, २०२६"
+          ],
+          "note": null
+        },
+        {
+          "heading": "मागील भेट",
+          "lines": [
+            "०६ नोव्हें, २०२६",
+            "ENCOUNTER-QA-DIAGNOSIS",
+            "सल्ला: ENCOUNTER-QA-ADVICE",
+            "पुढील भेट: ०६ डिसें, २०२६"
+          ],
+          "note": null
+        }
+      ],
+      "footer": [
+        "हा सारांश वरील वेळेच्या नोंदीचा एक नमुना आहे — हे निदान नाही आणि डॉक्टरांच्या सल्ल्याचा पर्याय नाही.",
+        "तुम्ही हे कोणत्याही डॉक्टरांशी शेअर करू शकता. तुमच्या CityCare नोंदीत संपूर्ण इतिहास आहे.",
+        "CityCare — संमतीला प्राधान्य देणारी वैयक्तिक आरोग्य नोंद · citycare (डेमो आवृत्ती)"
+      ]
+    }
+  },
+  "doctor": {
+    "before": {
+      "text": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:03 pm IST · shared under consent: Full record\nPATIENT\nAnita Pawar · 35 y · FEMALE · Blood O_POSITIVE · Pune\nALLERGIES\nNone recorded.\nACTIVE CONDITIONS\nAsthma\nCURRENT MEDICINES (CONFIRMED ONLY)\nNone recorded.\nSELF-REPORTED READINGS — LATEST VALUES\nPeak flow — latest 358 L/min · improving, in target range\nLATEST LAB VALUES\nNone recorded.\nLAST VISIT\nNone recorded.\n\nThis summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.\n\nSelf-reported readings are marked as such in the record and shown here as reported.\n\nCityCare — consent-first personal health record · citycare (demo build)",
+      "position": "absolute"
+    },
+    "after": {
+      "text": "CityCare — visit summary\nGenerated 6 Nov 2026, 11:03 pm IST · shared under consent: Full record\nPATIENT\nAnita Pawar · 35 y · FEMALE · Blood O_POSITIVE · Pune\nALLERGIES\nNone recorded.\nACTIVE CONDITIONS\nAsthma\nCURRENT MEDICINES (CONFIRMED ONLY)\nNone recorded.\nSELF-REPORTED READINGS — LATEST VALUES\nPeak flow — latest 358 L/min · improving, in target range\nLATEST LAB VALUES\nNone recorded.\nLAST VISIT\nNone recorded.\n\nThis summary is a data snapshot of the record as of the timestamp above — it is not a diagnosis and not a substitute for consulting a doctor.\n\nSelf-reported readings are marked as such in the record and shown here as reported.\n\nCityCare — consent-first personal health record · citycare (demo build)",
+      "position": "absolute"
+    },
+    "removed": 5,
+    "denied": {
+      "summary": false,
+      "status": 403
+    }
+  }
+}

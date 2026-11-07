@@ -1,0 +1,1134 @@
+{
+  "note": "Synthetic browser QA; injected 500s used for busy/error checks. Native date shadow focus and nav clipping need manual interpretation.",
+  "longNameLength": 60,
+  "longFilenameLength": 113,
+  "report": {
+    "en": {
+      "320": {
+        "viewport": [
+          320,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 288,
+          "scroll": 557,
+          "end": 269
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 320,
+          "scroll": 320,
+          "grid": "288px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 8,
+            "tag": "A",
+            "type": null,
+            "name": "Records",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(15, 118, 110) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 10,
+            "tag": "A",
+            "type": null,
+            "name": "Inbox1",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "375": {
+        "viewport": [
+          375,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 343,
+          "scroll": 557,
+          "end": 214
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 375,
+          "scroll": 375,
+          "grid": "343px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "Access & trust",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "390": {
+        "viewport": [
+          390,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 358,
+          "scroll": 557,
+          "end": 199
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 390,
+          "scroll": 390,
+          "grid": "358px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "Access & trust",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "414": {
+        "viewport": [
+          414,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 382,
+          "scroll": 557,
+          "end": 175
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 414,
+          "scroll": 414,
+          "grid": "382px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "Access & trust",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "768": {
+        "viewport": [
+          768,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 736,
+          "scroll": 736,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 768,
+          "scroll": 768,
+          "grid": "360px 360px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "1280": {
+        "viewport": [
+          1280,
+          900
+        ],
+        "errors": [],
+        "nav": {
+          "client": 1120,
+          "scroll": 1120,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 1280,
+          "scroll": 1280,
+          "grid": "552px 552px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "date",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      }
+    },
+    "hi": {
+      "320": {
+        "viewport": [
+          320,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 288,
+          "scroll": 475,
+          "end": 187
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 320,
+          "scroll": 320,
+          "grid": "288px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "पहुँच और भरोसा",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "375": {
+        "viewport": [
+          375,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 343,
+          "scroll": 475,
+          "end": 132
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 375,
+          "scroll": 375,
+          "grid": "343px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "पहुँच और भरोसा",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "390": {
+        "viewport": [
+          390,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 358,
+          "scroll": 475,
+          "end": 117
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 390,
+          "scroll": 390,
+          "grid": "358px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "पहुँच और भरोसा",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "414": {
+        "viewport": [
+          414,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 382,
+          "scroll": 475,
+          "end": 93
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 414,
+          "scroll": 414,
+          "grid": "382px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 10,
+            "tag": "A",
+            "type": null,
+            "name": "इनबॉक्स1",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "768": {
+        "viewport": [
+          768,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 736,
+          "scroll": 736,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 768,
+          "scroll": 768,
+          "grid": "360px 360px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "1280": {
+        "viewport": [
+          1280,
+          900
+        ],
+        "errors": [],
+        "nav": {
+          "client": 1120,
+          "scroll": 1120,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 1280,
+          "scroll": 1280,
+          "grid": "552px 552px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      }
+    },
+    "mr": {
+      "320": {
+        "viewport": [
+          320,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 288,
+          "scroll": 478,
+          "end": 190
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 320,
+          "scroll": 320,
+          "grid": "288px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "प्रवेश आणि विश्वास",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "375": {
+        "viewport": [
+          375,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 343,
+          "scroll": 478,
+          "end": 135
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 375,
+          "scroll": 375,
+          "grid": "343px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "प्रवेश आणि विश्वास",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "390": {
+        "viewport": [
+          390,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 358,
+          "scroll": 478,
+          "end": 120
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 390,
+          "scroll": 390,
+          "grid": "358px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 9,
+            "tag": "A",
+            "type": null,
+            "name": "प्रवेश आणि विश्वास",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(92, 107, 118) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "414": {
+        "viewport": [
+          414,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 382,
+          "scroll": 478,
+          "end": 96
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 414,
+          "scroll": 414,
+          "grid": "382px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 10,
+            "tag": "A",
+            "type": null,
+            "name": "इनबॉक्स1",
+            "visible": true,
+            "within": true,
+            "outline": "rgb(15, 118, 110) solid 2px",
+            "partiallyClipped": true
+          },
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "768": {
+        "viewport": [
+          768,
+          844
+        ],
+        "errors": [],
+        "nav": {
+          "client": 736,
+          "scroll": 736,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 768,
+          "scroll": 768,
+          "grid": "360px 360px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      },
+      "1280": {
+        "viewport": [
+          1280,
+          900
+        ],
+        "errors": [],
+        "nav": {
+          "client": 1120,
+          "scroll": 1120,
+          "end": 0
+        },
+        "fileName": "Synthetic_long_filename_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.pdf",
+        "docBusy": true,
+        "docError": true,
+        "docUpload": true,
+        "fullSelectedName": "SyntheticLongReadingZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+        "values": {
+          "number": "123",
+          "unit": "mmHg"
+        },
+        "validation": true,
+        "trendBusy": true,
+        "trendError": true,
+        "dimensions": {
+          "client": 1280,
+          "scroll": 1280,
+          "grid": "552px 552px",
+          "offending": []
+        },
+        "trendSave": true,
+        "docDelete": true,
+        "focus": [
+          {
+            "step": 21,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          },
+          {
+            "step": 30,
+            "tag": "INPUT",
+            "type": "date",
+            "name": "तारीख",
+            "visible": false,
+            "within": true,
+            "outline": "rgb(18, 34, 43) none 3px",
+            "partiallyClipped": false
+          }
+        ],
+        "passed": true
+      }
+    }
+  },
+  "fail": []
+}

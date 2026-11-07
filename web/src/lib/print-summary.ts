@@ -60,7 +60,7 @@ function fmtDate(iso: string | null): string {
   return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" });
 }
 
-function ageFromIso(iso: string | null, asOfIso: string): string | null {
+export function ageFromIso(iso: string | null, asOfIso: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   const now = new Date(asOfIso);

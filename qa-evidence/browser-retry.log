@@ -1,0 +1,32 @@
+PASS en: locale switch, root lang, reload persistence 
+PASS en: populated timeline, labs, medications, allergy and charts 
+PASS en: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"Enter a valid date before saving.","role":"alert"}
+PASS en: upload, signed download and delete synthetic PDF saved and deleted
+FAIL en: backfill preview, save and confirm draft Waiting failed: 30000ms exceeded
+PASS en: FHIR export status success saved 1 file(s)
+PASS en: FHIR failure status (synthetic 500 injected) 
+FAIL en: desktop and mobile layout horizontal overflow {"viewport":390,"scroll":411,"overflow":[{"tag":"A","outer":"<a class=\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\" href=\"/patient/access\">Access &am","right":473},{"tag":"A","outer":"<a class=\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\" href=\"/patient/notifications\">Inb","right":573},{"tag":"SPAN","outer":"<span class=\"ml-1
+PASS en: print media PDF generated PDF; pagination/visual inspection separate
+PASS en: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS hi: locale switch, root lang, reload persistence 
+PASS hi: populated timeline, labs, medications, allergy and charts 
+PASS hi: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"सहेजने से पहले सही तारीख दर्ज करें।","role":"alert"}
+PASS hi: upload, signed download and delete synthetic PDF saved and deleted
+FAIL hi: backfill preview, save and confirm draft Waiting failed: 30000ms exceeded
+PASS hi: FHIR export status success saved 1 file(s)
+PASS hi: FHIR failure status (synthetic 500 injected) 
+FAIL hi: desktop and mobile layout horizontal overflow {"viewport":390,"scroll":411,"overflow":[{"tag":"A","outer":"<a class=\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\" href=\"/patient/notifications\">इनब","right":491},{"tag":"SPAN","outer":"<span class=\"ml-1.5 badge badge-warn\">2</span>","right":479},{"tag":"DIV","outer":"<div class=\"grid gap-4 content-start md:col-span-2\"><div lang=\"hi\" class=\"grid gap-4\"><p class=\"text-[11px] leading-relaxed t
+PASS hi: print media PDF generated PDF; pagination/visual inspection separate
+PASS hi: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS mr: locale switch, root lang, reload persistence 
+PASS mr: populated timeline, labs, medications, allergy and charts 
+PASS mr: cleared trend date accessible validation {"invalid":"true","desc":"_R_nmsav5uebvb_","msg":"जतन करण्यापूर्वी वैध तारीख भरा.","role":"alert"}
+PASS mr: upload, signed download and delete synthetic PDF saved and deleted
+FAIL mr: backfill preview, save and confirm draft Waiting failed: 30000ms exceeded
+PASS mr: FHIR export status success saved 1 file(s)
+PASS mr: FHIR failure status (synthetic 500 injected) 
+FAIL mr: desktop and mobile layout horizontal overflow {"viewport":390,"scroll":411,"overflow":[{"tag":"A","outer":"<a class=\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\" href=\"/patient/notifications\">इनब","right":494},{"tag":"SPAN","outer":"<span class=\"ml-1.5 badge badge-warn\">2</span>","right":482},{"tag":"DIV","outer":"<div class=\"grid gap-4 content-start md:col-span-2\"><div lang=\"mr\" class=\"grid gap-4\"><p class=\"text-[11px] leading-relaxed t
+PASS mr: print media PDF generated PDF; pagination/visual inspection separate
+PASS mr: automated axe accessibility [{"id":"page-has-heading-one","impact":"moderate","n":1},{"id":"region","impact":"moderate","n":2}]
+PASS keyboard tab order and focus indication (English) [{"tag":"A","text":"Privacy notice","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"SELECT","text":"English\nहिन्दी\nमराठी","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"CityCare","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"2","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"BUTTON","text":"Sign out","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"Dashboard1","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"},{"tag":"A","text":"Find doctors","focusVisible":true,"outline":"solid","outlineWidth":"2px","shadow":"none"}]
+TOTAL 31 25 6

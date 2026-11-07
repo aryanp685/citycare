@@ -96,7 +96,7 @@ export function DependentsPanel({ guardianHasDob }: { guardianHasDob: boolean })
 }
 
 /** Shown in the patient header while acting for a dependent. */
-export function SwitchBackButton() {
+export function SwitchBackButton({ label = "← Back to my account" }: { label?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
@@ -104,6 +104,6 @@ export function SwitchBackButton() {
       setBusy(true);
       await fetch("/api/patient/dependents/switch-back", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
       router.push("/patient"); router.refresh();
-    }}>← Back to my account</button>
+    }}>{label}</button>
   );
 }

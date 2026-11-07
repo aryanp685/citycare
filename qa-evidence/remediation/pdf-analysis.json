@@ -1,0 +1,55 @@
+{
+  "print-en.pdf": {
+    "pages": 1,
+    "pageCharacters": [
+      1225
+    ],
+    "missingClinicalTokens": []
+  },
+  "print-hi.pdf": {
+    "pages": 1,
+    "pageCharacters": [
+      1216
+    ],
+    "missingClinicalTokens": []
+  },
+  "print-mr.pdf": {
+    "pages": 1,
+    "pageCharacters": [
+      1243
+    ],
+    "missingClinicalTokens": []
+  },
+  "print-mr-long.pdf": {
+    "pages": 3,
+    "pageCharacters": [
+      1566,
+      1695,
+      1273
+    ],
+    "missingMarkers": [],
+    "footerPresentOnLastPage": true
+  },
+  "doctor-before-remove-patient-rules.pdf": {
+    "pages": 2,
+    "pageCharacters": [
+      711,
+      0
+    ],
+    "pagePixelHashes": [
+      "60f88e3c0e7e3a847348cdc9ce8623a667b55da74a8692d9ce3da98150cc6fca",
+      "b6274a9ad25ecd23948a10b7f48585f7714970b38f745dbf54ad462ae7fa8af2"
+    ]
+  },
+  "doctor-after-remove-patient-rules.pdf": {
+    "pages": 2,
+    "pageCharacters": [
+      711,
+      0
+    ],
+    "pagePixelHashes": [
+      "60f88e3c0e7e3a847348cdc9ce8623a667b55da74a8692d9ce3da98150cc6fca",
+      "b6274a9ad25ecd23948a10b7f48585f7714970b38f745dbf54ad462ae7fa8af2"
+    ]
+  }
+}

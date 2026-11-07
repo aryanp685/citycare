@@ -1,0 +1,50 @@
+{
+  "en": {
+    "pages": 3,
+    "page_characters": [
+      1130,
+      1403,
+      1279
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "hi": {
+    "pages": 3,
+    "page_characters": [
+      1165,
+      1421,
+      1329
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  },
+  "mr": {
+    "pages": 3,
+    "page_characters": [
+      1156,
+      1404,
+      1462
+    ],
+    "markers": {
+      "MED-QA-001": 1,
+      "MED-QA-060": 1,
+      "ALL-QA-014": 1,
+      "OBS-QA-012": 1,
+      "LAB-QA-005": 1,
+      "ENCOUNTER-QA-ADVICE": 1
+    }
+  }
+}

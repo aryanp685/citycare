@@ -1,0 +1,162 @@
+[
+  {
+    "tag": "A",
+    "text": "Privacy notice",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "SELECT",
+    "text": "English\nहिन्दी\nमराठी",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "CityCare",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "2",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "Sign out",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "Dashboard1",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "Find doctors",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "Records",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "Access & trust",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "A",
+    "text": "Inbox2",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "Export FHIR R4 (JSON)",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "🖨 Print / save as PDF",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "use a sample prescription",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "TEXTAREA",
+    "text": "Prescription text",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "SELECT",
+    "text": "Lab report\nPrescription\nDischarge summary\nX-ray\nMR",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "INPUT",
+    "text": "Title (defaults to the file name)",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "focusVisible": true,
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "shadow": "none"
+  }
+]

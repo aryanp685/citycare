@@ -1,0 +1,291 @@
+[
+  {
+    "nodeId": "237",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "Date"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 27
+    },
+    "name": {
+      "type": "computedString",
+      "value": "तारीख",
+      "sources": [
+        {
+          "type": "relatedElement",
+          "attribute": "aria-labelledby"
+        },
+        {
+          "type": "attribute",
+          "value": {
+            "type": "computedString",
+            "value": "तारीख"
+          },
+          "attribute": "aria-label",
+          "attributeValue": {
+            "type": "string",
+            "value": "तारीख"
+          }
+        },
+        {
+          "type": "relatedElement",
+          "superseded": true,
+          "nativeSource": "label"
+        },
+        {
+          "type": "attribute",
+          "attribute": "title",
+          "superseded": true
+        }
+      ]
+    },
+    "description": {
+      "type": "computedString",
+      "value": "सहेजने से पहले सही तारीख दर्ज करें।"
+    },
+    "properties": [
+      {
+        "name": "invalid",
+        "value": {
+          "type": "token",
+          "value": "true"
+        }
+      },
+      {
+        "name": "focusable",
+        "value": {
+          "type": "booleanOrUndefined",
+          "value": true
+        }
+      },
+      {
+        "name": "settable",
+        "value": {
+          "type": "booleanOrUndefined",
+          "value": true
+        }
+      },
+      {
+        "name": "describedby",
+        "value": {
+          "type": "idrefList",
+          "value": "_R_nmsav5uebvb_",
+          "relatedNodes": [
+            {
+              "backendDOMNodeId": 596,
+              "idref": "_R_nmsav5uebvb_"
+            }
+          ]
+        }
+      }
+    ],
+    "parentId": "252",
+    "childIds": [
+      "588"
+    ],
+    "backendDOMNodeId": 237
+  },
+  {
+    "nodeId": "893",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "StaticText"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 158
+    },
+    "name": {
+      "type": "computedString",
+      "value": "सहेजने से पहले सही तारीख दर्ज करें।",
+      "sources": [
+        {
+          "type": "contents",
+          "value": {
+            "type": "computedString",
+            "value": "सहेजने से पहले सही तारीख दर्ज करें।"
+          }
+        }
+      ]
+    },
+    "properties": [],
+    "parentId": "596",
+    "childIds": [
+      "-1000000115"
+    ],
+    "backendDOMNodeId": 893
+  },
+  {
+    "nodeId": "-1000000115",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "InlineTextBox"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 101
+    },
+    "name": {
+      "type": "computedString",
+      "value": "सहेजने से पहले सही तारीख दर्ज करें।"
+    },
+    "properties": [],
+    "parentId": "893",
+    "childIds": []
+  },
+  {
+    "nodeId": "814",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "StaticText"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 158
+    },
+    "name": {
+      "type": "computedString",
+      "value": "रिपोर्ट की तारीख (वैकल्पिक)",
+      "sources": [
+        {
+          "type": "contents",
+          "value": {
+            "type": "computedString",
+            "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+          }
+        }
+      ]
+    },
+    "properties": [],
+    "parentId": "455",
+    "childIds": [
+      "-1000000037"
+    ],
+    "backendDOMNodeId": 814
+  },
+  {
+    "nodeId": "235",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "Date"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 27
+    },
+    "name": {
+      "type": "computedString",
+      "value": "रिपोर्ट की तारीख (वैकल्पिक)",
+      "sources": [
+        {
+          "type": "relatedElement",
+          "attribute": "aria-labelledby"
+        },
+        {
+          "type": "attribute",
+          "attribute": "aria-label"
+        },
+        {
+          "type": "relatedElement",
+          "value": {
+            "type": "computedString",
+            "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+          },
+          "nativeSource": "labelwrapped",
+          "nativeSourceValue": {
+            "type": "nodeList",
+            "relatedNodes": [
+              {
+                "backendDOMNodeId": 454,
+                "text": "रिपोर्ट की तारीख (वैकल्पिक)"
+              }
+            ]
+          }
+        },
+        {
+          "type": "attribute",
+          "value": {
+            "type": "computedString",
+            "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+          },
+          "attribute": "title",
+          "attributeValue": {
+            "type": "string",
+            "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+          },
+          "superseded": true
+        }
+      ]
+    },
+    "description": {
+      "type": "computedString",
+      "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+    },
+    "properties": [
+      {
+        "name": "invalid",
+        "value": {
+          "type": "token",
+          "value": "false"
+        }
+      },
+      {
+        "name": "focusable",
+        "value": {
+          "type": "booleanOrUndefined",
+          "value": true
+        }
+      },
+      {
+        "name": "settable",
+        "value": {
+          "type": "booleanOrUndefined",
+          "value": true
+        }
+      },
+      {
+        "name": "labelledby",
+        "value": {
+          "type": "nodeList",
+          "relatedNodes": [
+            {
+              "backendDOMNodeId": 454,
+              "text": "रिपोर्ट की तारीख (वैकल्पिक)"
+            }
+          ]
+        }
+      }
+    ],
+    "parentId": "454",
+    "childIds": [
+      "456"
+    ],
+    "backendDOMNodeId": 235
+  },
+  {
+    "nodeId": "-1000000037",
+    "ignored": false,
+    "role": {
+      "type": "internalRole",
+      "value": "InlineTextBox"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 101
+    },
+    "name": {
+      "type": "computedString",
+      "value": "रिपोर्ट की तारीख (वैकल्पिक)"
+    },
+    "properties": [],
+    "parentId": "814",
+    "childIds": []
+  }
+]

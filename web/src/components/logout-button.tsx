@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 
-export function LogoutButton() {
+export function LogoutButton({ label = "Sign out" }: { label?: string }) {
   const router = useRouter();
   return (
     <button
@@ -12,7 +12,7 @@ export function LogoutButton() {
         router.refresh();
       }}
     >
-      Sign out
+      {label}
     </button>
   );
 }

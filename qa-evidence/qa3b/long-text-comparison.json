@@ -1,0 +1,126 @@
+{
+  "current": {
+    "320": {
+      "medication": {
+        "scroll": 320,
+        "client": 320
+      },
+      "chart": {
+        "scroll": 320,
+        "client": 320
+      }
+    },
+    "375": {
+      "medication": {
+        "scroll": 375,
+        "client": 375
+      },
+      "chart": {
+        "scroll": 375,
+        "client": 375
+      }
+    },
+    "390": {
+      "medication": {
+        "scroll": 390,
+        "client": 390
+      },
+      "chart": {
+        "scroll": 390,
+        "client": 390
+      }
+    },
+    "414": {
+      "medication": {
+        "scroll": 414,
+        "client": 414
+      },
+      "chart": {
+        "scroll": 414,
+        "client": 414
+      }
+    },
+    "768": {
+      "medication": {
+        "scroll": 2415,
+        "client": 768
+      },
+      "chart": {
+        "scroll": 768,
+        "client": 768
+      }
+    },
+    "1280": {
+      "medication": {
+        "scroll": 2671,
+        "client": 1280
+      },
+      "chart": {
+        "scroll": 1280,
+        "client": 1280
+      }
+    }
+  },
+  "baseline": {
+    "320": {
+      "medication": {
+        "scroll": 320,
+        "client": 320
+      },
+      "chart": {
+        "scroll": 320,
+        "client": 320
+      }
+    },
+    "375": {
+      "medication": {
+        "scroll": 375,
+        "client": 375
+      },
+      "chart": {
+        "scroll": 375,
+        "client": 375
+      }
+    },
+    "390": {
+      "medication": {
+        "scroll": 390,
+        "client": 390
+      },
+      "chart": {
+        "scroll": 390,
+        "client": 390
+      }
+    },
+    "414": {
+      "medication": {
+        "scroll": 414,
+        "client": 414
+      },
+      "chart": {
+        "scroll": 414,
+        "client": 414
+      }
+    },
+    "768": {
+      "medication": {
+        "scroll": 2415,
+        "client": 768
+      },
+      "chart": {
+        "scroll": 768,
+        "client": 768
+      }
+    },
+    "1280": {
+      "medication": {
+        "scroll": 2671,
+        "client": 1280
+      },
+      "chart": {
+        "scroll": 1280,
+        "client": 1280
+      }
+    }
+  }
+}

@@ -19,12 +19,12 @@ export function activeTab(path: string, tabs: TabDef[]): string | null {
   return best?.href ?? null;
 }
 
-export function Tabs({ tabs }: { tabs: TabDef[] }) {
+export function Tabs({ tabs, ariaLabel = "Sections" }: { tabs: TabDef[]; ariaLabel?: string }) {
   const path = usePathname();
   const reduce = useReducedMotion();
   const active = activeTab(path, tabs);
   return (
-    <nav className="flex gap-1 -mb-px overflow-x-auto" aria-label="Sections">
+    <nav className="flex gap-1 -mb-px overflow-x-auto" aria-label={ariaLabel}>
       {tabs.map((t) => {
         const isActive = active === t.href;
         return (

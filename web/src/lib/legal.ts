@@ -50,14 +50,8 @@ export function isMinor(dob: Date, on: Date = new Date()): boolean {
   return ageOn(dob, on) < ADULT_AGE;
 }
 
-/**
- * Grievance / Data Protection contact (DPDP s.13; Rules r.3 requires the notice to carry
- * the channel). Placeholders are deliberately obvious: the team must fill them before any
- * non-demo use — the app refuses to pretend a mailbox exists.
- */
+/** Shared grievance workflow settings. Public contact validation lives in grievance-contact.ts. */
 export const GRIEVANCE = {
-  officer: process.env.NEXT_PUBLIC_GRIEVANCE_OFFICER ?? "Grievance Officer (to be named by the CityCare team)",
-  email: process.env.NEXT_PUBLIC_GRIEVANCE_EMAIL ?? null, // null → page says "not yet published"
   responseDays: 30, // we commit to 30; the DPDP Rules cap the published period at 90 days
   boardUrl: "https://www.meity.gov.in/", // Data Protection Board of India — complaints route (MeitY until the Board's own portal is live)
 };

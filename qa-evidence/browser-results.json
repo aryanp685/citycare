@@ -1,0 +1,157 @@
+[
+  {
+    "name": "en: locale switch, root lang, reload persistence",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "en: populated timeline, labs, medications, allergy and charts",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "en: cleared trend date accessible validation",
+    "status": "PASS",
+    "detail": "{\"invalid\":\"true\",\"desc\":\"_R_nmsav5uebvb_\",\"msg\":\"Enter a valid date before saving.\",\"role\":\"alert\"}"
+  },
+  {
+    "name": "en: upload, signed download and delete",
+    "status": "PASS",
+    "detail": "synthetic PDF saved and deleted"
+  },
+  {
+    "name": "en: backfill preview, save and confirm draft",
+    "status": "FAIL",
+    "detail": "Waiting failed: 30000ms exceeded"
+  },
+  {
+    "name": "en: FHIR export status success",
+    "status": "PASS",
+    "detail": "saved 1 file(s)"
+  },
+  {
+    "name": "en: FHIR failure status (synthetic 500 injected)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "en: desktop and mobile layout",
+    "status": "FAIL",
+    "detail": "horizontal overflow {\"viewport\":390,\"scroll\":411,\"overflow\":[{\"tag\":\"A\",\"outer\":\"<a class=\\\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\\\" href=\\\"/patient/access\\\">Access &am\",\"right\":473},{\"tag\":\"A\",\"outer\":\"<a class=\\\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\\\" href=\\\"/patient/notifications\\\">Inb\",\"right\":573},{\"tag\":\"SPAN\",\"outer\":\"<span class=\\\"ml-1"
+  },
+  {
+    "name": "en: print media PDF",
+    "status": "PASS",
+    "detail": "generated PDF; pagination/visual inspection separate"
+  },
+  {
+    "name": "en: automated axe accessibility",
+    "status": "PASS",
+    "detail": "[{\"id\":\"page-has-heading-one\",\"impact\":\"moderate\",\"n\":1},{\"id\":\"region\",\"impact\":\"moderate\",\"n\":2}]"
+  },
+  {
+    "name": "hi: locale switch, root lang, reload persistence",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "hi: populated timeline, labs, medications, allergy and charts",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "hi: cleared trend date accessible validation",
+    "status": "PASS",
+    "detail": "{\"invalid\":\"true\",\"desc\":\"_R_nmsav5uebvb_\",\"msg\":\"सहेजने से पहले सही तारीख दर्ज करें।\",\"role\":\"alert\"}"
+  },
+  {
+    "name": "hi: upload, signed download and delete",
+    "status": "PASS",
+    "detail": "synthetic PDF saved and deleted"
+  },
+  {
+    "name": "hi: backfill preview, save and confirm draft",
+    "status": "FAIL",
+    "detail": "Waiting failed: 30000ms exceeded"
+  },
+  {
+    "name": "hi: FHIR export status success",
+    "status": "PASS",
+    "detail": "saved 1 file(s)"
+  },
+  {
+    "name": "hi: FHIR failure status (synthetic 500 injected)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "hi: desktop and mobile layout",
+    "status": "FAIL",
+    "detail": "horizontal overflow {\"viewport\":390,\"scroll\":411,\"overflow\":[{\"tag\":\"A\",\"outer\":\"<a class=\\\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\\\" href=\\\"/patient/notifications\\\">इनब\",\"right\":491},{\"tag\":\"SPAN\",\"outer\":\"<span class=\\\"ml-1.5 badge badge-warn\\\">2</span>\",\"right\":479},{\"tag\":\"DIV\",\"outer\":\"<div class=\\\"grid gap-4 content-start md:col-span-2\\\"><div lang=\\\"hi\\\" class=\\\"grid gap-4\\\"><p class=\\\"text-[11px] leading-relaxed t"
+  },
+  {
+    "name": "hi: print media PDF",
+    "status": "PASS",
+    "detail": "generated PDF; pagination/visual inspection separate"
+  },
+  {
+    "name": "hi: automated axe accessibility",
+    "status": "PASS",
+    "detail": "[{\"id\":\"page-has-heading-one\",\"impact\":\"moderate\",\"n\":1},{\"id\":\"region\",\"impact\":\"moderate\",\"n\":2}]"
+  },
+  {
+    "name": "mr: locale switch, root lang, reload persistence",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "mr: populated timeline, labs, medications, allergy and charts",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "mr: cleared trend date accessible validation",
+    "status": "PASS",
+    "detail": "{\"invalid\":\"true\",\"desc\":\"_R_nmsav5uebvb_\",\"msg\":\"जतन करण्यापूर्वी वैध तारीख भरा.\",\"role\":\"alert\"}"
+  },
+  {
+    "name": "mr: upload, signed download and delete",
+    "status": "PASS",
+    "detail": "synthetic PDF saved and deleted"
+  },
+  {
+    "name": "mr: backfill preview, save and confirm draft",
+    "status": "FAIL",
+    "detail": "Waiting failed: 30000ms exceeded"
+  },
+  {
+    "name": "mr: FHIR export status success",
+    "status": "PASS",
+    "detail": "saved 1 file(s)"
+  },
+  {
+    "name": "mr: FHIR failure status (synthetic 500 injected)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "mr: desktop and mobile layout",
+    "status": "FAIL",
+    "detail": "horizontal overflow {\"viewport\":390,\"scroll\":411,\"overflow\":[{\"tag\":\"A\",\"outer\":\"<a class=\\\"relative px-3 py-2 text-sm font-semibold whitespace-nowrap no-underline transition-colors text-muted hover:text-ink\\\" href=\\\"/patient/notifications\\\">इनब\",\"right\":494},{\"tag\":\"SPAN\",\"outer\":\"<span class=\\\"ml-1.5 badge badge-warn\\\">2</span>\",\"right\":482},{\"tag\":\"DIV\",\"outer\":\"<div class=\\\"grid gap-4 content-start md:col-span-2\\\"><div lang=\\\"mr\\\" class=\\\"grid gap-4\\\"><p class=\\\"text-[11px] leading-relaxed t"
+  },
+  {
+    "name": "mr: print media PDF",
+    "status": "PASS",
+    "detail": "generated PDF; pagination/visual inspection separate"
+  },
+  {
+    "name": "mr: automated axe accessibility",
+    "status": "PASS",
+    "detail": "[{\"id\":\"page-has-heading-one\",\"impact\":\"moderate\",\"n\":1},{\"id\":\"region\",\"impact\":\"moderate\",\"n\":2}]"
+  },
+  {
+    "name": "keyboard tab order and focus indication (English)",
+    "status": "PASS",
+    "detail": "[{\"tag\":\"A\",\"text\":\"Privacy notice\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"SELECT\",\"text\":\"English\\nहिन्दी\\nमराठी\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"A\",\"text\":\"CityCare\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"A\",\"text\":\"2\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"BUTTON\",\"text\":\"Sign out\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"A\",\"text\":\"Dashboard1\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"},{\"tag\":\"A\",\"text\":\"Find doctors\",\"focusVisible\":true,\"outline\":\"solid\",\"outlineWidth\":\"2px\",\"shadow\":\"none\"}]"
+  }
+]

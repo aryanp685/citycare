@@ -206,12 +206,17 @@ table.data tbody tr:hover { background: #f8fbfb; }
 .legal-prose .meta { font-size: .8125rem; color: var(--muted); margin-bottom: 1.5rem; }
 .legal-prose .callout { border: 1px solid var(--line); border-left: 4px solid var(--brand); background: #fff; border-radius: 10px; padding: .75rem 1rem; margin: 1rem 0; }
 
+/* Patient records can include long source values; let them wrap, not force a wide grid. */
+@media screen and (max-width: 767px) {
+  #patient-records { overflow-wrap: anywhere; }
+  #patient-records .badge { white-space: normal; }
+}
+
 /* F18 — print / PDF visit summary.
-   #print-summary is display:none on screen. When it exists in the DOM, @media print turns
-   it into the ENTIRE page: every other element on the page goes visibility:hidden (layout
-   is untouched, so nothing reflows while the block is hidden), and the summary is lifted
-   to the top-left as a plain black-on-white document. Styled with plain CSS on purpose —
-   the printout must not depend on the app's theme. Pages without the block print normally. */
+   #print-summary is display:none on screen. The shared/doctor default hides other content
+   with visibility and lifts the summary to the top-left. Patient records use a scoped
+   normal-flow override below so hidden screen layout cannot create blank pages. Styled
+   with plain CSS so print does not depend on the app theme; pages without a summary print normally. */
 #print-summary { display: none; }
 @media print {
   @page { margin: 1.4cm; }
@@ -239,4 +244,16 @@ table.data tbody tr:hover { background: #f8fbfb; }
   body:has(#print-summary) #print-summary .ps-note { font-size: 10.5px; color: #444; margin-top: 2px; }
   body:has(#print-summary) #print-summary .ps-footer { border-top: 1px solid #000; margin-top: 12px; padding-top: 6px; font-size: 10.5px; color: #333; }
   body:has(#print-summary) #print-summary .ps-footer p { margin: 2px 0; }
+  body:has(#print-summary) #print-summary[lang] { font-family: "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif; }
+  body:has(#print-summary) #print-summary[lang] .ps-section { break-inside: auto; }
+  body:has(#print-summary) #print-summary[lang] .ps-h { break-after: avoid; text-transform: none; letter-spacing: normal; }
+  body:has(#print-summary) #print-summary[lang] .ps-list li { overflow-wrap: anywhere; }
+  /* Patient records only: keep the summary in print flow, not the hidden screen layout.
+     The shared doctor print rules above are deliberately unchanged. */
+  body:has(.patient-shell #patient-records #print-summary) > :not(.patient-shell) { display: none; }
+  body:has(.patient-shell #patient-records #print-summary) .patient-shell > :not(main) { display: none; }
+  body:has(.patient-shell #patient-records #print-summary) .patient-shell main { padding: 0; max-width: none; }
+  body:has(.patient-shell #patient-records #print-summary) #patient-records > :not(#print-summary) { display: none; }
+  body:has(.patient-shell #patient-records #print-summary) #print-summary { position: static; width: auto; }
+
 }

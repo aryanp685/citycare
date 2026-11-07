@@ -1,7 +1,10 @@
+import { DEFAULT_LOCALE } from "@/lib/i18n";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { DemoBanner } from "@/components/demo-banner";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { PatientNoticeRegion } from "@/components/patient-notice-region";
 
 // Self-hosted variable font: zero external requests (the sandboxed preview has no network,
 // and a Google Fonts round-trip is the classic render-blocking regression on 3G in India).
@@ -27,8 +30,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body><DemoBanner />{children}</body>
+    <html lang={DEFAULT_LOCALE} className={inter.variable}>
+      <body><PatientNoticeRegion><DemoBanner /><LanguageSwitcher /></PatientNoticeRegion>{children}</body>
     </html>
   );
 }
