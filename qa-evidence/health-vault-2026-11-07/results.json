@@ -1,0 +1,62 @@
+{
+  "browser": "153.0.8010.0",
+  "database": "isolated synthetic PostgreSQL 18.6",
+  "results": [
+    {
+      "name": "bounded stable pages over more than 100 records",
+      "pass": true
+    },
+    {
+      "name": "search includes old records and quota counts all files",
+      "pass": true
+    },
+    {
+      "name": "literal wildcard and combined type filtering",
+      "pass": true
+    },
+    {
+      "name": "patient search ownership isolated in both directions",
+      "pass": true
+    },
+    {
+      "name": "invalid filters rejected",
+      "pass": true
+    },
+    {
+      "name": "browser search, source label, type filter and empty state",
+      "pass": true
+    },
+    {
+      "name": "browser pagination",
+      "pass": true
+    },
+    {
+      "name": "records 320 no document overflow",
+      "pass": true
+    },
+    {
+      "name": "records 375 no document overflow",
+      "pass": true
+    },
+    {
+      "name": "records 1280 no document overflow",
+      "pass": true
+    },
+    {
+      "name": "upload and open returns original bytes; other patient denied link and delete",
+      "pass": true
+    },
+    {
+      "name": "delete erases synthetic blob and persists tombstone",
+      "pass": true
+    },
+    {
+      "name": "hi localized vault controls",
+      "pass": true
+    },
+    {
+      "name": "mr localized vault controls",
+      "pass": true
+    }
+  ]
+}

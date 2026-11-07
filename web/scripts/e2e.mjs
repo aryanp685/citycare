@@ -275,10 +275,17 @@ console.log("\n— 4. trust core on OUR OWN pair: 403 -> grant -> 200 -> safety 
   const rev = await pat.patch(`/api/patient/consents?id=${live.id}`, { reason: 'e2e revoke' });
   check('revoke returns 200', rev.status === 200, JSON.stringify(rev.data));
   const revokedDownload = await doc.raw(revokeLink.data?.url ?? "/x");
-  check("D4 revoke: minted doctor link denied immediately after revocation", revokedDownload.status === 403, `got ${revokedDownload.status}`);
+  const revokedBody = new TextDecoder().decode(revokedDownload.bytes);
+  check("D4 revoke: minted doctor link denied immediately after revocation", revokedDownload.status === 404 && JSON.parse(revokedBody).code === "not_found", `got ${revokedDownload.status}`);
   const revokedUi = await doc.raw(`${revokeLink.data?.url ?? "/x"}&ui_lang=hi`);
-  check("D4 revoke: localized response remains denied", revokedUi.status === 403 && /अनुमति/.test(new TextDecoder().decode(revokedUi.bytes)), `got ${revokedUi.status}`);
-  if (revokeUpload.data?.id) await pat.del(`/api/documents/${revokeUpload.data.id}`);
+  const revokedUiBody = new TextDecoder().decode(revokedUi.bytes);
+  check("D4 revoke: localized response remains denied without exposing the title", revokedUi.status === 404 && /उपलब्ध/.test(revokedUiBody) && !revokedUiBody.includes("Synthetic consent test"), `got ${revokedUi.status}`);
+  if (revokeUpload.data?.id) {
+    await pat.del(`/api/documents/${revokeUpload.data.id}`);
+    const missing = await doc.raw(revokeLink.data?.url ?? "/x");
+    const missingUi = await doc.raw(`${revokeLink.data?.url ?? "/x"}&ui_lang=hi`);
+    check("D4 revoke: denied and missing documents have identical generic responses", missing.status === 404 && new TextDecoder().decode(missing.bytes) === revokedBody && missingUi.status === 404 && new TextDecoder().decode(missingUi.bytes) === revokedUiBody);
+  }
 
   const d3r = await doc.get(`/api/doctor/patients/${e2ePid}/record`);
   check('doctor read AFTER revoke -> instant 403', d3r.status === 403, `got ${d3r.status}`);
@@ -756,7 +763,8 @@ console.log("\n— 11. files (D4/L-G8), recovery (D3/D9), handover (D49), anchor
   const cons = await pat.get("/api/patient/consents");
   const fullLive = (cons.data?.consents ?? []).some((c) => c.doctorId === e2eDoctorId && c.status === "APPROVED" && c.scope === "FULL_RECORD" && new Date(c.expiresAt) > new Date());
   const docLink = await doc.post(`/api/documents/${docId}/link`, {});
-  check(`D4: doctor link follows scope (${fullLive ? "FULL live → 200" : "no FULL consent → 403"})`, fullLive ? docLink.status === 200 : docLink.status === 403, `got ${docLink.status} ${JSON.stringify(docLink.data)}`);
+  const absentLink = await doc.post("/api/documents/nonexistent-synthetic-id/link", {});
+  check(`D4: doctor link follows scope (${fullLive ? "FULL live → 200" : "no FULL consent → generic 404"})`, fullLive ? docLink.status === 200 : docLink.status === 404 && absentLink.status === 404 && JSON.stringify(docLink.data) === JSON.stringify(absentLink.data), `got ${docLink.status} ${JSON.stringify(docLink.data)}`);
   const led = await pat.get("/api/patient/ledger?limit=20");
   check("D4: upload and download are in my ledger", (led.data?.entries ?? []).some((e) => e.action === "UPLOAD_DOC") && (led.data?.entries ?? []).some((e) => e.action === "DOWNLOAD_DOC"), JSON.stringify((led.data?.entries ?? []).map((e) => e.action)));
   const delDoc = await pat.del(`/api/documents/${docId}`);
@@ -1768,10 +1776,10 @@ if (LOCAL) {
     } else {
       let userDel = null;
       try { await sql(`DELETE FROM "User" WHERE id = $1`, [e2eUid]); } catch (e) { userDel = e; }
-      check("18.6a DELETE FROM User (owns a patient profile) refused with 23503", userDel?.code === "23503", userDel?.code ?? "delete SUCCEEDED");
+      check("18.6a DELETE FROM User (owns a patient profile) refused by FK", ["23503", "23001"].includes(userDel?.code) && (await sql(`SELECT count(*)::int n FROM "User" WHERE id=$1`, [e2eUid])).rows[0].n === 1, userDel?.code ?? "delete SUCCEEDED");
       let patDel = null;
       try { await sql(`DELETE FROM "Patient" WHERE id = $1`, [e2ePid]); } catch (e) { patDel = e; }
-      check("18.6b DELETE FROM Patient (referenced by consents/appointments) refused with 23503", patDel?.code === "23503", patDel?.code ?? "delete SUCCEEDED");
+      check("18.6b DELETE FROM Patient (referenced by consents/appointments) refused by FK", ["23503", "23001"].includes(patDel?.code) && (await sql(`SELECT count(*)::int n FROM "Patient" WHERE id=$1`, [e2ePid])).rows[0].n === 1, patDel?.code ?? "delete SUCCEEDED");
     }
   }
 
@@ -2215,7 +2223,11 @@ if (LOCAL) {
       const noprivRole = `e2e_nopriv_${noprivSuffix}`;
       const noprivEmptyDb = `citycare_e2e_nopriv_empty_${noprivSuffix}`;
       const noprivFullDb = `citycare_e2e_nopriv_full_${noprivSuffix}`;
-      const noprivUrl = (dbName) => `postgres://${noprivRole}:e2enoprivpw@127.0.0.1:5432/${dbName}`;
+      const noprivUrl = (dbName) => {
+        const u = new URL(gateUrl);
+        u.username = noprivRole; u.password = "e2enoprivpw"; u.pathname = "/" + dbName;
+        return u.toString();
+      };
       const h23a = await hashMarker();
       try {
         // 18.23a/b — remote URL + declared context cannot authorize direct DDL (required 1–2)

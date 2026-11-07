@@ -1,43 +1,50 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { callApi } from "./api-client";
+import { useLocale } from "./use-locale";
+import { interpolate } from "@/lib/document-i18n";
+import type { MessageKey } from "@/lib/i18n";
 
 type Slot = { iso: string; wall: string; left: number };
 type Day = { date: string; slots: Slot[] };
-
 const REFRESH_MS = 45_000;
 
-/**
- * D7: the grid arrives server-rendered but a tab left open goes stale, so the picker re-fetches
- * `/api/patient/doctors/[id]/slots` every 45 s, whenever the tab becomes visible again, and after
- * any "slot_full" answer. The selected instant survives a refresh only if it is still open.
- */
+/** The server remains authoritative for availability, capacity and booking. */
 export function SlotPicker({ doctorId, doctorName, fee, grid: initial }: { doctorId: string; doctorName: string; fee: number; grid: Day[] }) {
   const router = useRouter();
+  const { locale, t } = useLocale();
+  const dateTime = (value: string) => new Intl.DateTimeFormat(`${locale}-IN`, { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
   const [grid, setGrid] = useState<Day[]>(initial);
   const [date, setDate] = useState<string | null>(initial.find((g) => g.slots.length > 0)?.date ?? null);
   const [iso, setIso] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
-  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [refreshError, setRefreshError] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; key: MessageKey<"appointments">; bookedIso?: string; access?: boolean; error?: string } | null>(null);
   const inflight = useRef(false);
+  const booking = useRef(false);
 
   const refresh = useCallback(async () => {
     if (inflight.current || document.visibilityState === "hidden") return;
-    inflight.current = true;
+    inflight.current = true; setRefreshing(true);
     try {
-      const r = await fetch(`/api/patient/doctors/${doctorId}/slots`, { credentials: "same-origin", cache: "no-store" });
-      if (!r.ok) return;
-      const j = (await r.json()) as { grid: Day[] };
-      setGrid(j.grid);
-      setRefreshedAt(new Date());
-      setIso((cur) => (cur && j.grid.some((g) => g.slots.some((s) => s.iso === cur)) ? cur : null));
+      const r = await fetch(`/api/patient/doctors/${encodeURIComponent(doctorId)}/slots`, { credentials: "same-origin", cache: "no-store" });
+      if (!r.ok) throw new Error("availability unavailable");
+      const j = (await r.json()) as { grid?: Day[] };
+      if (!Array.isArray(j.grid)) throw new Error("invalid availability response");
+      const next = j.grid;
+      setGrid(next);
+      setRefreshedAt(new Date()); setRefreshError(false);
+      setIso((cur) => (cur && next.some((g) => g.slots.some((s) => s.iso === cur)) ? cur : null));
     } catch {
-      /* transient — next tick retries */
+      setRefreshError(true);
     } finally {
-      inflight.current = false;
+      inflight.current = false; setRefreshing(false);
     }
   }, [doctorId]);
 
@@ -51,80 +58,64 @@ export function SlotPicker({ doctorId, doctorName, fee, grid: initial }: { docto
 
   const days = grid.filter((g) => g.slots.length > 0);
   const day = days.find((g) => g.date === date) ?? days[0] ?? null;
+  const selected = day?.slots.find((slot) => slot.iso === iso);
 
   async function book() {
-    if (!iso || !day) return;
-    setBusy(true);
-    const r = await callApi("/api/patient/appointments", { method: "POST", body: { doctorId, scheduledAt: iso, reason: reason || undefined } });
-    setBusy(false);
-    if (r.ok) {
-      const d = r.data as { consentRequested?: boolean };
-      setMsg({ kind: "ok", text: `Booked with ${doctorName} for ${day.date} ${new Date(new Date(iso).getTime() + 19.5 * 3600e3).toISOString().slice(11, 16)} IST.${d.consentRequested ? " Access request created — approve it on your dashboard when you are ready." : ""}` });
-      setIso(null);
-      void refresh();
-      router.refresh();
-    } else if (r.code === "slot_full" || r.code === "already_booked" || r.code === "token_race") {
-      setMsg({ kind: "err", text: r.code === "token_race" ? "Two bookings collided on the queue number — please tap Confirm again." : "That slot just filled up. The list has been refreshed — pick another." });
-      void refresh();
-    } else if (r.code === "patient_overlap") {
-      setMsg({ kind: "err", text: "You already have an appointment overlapping that time." });
-    } else {
-      setMsg({ kind: "err", text: r.error });
+    if (!iso || !day || !selected || booking.current || uncertain) return;
+    const bookedIso = iso;
+    booking.current = true; setBusy(true); setMsg(null);
+    try {
+      const r = await callApi("/api/patient/appointments", { method: "POST", body: { doctorId, scheduledAt: bookedIso, reason: reason.trim() || undefined } });
+      if (r.ok) {
+        const d = r.data as { consentRequested?: boolean };
+        setMsg({ kind: "ok", key: "bookingSuccess", bookedIso, access: d.consentRequested });
+        setIso(null); setReason("");
+        void refresh(); router.refresh();
+      } else if (r.status === 0 || r.status >= 500) {
+        setUncertain(true);
+        setMsg({ kind: "err", key: "bookingUncertain" });
+      } else if (r.code === "slot_full" || r.code === "already_booked" || r.code === "slot_not_offered") {
+        setIso(null);
+        setMsg({ kind: "err", key: "slotTaken" });
+        void refresh();
+      } else if (r.code === "token_race") {
+        setMsg({ kind: "err", key: "tokenRace" });
+        void refresh();
+      } else if (r.code === "patient_overlap") {
+        setMsg({ kind: "err", key: "overlap" });
+      } else {
+        setMsg({ kind: "err", key: "bookingError", error: r.error });
+      }
+    } finally {
+      booking.current = false; setBusy(false);
     }
   }
 
-  if (days.length === 0) {
-    return <p className="text-sm text-muted">No open slots in the next 14 days for this doctor. Try another doctor or check back after 19:00.</p>;
-  }
-
   return (
-    <div>
-      <div className="flex gap-1.5 flex-wrap mb-3">
-        {days.map((g) => (
-          <button
-            key={g.date}
-            onClick={() => { setDate(g.date); setIso(null); }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${day?.date === g.date ? "border-brand bg-teal-50 text-brand" : "border-line bg-white text-muted"}`}
-          >
-            {new Date(g.date + "T00:00:00Z").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
-            <span className="ml-1 opacity-70">· {g.slots.length}</span>
-          </button>
-        ))}
-      </div>
-
-      {day && (
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
-          {day.slots.map((s) => (
-            <button
-              key={s.iso}
-              onClick={() => setIso(s.iso)}
-              title={s.left > 1 ? `${s.left} seats left in this slot` : undefined}
-              className={`py-1.5 rounded-lg border text-sm font-semibold ${iso === s.iso ? "border-brand bg-teal-600 text-white" : "border-line bg-white hover:border-teal-500"}`}
-            >
-              {s.wall}
-              {s.left > 1 && <span className="block text-[10px] font-normal opacity-70">{s.left} left</span>}
-            </button>
-          ))}
+    <div lang={locale} className="space-y-4">
+      {msg && <p role={msg.kind === "ok" ? "status" : "alert"} className={`text-sm rounded-lg p-3 border ${msg.kind === "ok" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.bookedIso ? interpolate(t("appointments", msg.key), { doctor: doctorName, date: dateTime(msg.bookedIso) }) : msg.error && locale === "en" ? msg.error : t("appointments", msg.key)} {msg.access && t("appointments", "accessRequested")} {uncertain && <Link href="/patient/appointments" className="font-semibold underline">{t("appointments", "viewAppointments")}</Link>}</p>}
+      {days.length === 0 ? <p className="text-sm text-muted">{t("appointments", "noSlots")}</p> : <>
+        <div role="group" aria-label={t("appointments", "availableDates")} className="flex gap-2 flex-wrap">
+          {days.map((g) => <button type="button" key={g.date} disabled={busy} aria-pressed={day?.date === g.date} onClick={() => { setDate(g.date); setIso(null); }} className={`px-3 py-2 rounded-lg text-sm font-semibold border ${day?.date === g.date ? "border-brand bg-teal-50 text-brand" : "border-line bg-white text-muted"}`}>
+            {new Date(g.date + "T00:00:00Z").toLocaleDateString(`${locale}-IN`, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}<span className="ml-1 opacity-70">· {g.slots.length}</span>
+          </button>)}
         </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-end gap-2">
-        <label className="field flex-1 min-w-48">
-          <span>Reason (optional, doctor sees this before the visit)</span>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={280} placeholder="follow-up for sugar control" />
-        </label>
-        <button className="btn btn-primary" disabled={!iso || busy} onClick={book}>
-          {busy ? "Booking…" : iso ? `Confirm · ₹${fee}` : "Pick a slot"}
-        </button>
-        <button type="button" className="btn btn-ghost text-xs" onClick={() => void refresh()} title="Slots also refresh automatically every 45 s and when you return to this tab">
-          ↻ {refreshedAt ? `updated ${refreshedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : "refresh"}
-        </button>
+        {day && <div role="group" aria-label={t("appointments", "availableTimes")} className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-2">
+          {day.slots.map((s) => <button type="button" key={s.iso} disabled={busy} aria-pressed={iso === s.iso} onClick={() => setIso(s.iso)} title={s.left > 1 ? interpolate(t("appointments", "seatsLeft"), { count: String(s.left) }) : undefined} className={`min-h-11 py-2 px-1 rounded-lg border text-sm font-semibold ${iso === s.iso ? "border-brand bg-teal-600 text-white" : "border-line bg-white hover:border-teal-500"}`}>
+            {s.wall}{s.left > 1 && <span className="block text-[10px] font-normal opacity-70">{interpolate(t("appointments", "left"), { count: String(s.left) })}</span>}
+          </button>)}
+        </div>}
+        <p className="text-sm text-muted">{selected && iso ? interpolate(t("appointments", "selected"), { date: dateTime(iso) }) : t("appointments", "chooseSlot")}</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="field flex-1 min-w-0 basis-56"><span>{t("appointments", "reasonLabel")}</span><input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={280} placeholder={t("appointments", "reasonPlaceholder")} /></label>
+          <button type="button" className="btn btn-primary" disabled={!selected || busy || uncertain} onClick={() => void book()}>{busy ? t("appointments", "booking") : selected ? interpolate(t("appointments", "confirmFee"), { fee: new Intl.NumberFormat(`${locale}-IN`, { style: "currency", currency: "INR" }).format(fee) }) : t("appointments", "pickSlot")}</button>
+        </div>
+      </>}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="btn btn-ghost text-xs" disabled={refreshing} onClick={() => void refresh()}>{t("appointments", refreshing ? "refreshing" : "refresh")}</button>
+        {refreshedAt && !refreshError && <span className="text-xs text-muted">{interpolate(t("appointments", "updated"), { time: new Intl.DateTimeFormat(`${locale}-IN`, { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(refreshedAt) })}</span>}
       </div>
-      {msg && (
-        <p className={`mt-2 text-sm rounded-lg p-2 border ${msg.kind === "ok" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700"}`}>
-          {msg.text}
-        </p>
-      )}
+      {refreshError && <p role="alert" className="text-sm text-red-700">{t("appointments", "refreshError")}</p>}
     </div>
   );
 }

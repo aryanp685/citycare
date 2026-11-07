@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CATALOGS, LOCALES, missingMessages, translate, type Locale } from "../i18n";
-import { DOCUMENT_TYPES, documentDate, documentErrorKey, documentSize, documentTypeKey, interpolate } from "../document-i18n";
+import { DOCUMENT_TYPES, documentDate, documentErrorKey, documentSize, documentTypeKey, documentSourceKey, interpolate } from "../document-i18n";
 const state = vi.hoisted(() => ({ locale: "en" }));
 vi.mock("@/components/use-locale", async () => {
   const { translate } = await import("../i18n");
@@ -27,6 +27,8 @@ describe("patient document localization", () => {
     expect(html).toContain(translate(locale, "documents", "typeLabel"));
     expect(html).toContain(translate(locale, "documents", "dateLabel"));
     expect(html).toContain(translate(locale, "documents", "loading"));
+    expect(html).toContain(translate(locale, "documents", "searchLabel"));
+    expect(html).toContain(translate(locale, "documents", "filterLabel"));
     expect(html).toContain('role="status"');
     expect(html).toContain('accept="application/pdf,image/jpeg,image/png"');
   });
@@ -34,6 +36,9 @@ describe("patient document localization", () => {
     expect(DOCUMENT_TYPES).toHaveLength(11);
     expect(documentTypeKey("DISCHARGE_SUMMARY")).toBe("typeDischarge");
     expect(documentTypeKey("new type")).toBe("typeOther");
+    expect(documentSourceKey("PATIENT_UPLOAD")).toBe("sourcePatient");
+    expect(documentSourceKey("LAB_UPLOAD")).toBe("sourceLab");
+    expect(documentSourceKey("__proto__")).toBe("sourceUnknown");
     expect(documentErrorKey("quota_exceeded")).toBe("errorQuota");
     expect(documentErrorKey("auth_required")).toBe("errorAuth");
     expect(documentErrorKey("consent_outdated")).toBe("errorConsent");

@@ -92,7 +92,7 @@ export default async function RecordsPage() {
         encounters={rec.encounters.map((e) => ({ id: e.id, date: e.encounterDate.toISOString(), type: e.type, doctor: e.doctor,
           diagnosis: e.diagnosisText, complaint: e.chiefComplaint, code: e.diagnosisCode, advice: e.advice,
           followUp: e.followUpOn?.toISOString() ?? null }))}
-        labs={rec.labs.slice(0, 6).map((l) => ({ id: l.id, takenOn: l.takenOn?.toISOString() ?? null, name: l.testName,
+        labs={rec.labs.map((l) => ({ id: l.id, takenOn: l.takenOn?.toISOString() ?? null, name: l.testName,
           value: l.value, unit: l.unit, low: l.refRangeLow, high: l.refRangeHigh }))}
       />
 

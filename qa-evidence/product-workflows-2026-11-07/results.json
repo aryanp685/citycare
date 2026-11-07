@@ -1,0 +1,267 @@
+{
+  "date": "2026-11-07",
+  "browser": "153.0.8010.0",
+  "mode": "isolated PostgreSQL 18.6, synthetic accounts and fixtures",
+  "flags": [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage"
+  ],
+  "results": [
+    {
+      "name": "patient login via form",
+      "pass": true
+    },
+    {
+      "name": "PostgreSQL city + specialty filters and complete specialty labels",
+      "pass": true
+    },
+    {
+      "name": "Nagpur match and nonmatching doctor exclusion",
+      "pass": true
+    },
+    {
+      "name": "combined filters show empty state",
+      "pass": true
+    },
+    {
+      "name": "wildcard search remains literal",
+      "pass": true
+    },
+    {
+      "name": "discovery 320 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "discovery 375 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "discovery 768 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "discovery 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "doctor-profile 320 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "doctor-profile 375 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "doctor-profile 768 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "doctor-profile 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "patient books selected slot and PostgreSQL persists it",
+      "pass": true
+    },
+    {
+      "name": "appointment history displays persisted booking details",
+      "pass": true
+    },
+    {
+      "name": "other patient cannot cancel booking",
+      "pass": true
+    },
+    {
+      "name": "other doctor cannot update booking",
+      "pass": true
+    },
+    {
+      "name": "patient cancels through UI and PostgreSQL persists status",
+      "pass": true
+    },
+    {
+      "name": "appointments 320 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "appointments 375 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "appointments 768 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "appointments 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "timeline displays >6 synthetic labs newest first from database",
+      "pass": true
+    },
+    {
+      "name": "records 320 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "records 375 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "records 768 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "records 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "Hindi and Marathi selection updates discovery",
+      "pass": true
+    },
+    {
+      "name": "admin 320 document overflow",
+      "pass": false,
+      "metrics": {
+        "width": 320,
+        "scroll": 826
+      }
+    },
+    {
+      "name": "admin 375 document overflow",
+      "pass": false,
+      "metrics": {
+        "width": 375,
+        "scroll": 826
+      }
+    },
+    {
+      "name": "admin 768 document overflow",
+      "pass": false,
+      "metrics": {
+        "width": 768,
+        "scroll": 826
+      }
+    },
+    {
+      "name": "admin 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "admin login and verification dashboard",
+      "pass": true
+    },
+    {
+      "name": "doctor-dashboard 320 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "doctor-dashboard 375 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 375,
+        "scroll": 375
+      }
+    },
+    {
+      "name": "doctor-dashboard 768 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "doctor-dashboard 1280 document overflow",
+      "pass": true,
+      "metrics": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "doctor login and dashboard",
+      "pass": true
+    }
+  ],
+  "limitations": [
+    "No concurrent consent/revocation race tested",
+    "No clinical scope isolation canary test",
+    "No real patient data",
+    "Responsive checks limited to sampled routes and widths",
+    "No screen-reader, formal accessibility, translation or production security review"
+  ]
+}

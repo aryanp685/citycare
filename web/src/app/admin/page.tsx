@@ -33,12 +33,12 @@ export default async function AdminHome() {
   const decided = rows.filter((r) => r.isVerified || r.rejectedAt);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       <WorkspaceHeading eyebrow="Administration" title="Doctor verification" description="Review registrations and record verification decisions. Checks are performed by a person, not an official integration." />
       {metrics && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Doctor registration totals">
         {[{ label: "Awaiting review", value: metrics.pending }, { label: "Admin approved", value: metrics.approved }, { label: "Not approved", value: metrics.rejected }].map((item) => <div key={item.label} className="workspace-metric"><p className="text-sm text-muted">{item.label}</p><p className="mt-2 text-2xl font-bold">{item.value}</p></div>)}
       </div>}
-      <Card>
+      <Card className="min-w-0">
         <SectionTitle right={<Badge tone={pending.length ? "warn" : "live"}>{pending.length} pending in this list</Badge>}>Registrations awaiting verification</SectionTitle>
         <p className="text-sm text-muted mb-3">
           Showing up to 60 registrations. Check the number on the State Medical Council / NMC Indian Medical Register before approving. Every decision is written to the ledger
@@ -62,7 +62,7 @@ export default async function AdminHome() {
           </table></div>
         )}
       </Card>
-      <Card>
+      <Card className="min-w-0">
         <SectionTitle>Recent decisions</SectionTitle>
         {decided.length === 0 ? <EmptyNote>None yet.</EmptyNote> : (
           <div className="workspace-table" role="region" aria-label="Recent verification decisions" tabIndex={0}><table className="data">
