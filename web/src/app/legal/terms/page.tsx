@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { DEMO_MODE, DEMO_RETENTION_DAYS, TERMS_VERSION } from "@/lib/legal";
 import { evaluateRetentionPolicy } from "@/lib/retention-core.mjs";
 
+// The retention policy is runtime configuration; never freeze it during the build.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Terms of use" };
 
 export default function Terms() {

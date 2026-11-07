@@ -1,0 +1,15 @@
+{
+  "browser": "153.0.8010.0",
+  "results": [
+    {
+      "policy": "demo",
+      "copyMatches": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "policy": "pilot",
+      "copyMatches": true,
+      "noHorizontalOverflow": true
+    }
+  ]
+}

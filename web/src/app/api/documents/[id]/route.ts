@@ -10,7 +10,7 @@ import { decryptBlob, safeFilename, verifyDownload, type AllowedMime } from "@/l
 /**
  * GET /api/documents/[id]?exp=&sig= — the signed download. The link alone is not enough: the
  * session must belong to the user the link was minted for, and a doctor's consent is re-checked
- * at download time (a consent revoked 10 s after the link was issued means 403).
+ * at download time (after revocation the response is a generic 404).
  */
 const download = handler(async (req, { params }) => {
   const url = new URL(req.url);
