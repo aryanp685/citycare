@@ -35,7 +35,12 @@ export function PatientWorkspace({ patientId, patientName }: { patientId: string
   const [showForm, setShowForm] = useState(false);
 
   const fetchRecord = useCallback(async () => {
-    const res = await fetch(`/api/doctor/patients/${patientId}/record`, { credentials: "same-origin" });
+    let res: Response;
+    try {
+      res = await fetch(`/api/doctor/patients/${patientId}/record`, { credentials: "same-origin", cache: "no-store" });
+    } catch {
+      setData(null); setDeniedCode(null); setDenied("Could not load the record. Check your connection and retry."); return;
+    }
     if (res.status === 403) {
       const j = await res.json().catch(() => ({}));
       setDenied(j.error ?? "Access refused.");
@@ -43,7 +48,7 @@ export function PatientWorkspace({ patientId, patientName }: { patientId: string
       setData(null);
       return;
     }
-    if (!res.ok) { setDenied(`Could not load (${res.status}).`); return; }
+    if (!res.ok) { setData(null); setDeniedCode(null); setDenied(`Could not load (${res.status}).`); return; }
     const j = (await res.json()) as RecordPayload;
     setData(j);
     setDenied(null);
@@ -57,12 +62,9 @@ export function PatientWorkspace({ patientId, patientName }: { patientId: string
     <div className="grid gap-4">
       {denied && (
         <Card className="border-amber-300 bg-amber-50/60">
-          <div className="font-bold text-amber-900">Access refused</div>
+          <div className="font-bold text-amber-900">{deniedCode === "no_consent" ? "Access refused" : "Record unavailable"}</div>
           <p className="text-sm mt-1 text-amber-900/90">{denied}</p>
-          <p className="text-xs text-muted mt-2">
-            This refusal itself was written to the patient&apos;s tamper-evident ledger — this page does not
-            quietly hide data; the server refuses it, and the attempt is visible to the patient.
-          </p>
+          {deniedCode === "no_consent" && <p className="text-xs text-muted mt-2">This refused request was recorded in the patient&apos;s access history.</p>}
           <button className="btn btn-ghost mt-3" onClick={() => setLoad((x) => x + 1)}>Re-check (this re-hits the server, not cache)</button>
         </Card>
       )}

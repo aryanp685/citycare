@@ -138,13 +138,18 @@ export const CancelSchema = z.object({ appointmentId: z.string().uuid() });
 
 export const GrantSchema = z.object({
   doctorId: z.string().uuid(),
+  consentId: z.string().uuid().optional(),
   scope: z.enum(["FULL_RECORD", "SUMMARY_ONLY", "LAST_N_ENCOUNTERS", "SPECIFIC_CONDITION"]).default("LAST_N_ENCOUNTERS"),
   lastNEncounters: z.number().int().min(1).max(50).optional(),
   conditionName: z.string().trim().min(2).max(80).optional(),
   expiryDays: z.number().int().min(1).max(90).default(7),
+}).refine((v) => v.scope !== "SPECIFIC_CONDITION" || v.conditionName !== undefined, {
+  message: "A condition name is required for this scope",
+  path: ["conditionName"],
 });
 
 export const RevokeSchema = z.object({
+  decision: z.enum(["DENY", "REVOKE"]).optional(),
   reason: z.string().trim().max(200).optional(),
 });
 

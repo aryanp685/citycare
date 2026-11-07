@@ -10,9 +10,9 @@ import { ReacceptBanner } from "./reaccept-banner";
 
 export function PatientHeader({ name, actingFor, pending, drafts, unread }: { name: string | null; actingFor: boolean; pending: number; drafts: number; unread: number }) {
   const { locale, t } = useLocale();
-  return <header lang={locale} className="bg-white border-b border-line"><div className="max-w-6xl mx-auto px-4">
+  return <header lang={locale} className="workspace-header"><div className="max-w-6xl mx-auto px-4">
     <div className="flex flex-wrap items-center justify-between min-h-14 gap-2 py-2">
-      <div className="flex flex-wrap items-center gap-4"><Link href="/" className="font-black tracking-tight no-underline text-ink">City<span className="text-brand">Care</span></Link>
+      <div className="flex flex-wrap items-center gap-4"><Link href="/" className="workspace-brand"><span className="workspace-brand-mark" aria-hidden="true">+</span><span>City<span className="text-brand">Care</span></span></Link>
         <Badge tone="off">{name === "[REDACTED]" ? t("records", "shellErased") : name ? <bdi lang="">{name}</bdi> : t("records", "shellPatient")}</Badge>
         {actingFor && <Badge tone="warn">{t("records", "shellDependent")}</Badge>}
       </div><div className="flex flex-wrap items-center gap-2">
@@ -23,6 +23,7 @@ export function PatientHeader({ name, actingFor, pending, drafts, unread }: { na
     </div>
     <Tabs ariaLabel={t("records", "shellSections")} tabs={[
       { href: "/patient", label: t("records", "shellDashboard"), badge: pending },
+      { href: "/patient/appointments", label: t("records", "shellAppointments") },
       { href: "/patient/doctors", label: t("records", "shellDoctors") },
       { href: "/patient/records", label: t("records", "shellRecords"), badge: drafts },
       { href: "/patient/access", label: t("records", "shellAccess") },

@@ -1,10 +1,10 @@
-import { requireRole, guardSameOrigin } from "@/lib/session";
+import { requireRole, requireVerifiedDoctor, guardSameOrigin } from "@/lib/session";
 import { handler, ok, parseBody } from "@/lib/api";
 import { one, run, tx, fail } from "@/lib/db";
 import { appendAudit } from "@/lib/ledger";
 import { z } from "zod";
 
-const StatusSchema = z.object({ status: z.enum(["CHECKED_IN", "COMPLETED", "CANCELLED_BY_DOCTOR", "NO_SHOW"]) });
+const StatusSchema = z.object({ status: z.enum(["CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED_BY_DOCTOR", "NO_SHOW"]) });
 
 const ALLOWED: Record<string, string[]> = {
   CONFIRMED: ["CHECKED_IN", "CANCELLED_BY_DOCTOR", "NO_SHOW"],
@@ -20,6 +20,7 @@ const ALLOWED: Record<string, string[]> = {
 export const PATCH = handler(async (req, { params }) => {
   await guardSameOrigin(req);
   const v = await requireRole("DOCTOR");
+  await requireVerifiedDoctor(v);
   const { id } = await params;
   const body = parseBody(StatusSchema, await req.json().catch(() => ({})));
 

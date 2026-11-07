@@ -523,3 +523,11 @@ syntax. Changes require deployment-environment access and may require a restart/
 on the hosting platform. No production configuration was changed. The DB-backed desk
 regression passed in an isolated synthetic PostgreSQL 17 environment; see the implementation
 ledger for evidence and remaining audit-atomicity limitations.
+
+### DW-P0-01/02, DW-P1-03–05 and DW-P2-06 — doctor workspace follow-up (2026-11-07)
+
+See the appended original-ID crosswalk and new DW findings in `../CITYCARE_MASTER_GAP_REGISTER.md`, and evidence in `../qa-evidence/doctor-workspace/`. In particular, current record, print, encounter and document paths do not serialize their entire operation with consent revocation; sequential denial after revocation is not proof about requests already in flight. The encounter path's full-record safety-check inputs under narrow consent need a scope/privacy review. The existing encounter is not a signed, draft/amend-capable workflow. These are **not closed**. The patient-facing revocation message now acknowledges that an in-progress request may finish.
+
+### DW-P0 security review (2026-11-07) — unresolved
+
+DW-P0-01 and DW-P0-02 remain open: consent checks are not synchronized transactionally with clinical record reads/writes, document links/downloads or print; restricted-scope records are loaded before filtering and encounter safety checks can use out-of-scope facts. The proposed policy and outstanding deadlock, expiry, missing-row, audit, scope and real-concurrency proof requirements are recorded in `qa-evidence/dw-p0/AUTHORIZATION_POLICY.md`. This milestone did not deliver or validate a fix. Owner review is required; do not characterize prior sequential or browser QA as proof of revocation safety.

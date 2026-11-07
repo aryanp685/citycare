@@ -257,3 +257,24 @@ table.data tbody tr:hover { background: #f8fbfb; }
   body:has(.patient-shell #patient-records #print-summary) #print-summary { position: static; width: auto; }
 
 }
+
+/* Shared workspace language — existing application primitives remain authoritative. */
+.workspace-shell { min-height: 100vh; background: #f4f8f8; }
+.workspace-header { background: #fff; border-bottom: 1px solid var(--line); }
+.workspace-brand { display: inline-flex; align-items: center; gap: .5rem; font-weight: 800; letter-spacing: -.04em; color: var(--ink); text-decoration: none; }
+.workspace-brand-mark { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .6rem; background: var(--brand); color: #fff; font-size: 1.05rem; line-height: 1; }
+.workspace-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1.25rem; padding: .75rem 0 .35rem; }
+.workspace-heading h1 { font-size: clamp(1.8rem, 3vw, 2.4rem); letter-spacing: -.045em; font-weight: 750; line-height: 1.12; margin-top: .45rem; }
+.workspace-eyebrow { color: var(--brand-2); font-size: .68rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.workspace-description { color: var(--muted); font-size: .9rem; margin-top: .55rem; max-width: 42rem; line-height: 1.55; }
+.workspace-heading-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.workspace-nav { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.workspace-metric { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.25rem; box-shadow: var(--shadow-1); }
+.workspace-table { overflow-x: auto; max-width: 100%; }
+.workspace-table table { min-width: 48rem; }
+.workspace-quicklinks { display: flex; flex-wrap: wrap; gap: .6rem; }
+@media (max-width: 480px) {
+  .workspace-heading-actions { width: 100%; }
+  .workspace-heading-actions .btn { flex: 1 1 auto; }
+  .workspace-metric { padding: .9rem; }
+}

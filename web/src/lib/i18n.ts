@@ -35,6 +35,7 @@ const en = {
 
     "patientLoading": "Loading",
     "shellDashboard": "Dashboard",
+    "shellAppointments": "Appointments",
     "shellDoctors": "Find doctors",
     "shellRecords": "Records",
     "shellAccess": "Access & trust",
@@ -272,6 +273,7 @@ const hi: Catalog = {
 
     "patientLoading": "लोड हो रहा है",
     "shellDashboard": "डैशबोर्ड",
+    "shellAppointments": "अपॉइंटमेंट",
     "shellDoctors": "डॉक्टर खोजें",
     "shellRecords": "रिकॉर्ड",
     "shellAccess": "पहुँच और भरोसा",
@@ -500,6 +502,7 @@ const mr: Catalog = {
 
     "patientLoading": "लोड होत आहे",
     "shellDashboard": "डॅशबोर्ड",
+    "shellAppointments": "भेटी",
     "shellDoctors": "डॉक्टर शोधा",
     "shellRecords": "नोंदी",
     "shellAccess": "प्रवेश आणि विश्वास",

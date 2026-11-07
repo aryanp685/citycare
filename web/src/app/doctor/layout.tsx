@@ -27,19 +27,17 @@ export default async function DoctorLayout({ children }: { children: React.React
   );
 
   return (
-    <div>
+    <div className="workspace-shell">
       {!consent.current && <ReacceptBanner current={PRIVACY_NOTICE_VERSION} accepted={consent.accepted} />}
-      <header className="bg-white border-b border-line">
+      <header className="workspace-header">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="font-black tracking-tight no-underline text-ink">
-                City<span className="text-brand">Care</span>
-              </Link>
-              <span className="text-sm font-semibold">Dr. {who?.name?.replace(/^Dr\.?\s+/i, "") ?? "you"}</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+              <Link href="/" className="workspace-brand"><span className="workspace-brand-mark" aria-hidden="true">+</span><span>City<span className="text-brand">Care</span></span></Link>
+              <span className="text-sm font-semibold break-words">Dr. {who?.name?.replace(/^Dr\.?\s+/i, "") ?? "you"}</span>
             </div>
-            <div className="flex items-center gap-2">
-              {who?.isVerified ? <Badge tone="live">verified</Badge> : <Badge tone={who?.rejectedAt ? "crit" : "warn"}>{who?.rejectedAt ? "not approved" : "verification pending"}</Badge>}
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              {who?.isVerified ? <Badge tone="live">admin approved</Badge> : <Badge tone={who?.rejectedAt ? "crit" : "warn"}>{who?.rejectedAt ? "not approved" : "verification pending"}</Badge>}
               <NotificationBell initial={who?.unread ?? 0} href="/doctor/notifications" />
               <LogoutButton />
             </div>
@@ -47,6 +45,8 @@ export default async function DoctorLayout({ children }: { children: React.React
           <Tabs tabs={[
             { href: "/doctor", label: "Today" },
             { href: "/doctor/patients", label: "Patients" },
+            { href: "/doctor/activity", label: "Activity" },
+            { href: "/doctor/profile", label: "Profile" },
             { href: "/doctor/notifications", label: "Inbox", badge: who?.unread ?? 0 },
           ]} />
         </div>
@@ -57,7 +57,7 @@ export default async function DoctorLayout({ children }: { children: React.React
             {who?.rejectedAt ? (
               <><strong>Registration not approved.</strong> {who.note ?? "Contact the CityCare admin."} Patients cannot see or book you, and records stay closed.</>
             ) : (
-              <><strong>Verification pending</strong> for registration <span className="kbd">{who?.registrationNo ?? "—"}</span>. An admin checks it against the medical register; until then patients cannot find or book you, and no record can be opened.</>
+              <><strong>Verification pending</strong> for registration <span className="kbd">{who?.registrationNo ?? "—"}</span>. An admin reviews the submitted registration details; this is not a claim of official register verification. Until then patients cannot find or book you, and no record can be opened.</>
             )}
           </div>
         </div>

@@ -18,7 +18,7 @@ export function ConsentActions({ consent, compact }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [scope, setScope] = useState("LAST_N_ENCOUNTERS");
+  const [scope, setScope] = useState(SCOPES.some((s) => s.v === consent.scope) ? consent.scope : "LAST_N_ENCOUNTERS");
   const [open, setOpen] = useState(false);
 
   async function act(fn: () => Promise<{ ok: boolean; error?: string; code?: string; extra?: Record<string, unknown> }>, done: string) {
@@ -44,15 +44,15 @@ export function ConsentActions({ consent, compact }: Props) {
       () =>
         callApi("/api/patient/consents", {
           method: "POST",
-          body: { doctorId: consent.doctorId, scope, expiryDays: 7, lastNEncounters: scope === "LAST_N_ENCOUNTERS" ? 3 : undefined },
+          body: { doctorId: consent.doctorId, consentId: consent.id, scope, expiryDays: 7, lastNEncounters: scope === "LAST_N_ENCOUNTERS" ? 3 : undefined },
         }),
       "Access granted — the doctor now sees only what you chose.",
     );
 
   const denyOrRevoke = (verb: "DENIED" | "REVOKED") =>
     act(
-      () => callApi(`/api/patient/consents?id=${consent.id}`, { method: "PATCH", body: { reason: `${verb.toLowerCase()} by patient from CityCare UI` } }),
-      verb === "DENIED" ? "Request denied. This is logged — the doctor can see why." : "Revoked. Their next request will be refused instantly.",
+      () => callApi(`/api/patient/consents?id=${consent.id}`, { method: "PATCH", body: { decision: verb === "DENIED" ? "DENY" : "REVOKE", reason: `${verb.toLowerCase()} by patient from CityCare UI` } }),
+      verb === "DENIED" ? "Request denied. This decision is recorded in your access history." : "Revoked. New requests are checked again; a request already in progress may finish.",
     );
 
   return (
@@ -73,6 +73,7 @@ export function ConsentActions({ consent, compact }: Props) {
       {open && consent.status === "REQUESTED" && (
         <div className="mt-2 p-3 border border-line rounded-xl bg-wash">
           <div className="text-sm font-semibold mb-2">What should {consent.doctorName} see?</div>
+          <p className="text-xs text-muted mb-2">Requested: {consent.scope.replaceAll("_", " ").toLowerCase()}. You can choose a different scope before approving.</p>
           <div className="flex flex-wrap gap-2">
             {SCOPES.map((s) => (
               <button

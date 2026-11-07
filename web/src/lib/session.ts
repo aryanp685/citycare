@@ -75,7 +75,7 @@ export async function requireVerifiedDoctor(v: SessionPayload): Promise<void> {
     [v.profileId],
   );
   if (!d) fail(404, "no_profile", "doctor profile missing");
-  if (!d.isVerified) {
+  if (!d.isVerified || d.rejectedAt) {
     fail(403, "doctor_unverified", d.rejectedAt
       ? "Your registration was not approved. Contact the CityCare admin."
       : "Your registration is pending verification. Patients cannot book you yet.");
